@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { LeadDetails } from "@/types/lead";
 import {
   Eye,
   User,
@@ -57,34 +58,13 @@ type StatusHistory = {
   changedAt: string;
 };
 
-type Lead = {
-  id: string;
-  name?: string;
-  phone?: string;
-  email?: string;
-  city?: string;
-  currentStatus?: string;
-  purpose?: string;
-  status?: string;
-  assignedTo?: User | null;
-  bestTimeToReach?: string;
-  willingToAttendTraining?: boolean;
-  nextFollowUp?: string | null;
-  age?: number | string;
-  remarks?: string;
-  followUpCount?: number;
-  followups?: FollowUp[];
-  activities?: Activity[];
-  statusHistory?: StatusHistory[];
-};
-
 export default function LeadDetailsDialog({
   leadId,
   onUpdate,
 }: LeadDetailsDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [lead, setLead] = useState<Lead | null>(null);
+  const [lead, setLead] = useState<LeadDetails | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
 
