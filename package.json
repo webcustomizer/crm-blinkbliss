@@ -2,12 +2,13 @@
   "name": "blinknbliss",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
+"scripts": {
+  "dev": "next dev",
+  "build": "next build",
+  "start": "next start",
+  "lint": "eslint",
+  "postinstall": "prisma generate"
+},
   "dependencies": {
     "@base-ui/react": "^1.6.0",
     "@capacitor/android": "^8.4.1",
