@@ -8,10 +8,12 @@ import {
   Activity,
   TrendingUp,
 } from "lucide-react";
-import { useState } from "react";
+type Lead = {
+  status: string;
+};
 
 type Props = {
-  leads: any[];
+  leads: Lead[];
 };
 
 export default function ReportStats({ leads }: Props) {

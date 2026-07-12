@@ -9,8 +9,12 @@ import {
   Legend,
 } from "recharts";
 
+type Lead = {
+  status: string;
+};
+
 type Props = {
-  leads: any[];
+  leads: Lead[];
 };
 
 export default function StatusChart({ leads }: Props) {

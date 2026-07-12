@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -61,7 +61,7 @@ export default function LeadsTable({ salespersons }: Props) {
     total: 0,
   });
 
-  async function getLeads() {
+  const getLeads = useCallback(async () => {
     try {
       if (!hasLoaded) {
         setInitialLoading(true);
@@ -96,19 +96,27 @@ export default function LeadsTable({ salespersons }: Props) {
 
       setHasLoaded(true);
     }
-  }
+  }, [hasLoaded, page, limit, search, filter, salespersonId]);
 
   useEffect(() => {
-    if (dashboardFilter) {
-      setFilter(dashboardFilter);
+    if (!dashboardFilter) {
+      return;
     }
+
+    const timeout = window.setTimeout(() => {
+      setFilter(dashboardFilter);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
   }, [dashboardFilter]);
 
+  const getLeadsRef = useRef(getLeads);
   useEffect(() => {
-    getLeads();
-  }, [page, filter, search, salespersonId]);
+    getLeadsRef.current = getLeads;
+  });
 
-  // realtime updates using supabase
   useEffect(() => {
     const channel = supabase
       .channel("lead-changes")
@@ -120,7 +128,7 @@ export default function LeadsTable({ salespersons }: Props) {
           table: "Lead",
         },
         () => {
-          getLeads();
+          getLeadsRef.current();
         },
       )
       .subscribe();
@@ -129,6 +137,22 @@ export default function LeadsTable({ salespersons }: Props) {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      void Promise.resolve().then(getLeads);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      void Promise.resolve().then(getLeads);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [getLeads]);
 
   async function assignLead(leadId: string, salespersonId: string) {
     try {

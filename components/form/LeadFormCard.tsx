@@ -29,14 +29,16 @@ export default function LeadFormCard() {
 
       if (!json.success) {
         toast.error(json.message || "Failed to submit form.");
-        return;
+        return false;
       }
 
       setSubmitted(true);
+      return true;
     } catch (error) {
       console.log(error);
 
       toast.error("Something went wrong.");
+      return false;
     } finally {
       setLoading(false);
     }

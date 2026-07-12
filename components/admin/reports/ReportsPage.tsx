@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 
 import { supabase } from "@/lib/supabase";
 
@@ -9,20 +9,22 @@ import StatusChart from "./StatusChart";
 import SalesReportTable from "./SalesReportTable";
 import DateFilter from "./DateFilter";
 
+type Lead = {
+  id: string;
+  status: string;
+  createdAt: string;
+  assignedTo?: {
+    id: string;
+    name: string;
+  } | null;
+};
+
 export default function ReportsPage() {
-  const [leads, setLeads] = useState<any[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
-  const [salesReport, setSalesReport] = useState([]);
   const [dateFilter, setDateFilter] = useState("ALL");
 
-  async function getLeads() {
-    const reportRes = await fetch("/api/admin/reports/sales", {
-      cache: "no-store",
-    });
-
-    const reportJson = await reportRes.json();
-
-    setSalesReport(reportJson);
+  const getLeads = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -38,10 +40,15 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  const getLeadsRef = useRef(getLeads);
+  useEffect(() => {
+    getLeadsRef.current = getLeads;
+  });
 
   useEffect(() => {
-    getLeads();
+    void Promise.resolve().then(getLeads);
 
     const channel = supabase
       .channel("reports-page")
@@ -53,7 +60,7 @@ export default function ReportsPage() {
           table: "Lead",
         },
         () => {
-          getLeads();
+          getLeadsRef.current();
         },
       )
       .subscribe();
@@ -61,7 +68,7 @@ export default function ReportsPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [getLeads]);
 
   const filteredLeads = useMemo(() => {
     if (dateFilter === "ALL") return leads;

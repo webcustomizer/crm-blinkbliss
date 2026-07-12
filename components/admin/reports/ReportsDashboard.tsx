@@ -18,24 +18,15 @@ type LeadStatus =
   | string;
 
 type Lead = {
+  id: string;
   assignedTo?: {
     id: string;
     name: string;
-  };
+  } | null;
   status: LeadStatus;
 };
 
-type SalespersonReport = {
-  id: string;
-  name: string;
-  total: number;
-  called: number;
-  followups: number;
-  training: number;
-  reserved: number;
-  joined: number;
-  dead: number;
-};
+
 
 export default function ReportsDashboard() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -95,68 +86,6 @@ export default function ReportsDashboard() {
     );
   }
 
-  const salespersonMap: Record<string, SalespersonReport> = {};
-
-  leads.forEach((lead) => {
-    const person = lead.assignedTo;
-
-    if (!person) return;
-
-    if (!salespersonMap[person.id]) {
-      salespersonMap[person.id] = {
-        id: person.id,
-
-        name: person.name,
-
-        total: 0,
-
-        called: 0,
-
-        followups: 0,
-
-        training: 0,
-
-        reserved: 0,
-
-        joined: 0,
-
-        dead: 0,
-      };
-    }
-
-    const data = salespersonMap[person.id];
-
-    data.total++;
-
-    switch (lead.status) {
-      case "CALLED":
-        data.called++;
-        break;
-
-      case "NEED_MORE_FOLLOW_UP":
-        data.followups++;
-        break;
-
-      case "TRAINING_ATTENDED":
-        data.training++;
-        break;
-
-      case "SEAT_RESERVED":
-        data.reserved++;
-        break;
-
-      case "JOINED":
-        data.joined++;
-        break;
-
-      case "DEAD":
-        data.dead++;
-        break;
-    }
-  });
-
-  const salesReport = Object.values(salespersonMap);
-
   return (
     <div
       className="
@@ -192,9 +121,7 @@ export default function ReportsDashboard() {
 
       <StatusChart leads={leads} />
 
-      {/* SALESPERSON REPORT */}
-
-      <SalesReportTable data={salesReport as any} />
+      <SalesReportTable leads={leads} />
     </div>
   );
 }

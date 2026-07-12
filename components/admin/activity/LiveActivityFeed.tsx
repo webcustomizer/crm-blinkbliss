@@ -1,9 +1,10 @@
 "use client";
 
 import ActivityMessage from "./ActivityMessage";
+import type { ActivityMessageProps } from "./ActivityMessage";
 
 interface LiveActivityFeedProps {
-  activities: any[];
+  activities: ActivityMessageProps["activity"][];
 }
 
 export default function LiveActivityFeed({
@@ -72,7 +73,7 @@ animate-pulse
 
       <div
         className="
-max-h-[650px]
+max-h-162.5
 overflow-y-auto
 space-y-4
 pr-2

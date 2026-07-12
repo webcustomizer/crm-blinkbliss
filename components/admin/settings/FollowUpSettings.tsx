@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { CalendarClock, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -15,11 +15,7 @@ export default function FollowUpSettings() {
     deadAfterDays: 37,
   });
 
-  useEffect(() => {
-    getSettings();
-  }, []);
-
-  async function getSettings() {
+  const getSettings = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/settings", {
         cache: "no-store",
@@ -43,7 +39,11 @@ export default function FollowUpSettings() {
 
       toast.error("Failed to load settings");
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    void Promise.resolve().then(getSettings);
+  }, [getSettings]);
 
   function change(e: React.ChangeEvent<HTMLInputElement>) {
     setForm((previous) => ({

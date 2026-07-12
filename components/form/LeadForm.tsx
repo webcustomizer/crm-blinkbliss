@@ -15,9 +15,12 @@ type LeadFormData = {
   willingToAttendTraining: boolean | null;
 };
 
-export default function LeadForm() {
-  const [loading, setLoading] = useState(false);
+interface LeadFormProps {
+  loading: boolean;
+  onSubmit: (data: LeadFormData) => Promise<boolean>;
+}
 
+export default function LeadForm({ loading, onSubmit }: LeadFormProps) {
   const [success, setSuccess] = useState(false);
 
   const [errors, setErrors] = useState<
@@ -118,42 +121,24 @@ export default function LeadForm() {
       return;
     }
 
-    setLoading(true);
-
-    // PART 2
     try {
-      const res = await fetch("/api/admin/leads", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(form),
-      });
-
-      const json = await res.json();
-
-      if (!json.success) {
-        alert(json.message || "Something went wrong.");
-        return;
+      const ok = await onSubmit(form);
+      if (ok) {
+        setSuccess(true);
+        setForm({
+          name: "",
+          phone: "",
+          email: "",
+          city: "",
+          age: "",
+          purpose: "",
+          currentStatus: "",
+          bestTimeToReach: "",
+          willingToAttendTraining: null,
+        });
       }
-
-      setSuccess(true);
-
-      setForm({
-        name: "",
-        phone: "",
-        email: "",
-        city: "",
-        age: "",
-        purpose: "",
-        currentStatus: "",
-        bestTimeToReach: "",
-        willingToAttendTraining: null,
-      });
-    } catch (error) {
+    } catch {
       alert("Failed to submit form.");
-    } finally {
-      setLoading(false);
     }
   }
 

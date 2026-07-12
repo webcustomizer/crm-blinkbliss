@@ -260,7 +260,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
   }
 
   useEffect(() => {
-    getLeadDetails();
+    void Promise.resolve().then(getLeadDetails);
   }, [leadId, getLeadDetails]);
 
   if (loading) {

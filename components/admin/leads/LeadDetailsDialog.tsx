@@ -29,13 +29,62 @@ type LeadDetailsDialogProps = {
   onUpdate?: () => void;
 };
 
+type User = {
+  id: string;
+  name: string;
+};
+
+type FollowUp = {
+  id: string;
+  user?: User | null;
+  createdAt: string;
+  remarks: string;
+  nextFollowUp?: string | null;
+};
+
+type Activity = {
+  id: string;
+  user?: User | null;
+  createdAt: string;
+  message: string;
+};
+
+type StatusHistory = {
+  id: string;
+  oldStatus: string;
+  newStatus: string;
+  changedBy?: User | null;
+  changedAt: string;
+};
+
+type Lead = {
+  id: string;
+  name?: string;
+  phone?: string;
+  email?: string;
+  city?: string;
+  currentStatus?: string;
+  purpose?: string;
+  status?: string;
+  assignedTo?: User | null;
+  bestTimeToReach?: string;
+  willingToAttendTraining?: boolean;
+  nextFollowUp?: string | null;
+  age?: number | string;
+  remarks?: string;
+  followUpCount?: number;
+  followups?: FollowUp[];
+  activities?: Activity[];
+  statusHistory?: StatusHistory[];
+};
+
 export default function LeadDetailsDialog({
   leadId,
   onUpdate,
 }: LeadDetailsDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [lead, setLead] = useState<any>(null);
+  const [lead, setLead] = useState<Lead | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
 
@@ -135,8 +184,8 @@ export default function LeadDetailsDialog({
       />
       <DialogContent
         className="
-    !max-w-[70vw]  /* ! important tag use karein */
-    w-[70vw]       /* Fixed width ensure karein */
+    max-w-[70vw]!
+    w-[70vw]
     max-h-[90vh]
     overflow-y-auto
     bg-[#111111]
@@ -311,7 +360,7 @@ export default function LeadDetailsDialog({
 
               {lead.followups?.length ? (
                 <div className="space-y-4">
-                  {lead.followups.map((item: any) => (
+                  {lead.followups.map((item) => (
                     <div
                       key={item.id}
                       className="
@@ -377,7 +426,7 @@ export default function LeadDetailsDialog({
 
               {lead.activities?.length ? (
                 <div className="space-y-4">
-                  {lead.activities.map((item: any) => (
+                  {lead.activities.map((item) => (
                     <div
                       key={item.id}
                       className="
@@ -426,7 +475,7 @@ text-gray-400
 
               {lead.statusHistory?.length ? (
                 <div className="space-y-4">
-                  {lead.statusHistory.map((item: any) => (
+                  {lead.statusHistory.map((item) => (
                     <div
                       key={item.id}
                       className="
@@ -487,7 +536,7 @@ text-gray-400
 type InfoProps = {
   icon?: React.ReactNode;
   label: string;
-  value: any;
+  value: string | number | null | undefined;
 };
 
 function Info({ icon, label, value }: InfoProps) {
@@ -511,7 +560,7 @@ function Info({ icon, label, value }: InfoProps) {
       <p
         className="
         mt-3
-        break-words
+        wrap-break-word
         text-sm
         text-white
         "

@@ -11,11 +11,22 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import type { LeadDetails } from "@/types/lead";
+
+type EditLeadForm = {
+  name: string;
+  phone: string;
+  email: string;
+  city: string;
+  purpose: string;
+  status: string;
+  remarks: string;
+};
 
 type Props = {
   open: boolean;
   setOpen: (value: boolean) => void;
-  lead: any;
+  lead: LeadDetails | null;
   onUpdate?: () => void;
 };
 
@@ -27,7 +38,7 @@ export default function EditLeadDialog({
 }: Props) {
   const [loading, setLoading] = useState(false);
 
-  const [form, setForm] = useState<any>({
+  const [form, setForm] = useState<EditLeadForm>({
     name: "",
     phone: "",
     email: "",
@@ -63,9 +74,8 @@ export default function EditLeadDialog({
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >,
   ) {
-    setForm((previous: any) => ({
+    setForm((previous: EditLeadForm) => ({
       ...previous,
-
       [e.target.name]: e.target.value,
     }));
   }
@@ -127,7 +137,7 @@ export default function EditLeadDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
         className="
-        !max-w-[600px]
+        max-w-150!
         bg-[#111111]
         border
         border-[#D4AF37]/30

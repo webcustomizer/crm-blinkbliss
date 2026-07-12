@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Trophy,
   Phone,
   CalendarClock,
   GraduationCap,

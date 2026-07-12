@@ -324,7 +324,7 @@ export default function AnnouncementList() {
         >
           <div
             className="
-      w-[400px]
+      w-100
       rounded-2xl
       border
       border-[#D4AF37]/20

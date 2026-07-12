@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 
 import { supabase } from "@/lib/supabase";
 
@@ -37,7 +37,7 @@ export default function MyLeads() {
   const [status, setStatus] = useState("");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
-  async function getLeads() {
+  const getLeads = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -65,15 +65,16 @@ export default function MyLeads() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [search, status]);
+
+  const getLeadsRef = useRef(getLeads);
+  useEffect(() => {
+    getLeadsRef.current = getLeads;
+  });
 
   useEffect(() => {
-    getLeads();
-
     const channel = supabase
-
       .channel("sales-my-leads")
-
       .on(
         "postgres_changes",
         {
@@ -81,14 +82,11 @@ export default function MyLeads() {
           schema: "public",
           table: "Lead",
         },
-
         () => {
           console.log("My Leads Updated");
-
-          getLeads();
+          getLeadsRef.current();
         },
       )
-
       .subscribe((status) => {
         console.log("My Leads Realtime:", status);
       });
@@ -98,13 +96,21 @@ export default function MyLeads() {
     };
   }, []);
 
+  const isFirstRender = useRef(true);
+
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      void Promise.resolve().then(getLeads);
+      return;
+    }
+
     const timer = setTimeout(() => {
-      getLeads();
+      void Promise.resolve().then(getLeads);
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [search, status]);
+  }, [getLeads]);
 
   if (loading) {
     return (

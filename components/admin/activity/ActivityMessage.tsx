@@ -1,6 +1,6 @@
 import ActivityIcon from "./ActivityIcon";
 
-interface ActivityMessageProps {
+export interface ActivityMessageProps {
   activity: {
     id: string;
 
@@ -19,7 +19,15 @@ interface ActivityMessageProps {
       phone: string;
     } | null;
 
-    metadata?: any;
+    metadata?: {
+      leadName?: string;
+      oldStatus?: string;
+      newStatus?: string;
+      followUpNumber?: number;
+      remarks?: string;
+      nextFollowUp?: string;
+      changes?: Record<string, { old: unknown; new: unknown }>;
+    };
   };
 }
 
@@ -179,14 +187,18 @@ export default function ActivityMessage({ activity }: ActivityMessageProps) {
             <p className="text-zinc-400 mb-2">Updated Fields:</p>
 
             {Object.entries(activity.metadata?.changes || {}).map(
-              ([key, value]: any) => (
-                <p key={key} className="text-white">
-                  {key}:
-                  <span className="text-zinc-400"> {String(value.old)}</span>
-                  <span className="mx-2 text-[#D4AFG37]">→</span>
-                  <span className="text-[#D4AF37]">{String(value.new)}</span>
-                </p>
-              ),
+              ([key, value]) => {
+                const change = value as { old: unknown; new: unknown };
+
+                return (
+                  <p key={key} className="text-white">
+                    {key}:
+                    <span className="text-zinc-400"> {String(change.old)}</span>
+                    <span className="mx-2 text-[#D4AF37]">→</span>
+                    <span className="text-[#D4AF37]">{String(change.new)}</span>
+                  </p>
+                );
+              },
             )}
           </div>
         )}

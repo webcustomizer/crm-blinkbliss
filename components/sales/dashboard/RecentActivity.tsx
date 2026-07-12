@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { ArrowRight, Clock, User } from "lucide-react";
 
 interface Activity {
@@ -18,7 +18,7 @@ export default function RecentActivity() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
 
-  async function fetchActivities() {
+  const fetchActivities = useCallback(async () => {
     try {
       const res = await fetch("/api/salesperson/dashboard/activity", {
         cache: "no-store",
@@ -34,11 +34,11 @@ export default function RecentActivity() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    fetchActivities();
-  }, []);
+    void Promise.resolve().then(fetchActivities);
+  }, [fetchActivities]);
 
   return (
     <div
