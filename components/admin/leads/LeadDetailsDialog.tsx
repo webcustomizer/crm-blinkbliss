@@ -205,7 +205,7 @@ export default function LeadDetailsDialog({
             <Button
               disabled={
                 followLoading ||
-                lead?.followUpCount >= 4 ||
+                (lead?.followUpCount ?? 0) >= 4 ||
                 lead?.status === "DEAD"
               }
               onClick={completeFollowUp}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useMemo } from "react";
 
 import {
   Dialog,
@@ -37,37 +37,22 @@ export default function EditLeadDialog({
   onUpdate,
 }: Props) {
   const [loading, setLoading] = useState(false);
+  const initialForm = useMemo<EditLeadForm>(
+    () => ({
+      name: lead?.name ?? "",
+      phone: lead?.phone ?? "",
+      email: lead?.email ?? "",
+      city: lead?.city ?? "",
+      purpose: lead?.purpose ?? "",
+      status: lead?.status ?? "NEW",
+      remarks: lead?.remarks ?? "",
+    }),
+    [lead],
+  );
 
-  const [form, setForm] = useState<EditLeadForm>({
-    name: "",
-    phone: "",
-    email: "",
-    city: "",
-    purpose: "",
-    status: "NEW",
-    remarks: "",
-  });
+  const [form, setForm] = useState<EditLeadForm>(initialForm);
 
   // LOAD CURRENT LEAD DATA
-  useEffect(() => {
-    if (lead) {
-      setForm({
-        name: lead.name || "",
-
-        phone: lead.phone || "",
-
-        email: lead.email || "",
-
-        city: lead.city || "",
-
-        purpose: lead.purpose || "",
-
-        status: lead.status || "NEW",
-
-        remarks: lead.remarks || "",
-      });
-    }
-  }, [lead]);
 
   function change(
     e: React.ChangeEvent<
@@ -134,7 +119,16 @@ export default function EditLeadDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(value) => {
+        setOpen(value);
+
+        if (value) {
+          setForm(initialForm);
+        }
+      }}
+    >
       <DialogContent
         className="
         !max-w-[600px]
