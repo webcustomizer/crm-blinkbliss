@@ -251,7 +251,7 @@ transition
     );
   }
   return (
-    <div className="min-h-screen bg-black py-10 px-4">
+    <div className="min-h-screen bg-black py-10 px-4 rounded-3xl">
       <div className="mx-auto max-w-3xl">
         {/* HERO */}
 

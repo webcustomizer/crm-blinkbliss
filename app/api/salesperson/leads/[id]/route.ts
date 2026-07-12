@@ -184,6 +184,72 @@ export async function PATCH(
       );
     }
 
+    // =====================================================
+    // NOTE-ONLY SAVE ("Save Note" button)
+    // - Permanently saved as a FollowUp record with
+    //   followUpNumber = 0 → shows in history forever
+    // - Does NOT touch followUpCount / nextFollowUp / status
+    //   so it never counts as a real follow up
+    // =====================================================
+    if (body.isNote) {
+      const remarksText = (body.remarks || "").trim();
+
+      if (!remarksText) {
+        return NextResponse.json(
+          {
+            message: "Please write something before saving",
+          },
+          {
+            status: 400,
+          },
+        );
+      }
+
+      if (lead.status === "JOINED" || lead.status === "DEAD") {
+        return NextResponse.json(
+          {
+            message: "Lead is closed",
+          },
+          {
+            status: 400,
+          },
+        );
+      }
+
+      const note = await prisma.followUp.create({
+        data: {
+          leadId: id,
+          userId: user.id,
+          remarks: remarksText,
+          followUpNumber: 0, // 0 = plain note, never counted
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
+
+      await logActivity({
+        userId: user.id,
+        leadId: id,
+        action: ActivityAction.REMARK_UPDATED,
+        description: `${user.name} added a note`,
+        metadata: {
+          leadName: lead.name || lead.phone,
+          remarks: remarksText,
+        },
+      });
+
+      return NextResponse.json({
+        message: "Note saved successfully",
+        note,
+      });
+    }
+
     const dataToUpdate: Record<string, unknown> = {};
     const changes: Record<string, { old: unknown; new: unknown }> = {};
 

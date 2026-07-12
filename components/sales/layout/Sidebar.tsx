@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Users, User, LogOut, Megaphone } from "lucide-react";
@@ -63,16 +64,77 @@ export default function Sidebar({ user }: SidebarProps) {
       "
     >
       {/* Logo */}
-      <div className="shrink-0 border-b border-[#D4AF37]/20 px-6 py-7">
-        <h1 className="text-2xl font-bold tracking-wide text-[#D4AF37]">
-          BlinknBliss
-        </h1>
+      <div
+        className="
+        relative
+        shrink-0
+        overflow-hidden
+        border-b
+        border-[#D4AF37]/20
+        bg-gradient-to-b
+        from-[#1c1c1c]
+        to-[#161616]
+        px-6
+        py-7
+        "
+      >
+        {/* Subtle glow accent */}
+        <div
+          className="
+          pointer-events-none
+          absolute
+          -left-10
+          -top-10
+          h-32
+          w-32
+          rounded-full
+          bg-[#D4AF37]/10
+          blur-3xl
+          "
+        />
 
-        <p className="mt-1 text-sm text-zinc-400">Salesperson Portal</p>
+        <div className="relative flex items-center gap-3">
+          <div
+            className="
+            relative
+            flex
+            h-12
+            w-12
+            shrink-0
+            items-center
+            justify-center
+            rounded-2xl
+            border
+            border-[#D4AF37]/30
+            bg-black/40
+            p-1.5
+            shadow-[0_0_20px_rgba(212,175,55,0.15)]
+            "
+          >
+            <Image
+              src="/logo.png"
+              alt="Blink and Bliss"
+              width={40}
+              height={40}
+              className="h-full w-full object-contain"
+              priority
+            />
+          </div>
+
+          <div className="min-w-0">
+            <h1 className="truncate text-xl font-bold tracking-wide text-[#D4AF37]">
+              BlinknBliss
+            </h1>
+
+            <p className="mt-0.5 truncate text-xs font-medium uppercase tracking-wider text-zinc-500">
+              Salesperson Portal
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-2 p-4">
+      <nav className="flex-1 space-y-1.5 p-4">
         {menuItems.map((item) => {
           const Icon = item.icon;
 
@@ -83,13 +145,22 @@ export default function Sidebar({ user }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 ${
+              className={`group relative flex items-center gap-3 overflow-hidden rounded-xl px-4 py-3 transition-all duration-200 ${
                 active
-                  ? "bg-[#D4AF37] text-black shadow-lg"
+                  ? "bg-gradient-to-r from-[#D4AF37] to-[#c9a430] text-black shadow-lg shadow-[#D4AF37]/20"
                   : "text-zinc-300 hover:bg-[#D4AF37]/10 hover:text-[#D4AF37]"
               }`}
             >
-              <Icon size={20} />
+              {active && (
+                <span className="absolute left-0 top-0 h-full w-1 bg-black/20" />
+              )}
+
+              <Icon
+                size={20}
+                className={`shrink-0 transition-transform duration-200 ${
+                  active ? "" : "group-hover:scale-110"
+                }`}
+              />
 
               <span className="font-medium">{item.title}</span>
             </Link>
@@ -120,8 +191,11 @@ export default function Sidebar({ user }: SidebarProps) {
           rounded-xl
           border
           border-[#D4AF37]/20
-          bg-[#1B1B1B]
+          bg-gradient-to-br
+          from-[#1f1f1f]
+          to-[#171717]
           p-4
+          shadow-inner
           "
         >
           {/* Avatar */}
@@ -134,9 +208,12 @@ export default function Sidebar({ user }: SidebarProps) {
             items-center
             justify-center
             rounded-full
-            bg-[#D4AF37]
+            bg-gradient-to-br
+            from-[#D4AF37]
+            to-[#b8912b]
             font-bold
             text-black
+            shadow-[0_0_12px_rgba(212,175,55,0.35)]
             "
           >
             {user?.name?.charAt(0).toUpperCase() || "S"}
@@ -171,7 +248,9 @@ export default function Sidebar({ user }: SidebarProps) {
           font-medium
           text-red-400
           transition
+          duration-200
           hover:bg-red-500/20
+          active:scale-[0.98]
           "
         >
           <LogOut size={18} />

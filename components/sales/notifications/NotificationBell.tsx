@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, Check } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
@@ -20,6 +20,8 @@ export default function NotificationBell() {
 
   const [open, setOpen] = useState(false);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const fetchNotifications = useCallback(async () => {
     try {
       const res = await fetch("/api/salesperson/notifications", {
@@ -29,8 +31,12 @@ export default function NotificationBell() {
       const data = await res.json();
 
       if (res.ok) {
-        setNotifications(Array.isArray(data?.notifications) ? data.notifications : []);
-        setUnreadCount(typeof data?.unreadCount === "number" ? data.unreadCount : 0);
+        setNotifications(
+          Array.isArray(data?.notifications) ? data.notifications : [],
+        );
+        setUnreadCount(
+          typeof data?.unreadCount === "number" ? data.unreadCount : 0,
+        );
       }
     } catch (error) {
       console.log("Notification fetch error", error);
@@ -81,8 +87,12 @@ export default function NotificationBell() {
         if (!isMounted) return;
 
         if (res.ok) {
-          setNotifications(Array.isArray(data?.notifications) ? data.notifications : []);
-          setUnreadCount(typeof data?.unreadCount === "number" ? data.unreadCount : 0);
+          setNotifications(
+            Array.isArray(data?.notifications) ? data.notifications : [],
+          );
+          setUnreadCount(
+            typeof data?.unreadCount === "number" ? data.unreadCount : 0,
+          );
         }
       } catch (error) {
         if (!isMounted) return;
@@ -120,10 +130,49 @@ export default function NotificationBell() {
     };
   }, []);
 
+  // Close dropdown when clicking or tapping anywhere outside it
+  useEffect(() => {
+    if (!open) return;
+
+    function handleOutsideInteraction(event: MouseEvent | TouchEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsideInteraction);
+    document.addEventListener("touchstart", handleOutsideInteraction);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideInteraction);
+      document.removeEventListener("touchstart", handleOutsideInteraction);
+    };
+  }, [open]);
+
+  // Close dropdown on Escape key
+  useEffect(() => {
+    if (!open) return;
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
+
   return (
-    <div className="relative flex-shrink-0">
+    <div ref={containerRef} className="relative flex-shrink-0">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpen((prev) => !prev)}
         className="
         relative
         flex
