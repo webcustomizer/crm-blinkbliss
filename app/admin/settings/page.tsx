@@ -1,6 +1,7 @@
 "use client";
 
 import ActivitySettings from "@/components/admin/settings/ActivitySettings";
+import CreateAdminSettings from "@/components/admin/settings/CreateAdminSettings";
 import DeadLeadSettings from "@/components/admin/settings/DeadLeadSettings";
 import FollowUpSettings from "@/components/admin/settings/FollowUpSettings";
 
@@ -19,6 +20,7 @@ export default function SettingsPage() {
 
       {/* SETTINGS COMPONENTS */}
 
+      <CreateAdminSettings />
       <FollowUpSettings />
       <ActivitySettings />
       <DeadLeadSettings />
