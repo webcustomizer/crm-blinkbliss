@@ -14,8 +14,13 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
+type Lead = {
+  status: string;
+  nextFollowUp?: string | null;
+};
+
 type Props = {
-  leads: any[];
+  leads: Lead[];
 };
 
 export default function FollowUpCards({ leads }: Props) {
@@ -23,7 +28,7 @@ export default function FollowUpCards({ leads }: Props) {
 
   const today = new Date();
 
-  const activeLead = (lead: any) => {
+  const activeLead = (lead: Lead) => {
     return lead.status !== "JOINED" && lead.status !== "DEAD";
   };
 

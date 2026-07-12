@@ -7,14 +7,16 @@ import {
   CheckCircle,
 } from "lucide-react";
 
+import type { LeadDetails } from "@/types/lead";
+
 type Props = {
-  leads: any[];
+  leads: LeadDetails[];
 };
 
 export default function TodayStats({ leads }: Props) {
   const today = new Date();
 
-  const isToday = (date: string) => {
+  const isToday = (date?: string | null) => {
     if (!date) return false;
 
     const d = new Date(date);
@@ -26,7 +28,7 @@ export default function TodayStats({ leads }: Props) {
     );
   };
 
-  const activeLead = (lead: any) => {
+  const activeLead = (lead: LeadDetails) => {
     return lead.status !== "JOINED" && lead.status !== "DEAD";
   };
 
@@ -40,7 +42,9 @@ export default function TodayStats({ leads }: Props) {
     {
       title: "Today's Follow Ups",
       value: leads.filter(
-        (lead) => activeLead(lead) && isToday(lead.nextFollowUp),
+        (lead) =>
+          activeLead(lead) &&
+          isToday(lead.nextFollowUp),
       ).length,
       icon: <CalendarClock size={22} />,
     },
@@ -59,7 +63,9 @@ export default function TodayStats({ leads }: Props) {
     {
       title: "Today's Joined",
       value: leads.filter(
-        (lead) => lead.status === "JOINED" && isToday(lead.updatedAt),
+        (lead) =>
+          lead.status === "JOINED" &&
+          isToday(lead.updatedAt),
       ).length,
       icon: <CheckCircle size={22} />,
     },
@@ -75,10 +81,12 @@ export default function TodayStats({ leads }: Props) {
           text-[#D4AF37]
           "
         >
-          Today's Performance
+          Today&apos;s Performance
         </h2>
 
-        <p className="text-sm text-gray-400">Daily CRM activity overview</p>
+        <p className="text-sm text-gray-400">
+          Daily CRM activity overview
+        </p>
       </div>
 
       <div

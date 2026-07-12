@@ -9,8 +9,10 @@ import TodayStats from "./TodayStats";
 import FollowUpCards from "./FollowUpCards";
 import RecentLeads from "./RecentLeads";
 
+import type { LeadDetails } from "@/types/lead";
+
 export default function AdminDashboard() {
-  const [leads, setLeads] = useState<any[]>([]);
+  const [leads, setLeads] = useState<LeadDetails[]>([]);
 
   const [loading, setLoading] = useState(true);
 
@@ -22,7 +24,7 @@ export default function AdminDashboard() {
 
       const json = await res.json();
 
-      setLeads(json.data || []);
+      setLeads((json.data as LeadDetails[]) || []);
     } catch (error) {
       console.log(error);
     } finally {
@@ -31,26 +33,23 @@ export default function AdminDashboard() {
   }
 
   useEffect(() => {
-    getLeads();
+    (async () => {
+      await getLeads();
+    })();
 
     const channel = supabase
-
       .channel("admin-dashboard")
-
       .on(
         "postgres_changes",
-
         {
           event: "*",
           schema: "public",
           table: "Lead",
         },
-
         () => {
           getLeads();
         },
       )
-
       .subscribe((status) => {
         console.log("Realtime:", status);
       });
@@ -105,14 +104,14 @@ export default function AdminDashboard() {
 
       {/* STATS */}
 
-      {/* STATS */}
-
       <StatsCards leads={leads} />
 
       {/* TODAY PERFORMANCE */}
 
       <TodayStats leads={leads} />
+
       <FollowUpCards leads={leads} />
+
       <RecentLeads leads={leads} />
     </div>
   );

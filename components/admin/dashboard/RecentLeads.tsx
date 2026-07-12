@@ -1,10 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+
 import LeadDetailsDialog from "../leads/LeadDetailsDialog";
 
+import type { LeadDetails } from "@/types/lead";
+
 type Props = {
-  leads: any[];
+  leads: LeadDetails[];
 };
 
 export default function RecentLeads({ leads }: Props) {
@@ -17,7 +20,7 @@ export default function RecentLeads({ leads }: Props) {
     )
     .slice(0, 10);
 
-  function statusStyle(status: string) {
+  function statusStyle(status?: string | null) {
     switch (status) {
       case "JOINED":
         return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";

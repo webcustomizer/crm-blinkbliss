@@ -49,6 +49,9 @@ export interface LeadStatusHistory {
 
 export interface LeadDetails {
   id: string;
+  createdAt: string; // ✅ add this
+  updatedAt: string; // ✅ add this
+
   name?: string | null;
   phone: string;
   email?: string | null;

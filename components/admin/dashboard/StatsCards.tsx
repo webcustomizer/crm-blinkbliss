@@ -3,8 +3,13 @@
 import { useRouter } from "next/navigation";
 import { CalendarClock, AlertTriangle } from "lucide-react";
 
+type Lead = {
+  nextFollowUp?: string | Date | null;
+  status?: string;
+};
+
 type Props = {
-  leads: any[];
+  leads: Lead[];
 };
 
 export default function FollowUpCards({ leads }: Props) {

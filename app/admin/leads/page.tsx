@@ -1,7 +1,9 @@
-import LeadDialog from "@/components/admin/leads/LeadDialog";
+import { Suspense } from "react";
 import LeadsTable from "@/components/admin/leads/LeadTable";
 
 import { prisma } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
 
 export default async function LeadsPage() {
   const salespersons = await prisma.user.findMany({
@@ -30,7 +32,9 @@ export default async function LeadsPage() {
         </div>
       </div>
 
-      <LeadsTable salespersons={salespersons} />
+      <Suspense fallback={<div className="text-gray-400">Loading...</div>}>
+        <LeadsTable salespersons={salespersons} />
+      </Suspense>
     </div>
   );
 }
