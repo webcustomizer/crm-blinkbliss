@@ -11,9 +11,6 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
-    "@capacitor/android": "^8.4.1",
-    "@capacitor/cli": "^8.4.1",
-    "@capacitor/core": "^8.4.1",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@supabase/supabase-js": "^2.110.1",
