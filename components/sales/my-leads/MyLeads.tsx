@@ -30,16 +30,20 @@ interface Lead {
 export default function MyLeads() {
   const [leads, setLeads] = useState<Lead[]>([]);
 
+  // Sirf first page load ke liye
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
 
   const [status, setStatus] = useState("");
+
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
-  async function getLeads() {
+  async function getLeads(showLoader = false) {
     try {
-      setLoading(true);
+      if (showLoader) {
+        setLoading(true);
+      }
 
       const params = new URLSearchParams();
 
@@ -63,12 +67,15 @@ export default function MyLeads() {
     } catch (error) {
       console.log("My Leads Error:", error);
     } finally {
-      setLoading(false);
+      if (showLoader) {
+        setLoading(false);
+      }
     }
   }
 
   useEffect(() => {
-    void Promise.resolve().then(getLeads);
+    // Defer initial load to avoid synchronous setState within effect
+    const t = setTimeout(() => void getLeads(true), 0);
 
     const channel = supabase
       .channel("sales-my-leads")
@@ -81,8 +88,7 @@ export default function MyLeads() {
         },
         () => {
           console.log("My Leads Updated");
-
-          getLeads();
+          void getLeads(false);
         },
       )
       .subscribe((status) => {
@@ -90,13 +96,14 @@ export default function MyLeads() {
       });
 
     return () => {
+      clearTimeout(t);
       supabase.removeChannel(channel);
     };
   }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      getLeads();
+      void getLeads(false);
     }, 400);
 
     return () => clearTimeout(timer);
@@ -106,11 +113,11 @@ export default function MyLeads() {
     return (
       <div
         className="
-        flex
-        min-h-[60vh]
-        items-center
-        justify-center
-        text-[#D4AF37]
+          flex
+          min-h-[60vh]
+          items-center
+          justify-center
+          text-[#D4AF37]
         "
       >
         Loading Leads...
@@ -120,14 +127,12 @@ export default function MyLeads() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-
       <div>
         <h1
           className="
-          text-3xl
-          font-bold
-          text-[#D4AF37]
+            text-3xl
+            font-bold
+            text-[#D4AF37]
           "
         >
           My Leads
@@ -135,9 +140,9 @@ export default function MyLeads() {
 
         <p
           className="
-          mt-2
-          text-sm
-          text-zinc-400
+            mt-2
+            text-sm
+            text-zinc-400
           "
         >
           Manage your assigned leads and follow ups
@@ -152,19 +157,15 @@ export default function MyLeads() {
       />
 
       {/* Desktop */}
-
       <div className="hidden lg:block">
         <LeadsTable leads={leads} onView={(lead) => setSelectedLead(lead)} />
       </div>
 
       {/* Mobile */}
-
-      {/* Mobile */}
-
       <div
         className="
-        space-y-4
-        lg:hidden
+          space-y-4
+          lg:hidden
         "
       >
         {leads.map((lead) => (

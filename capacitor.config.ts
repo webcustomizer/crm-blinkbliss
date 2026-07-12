@@ -7,8 +7,8 @@ const config: CapacitorConfig = {
   webDir: "out",
 
   server: {
-    url: "http://localhost:3000",
-    cleartext: true,
+    url: "https://crm-blinkbliss.vercel.app",
+    cleartext: false,
   },
 };
 
