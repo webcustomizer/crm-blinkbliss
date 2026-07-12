@@ -68,12 +68,10 @@ export default function MyLeads() {
   }
 
   useEffect(() => {
-    getLeads();
+    void Promise.resolve().then(getLeads);
 
     const channel = supabase
-
       .channel("sales-my-leads")
-
       .on(
         "postgres_changes",
         {
@@ -81,14 +79,12 @@ export default function MyLeads() {
           schema: "public",
           table: "Lead",
         },
-
         () => {
           console.log("My Leads Updated");
 
           getLeads();
         },
       )
-
       .subscribe((status) => {
         console.log("My Leads Realtime:", status);
       });

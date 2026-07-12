@@ -18,6 +18,8 @@ interface Lead {
   nextFollowUp: string | null;
 
   createdAt: string;
+
+  remarks: string | null;
 }
 
 interface LeadsTableProps {

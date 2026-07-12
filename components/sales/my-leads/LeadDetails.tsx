@@ -260,7 +260,11 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
   }
 
   useEffect(() => {
-    getLeadDetails();
+    async function loadLeadDetails() {
+      await getLeadDetails();
+    }
+
+    loadLeadDetails();
   }, [leadId, getLeadDetails]);
 
   if (loading) {

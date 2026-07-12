@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Bell, Check } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
@@ -20,7 +20,7 @@ export default function NotificationBell() {
 
   const [open, setOpen] = useState(false);
 
-  async function fetchNotifications() {
+  const fetchNotifications = useCallback(async () => {
     try {
       const res = await fetch("/api/salesperson/notifications", {
         cache: "no-store",
@@ -29,28 +29,30 @@ export default function NotificationBell() {
       const data = await res.json();
 
       if (res.ok) {
-        setNotifications(data.notifications);
-
-        setUnreadCount(data.unreadCount);
+        setNotifications(Array.isArray(data?.notifications) ? data.notifications : []);
+        setUnreadCount(typeof data?.unreadCount === "number" ? data.unreadCount : 0);
       }
     } catch (error) {
       console.log("Notification fetch error", error);
     }
-  }
+  }, []);
 
-  async function markAsRead(id: string) {
-    try {
-      await fetch(`/api/salesperson/notifications/${id}`, {
-        method: "PATCH",
-      });
+  const markAsRead = useCallback(
+    async (id: string) => {
+      try {
+        await fetch(`/api/salesperson/notifications/${id}`, {
+          method: "PATCH",
+        });
 
-      fetchNotifications();
-    } catch (error) {
-      console.log("Mark read error", error);
-    }
-  }
+        await fetchNotifications();
+      } catch (error) {
+        console.log("Mark read error", error);
+      }
+    },
+    [fetchNotifications],
+  );
 
-  async function markAllAsRead() {
+  const markAllAsRead = useCallback(async () => {
     try {
       await fetch("/api/salesperson/notifications", {
         method: "PATCH",
@@ -63,10 +65,32 @@ export default function NotificationBell() {
     } catch (error) {
       console.log("Mark all read error", error);
     }
-  }
+  }, [fetchNotifications]);
 
   useEffect(() => {
-    fetchNotifications();
+    let isMounted = true;
+
+    const loadNotifications = async () => {
+      try {
+        const res = await fetch("/api/salesperson/notifications", {
+          cache: "no-store",
+        });
+
+        const data = await res.json();
+
+        if (!isMounted) return;
+
+        if (res.ok) {
+          setNotifications(Array.isArray(data?.notifications) ? data.notifications : []);
+          setUnreadCount(typeof data?.unreadCount === "number" ? data.unreadCount : 0);
+        }
+      } catch (error) {
+        if (!isMounted) return;
+        console.log("Notification fetch error", error);
+      }
+    };
+
+    void loadNotifications();
 
     const channel = supabase
       .channel("sales-notifications-ui")
@@ -82,7 +106,7 @@ export default function NotificationBell() {
         (payload) => {
           console.log("Realtime notification:", payload);
 
-          fetchNotifications();
+          void loadNotifications();
         },
       )
 
@@ -91,6 +115,7 @@ export default function NotificationBell() {
       });
 
     return () => {
+      isMounted = false;
       supabase.removeChannel(channel);
     };
   }, []);
