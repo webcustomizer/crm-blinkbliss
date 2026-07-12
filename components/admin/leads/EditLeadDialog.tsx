@@ -110,7 +110,7 @@ export default function EditLeadDialog({
 
           remarks: form.remarks,
 
-          assignedToId: lead.assignedToId,
+          assignedToId: lead.assignedTo?.id ?? null,
         }),
       });
 
@@ -137,7 +137,7 @@ export default function EditLeadDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
         className="
-        max-w-150!
+        !max-w-[600px]
         bg-[#111111]
         border
         border-[#D4AF37]/30
