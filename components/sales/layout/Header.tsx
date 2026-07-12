@@ -141,12 +141,12 @@ export default function Header({
             <p className="text-sm font-semibold text-white">{userName}</p>
           </div>
 
-          {/* Avatar */}
+          {/* Avatar - hidden on mobile, visible from lg breakpoint up */}
 
           <Link
             href="/sales/profile"
             className="
-            flex
+            hidden
             h-10
             w-10
             shrink-0
@@ -159,6 +159,7 @@ export default function Header({
             transition
             hover:scale-105
             active:scale-95
+            lg:flex
             "
           >
             {userName.charAt(0).toUpperCase()}
