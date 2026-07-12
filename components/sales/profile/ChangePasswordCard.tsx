@@ -64,9 +64,8 @@ export default function ChangePasswordCard() {
       setNewPassword("");
 
       setConfirmPassword("");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Something went wrong";
-      toast.error(message);
+    } catch (error: any) {
+      toast.error(error.message || "Something went wrong");
     } finally {
       setLoading(false);
     }

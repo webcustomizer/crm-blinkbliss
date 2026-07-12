@@ -260,13 +260,23 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
   }
 
   useEffect(() => {
-    void Promise.resolve().then(getLeadDetails);
+    getLeadDetails();
   }, [leadId, getLeadDetails]);
 
   if (loading) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
         <div className="text-[#D4AF37]">Loading Lead...</div>
+      </div>
+    );
+  }
+
+  if (!lead) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+        <div className="rounded-xl border border-[#D4AF37]/20 bg-[#161616] px-6 py-4 text-[#D4AF37]">
+          Lead not found
+        </div>
       </div>
     );
   }

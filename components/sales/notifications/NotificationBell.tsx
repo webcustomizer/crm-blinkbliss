@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { Bell, Check } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
@@ -20,7 +20,7 @@ export default function NotificationBell() {
 
   const [open, setOpen] = useState(false);
 
-  const fetchNotifications = useCallback(async () => {
+  async function fetchNotifications() {
     try {
       const res = await fetch("/api/salesperson/notifications", {
         cache: "no-store",
@@ -36,7 +36,7 @@ export default function NotificationBell() {
     } catch (error) {
       console.log("Notification fetch error", error);
     }
-  }, []);
+  }
 
   async function markAsRead(id: string) {
     try {
@@ -66,7 +66,7 @@ export default function NotificationBell() {
   }
 
   useEffect(() => {
-    void Promise.resolve().then(fetchNotifications);
+    fetchNotifications();
 
     const channel = supabase
       .channel("sales-notifications-ui")
@@ -82,7 +82,7 @@ export default function NotificationBell() {
         (payload) => {
           console.log("Realtime notification:", payload);
 
-          void Promise.resolve().then(fetchNotifications);
+          fetchNotifications();
         },
       )
 
@@ -93,7 +93,7 @@ export default function NotificationBell() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchNotifications]);
+  }, []);
 
   return (
     <div className="relative flex-shrink-0">

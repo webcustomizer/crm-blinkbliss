@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Megaphone, Pin } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,7 +24,7 @@ export default function AnnouncementList() {
 
   const pinnedRef = useRef<HTMLDivElement | null>(null);
 
-  const loadAnnouncements = useCallback(async () => {
+  async function loadAnnouncements() {
     try {
       const res = await fetch("/api/salesperson/announcements", {
         cache: "no-store",
@@ -38,32 +38,37 @@ export default function AnnouncementList() {
     } finally {
       setLoading(false);
     }
+  }
+
+  useEffect(() => {
+    loadAnnouncements();
   }, []);
 
   useEffect(() => {
-    void Promise.resolve().then(loadAnnouncements);
-  }, [loadAnnouncements]);
-
-  useEffect(() => {
     const channel = supabase
+
       .channel("salesperson-announcements")
+
       .on(
         "postgres_changes",
+
         {
           event: "*",
           schema: "public",
           table: "Announcement",
         },
+
         () => {
-          void Promise.resolve().then(loadAnnouncements);
+          loadAnnouncements();
         },
       )
+
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [loadAnnouncements]);
+  }, []);
 
   const sortedAnnouncements = [...announcements].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
