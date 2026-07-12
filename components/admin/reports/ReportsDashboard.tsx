@@ -8,8 +8,37 @@ import SalesReportTable from "./SalesReportTable";
 
 import { supabase } from "@/lib/supabase";
 
+type LeadStatus =
+  | "CALLED"
+  | "NEED_MORE_FOLLOW_UP"
+  | "TRAINING_ATTENDED"
+  | "SEAT_RESERVED"
+  | "JOINED"
+  | "DEAD"
+  | string;
+
+type Lead = {
+  assignedTo?: {
+    id: string;
+    name: string;
+  };
+  status: LeadStatus;
+};
+
+type SalespersonReport = {
+  id: string;
+  name: string;
+  total: number;
+  called: number;
+  followups: number;
+  training: number;
+  reserved: number;
+  joined: number;
+  dead: number;
+};
+
 export default function ReportsDashboard() {
-  const [leads, setLeads] = useState<any[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
 
   const [loading, setLoading] = useState(true);
 
@@ -30,11 +59,10 @@ export default function ReportsDashboard() {
   }
 
   useEffect(() => {
-    getLeads();
+    void Promise.resolve().then(getLeads);
 
     const channel = supabase
       .channel("reports-dashboard")
-
       .on(
         "postgres_changes",
         {
@@ -42,12 +70,10 @@ export default function ReportsDashboard() {
           schema: "public",
           table: "Lead",
         },
-
         () => {
           getLeads();
         },
       )
-
       .subscribe();
 
     return () => {
@@ -69,7 +95,7 @@ export default function ReportsDashboard() {
     );
   }
 
-  const salespersonMap: any = {};
+  const salespersonMap: Record<string, SalespersonReport> = {};
 
   leads.forEach((lead) => {
     const person = lead.assignedTo;
