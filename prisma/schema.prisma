@@ -1,0 +1,295 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =====================
+// ENUMS
+// =====================
+
+enum Role {
+  ADMIN
+  SALESPERSON
+}
+
+enum LeadStatus {
+  NEW
+  CALLED
+  NEED_MORE_FOLLOW_UP
+  TRAINING_ATTENDED
+  SEAT_RESERVED
+  JOINED
+  DEAD
+}
+
+enum LeadCompletion {
+  COMPLETE
+  INCOMPLETE
+}
+
+enum ActivityAction {
+  LOGIN
+  LOGOUT
+
+  LEAD_UPDATED
+
+  STATUS_CHANGED
+
+  FOLLOWUP_COMPLETED
+
+  REMARK_UPDATED
+
+  ANNOUNCEMENT_CREATED
+
+  PASSWORD_CHANGED
+}
+
+// =====================
+// USER MODEL
+// =====================
+
+model User {
+  id String @id @default(cuid())
+
+  name String
+
+  email String @unique
+
+  password String
+
+  phone String?
+
+  role Role @default(SALESPERSON)
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  // Relations
+
+  leads Lead[]
+
+  followups FollowUp[]
+
+  statusLogs StatusHistory[]
+
+  notifications Notification[]
+  activityLogs  ActivityLog[]
+  announcements Announcement[]
+}
+
+// =====================
+// LEAD MODEL
+// =====================
+
+model Lead {
+  id String @id @default(cuid())
+
+  name String?
+
+  phone String
+
+  email String?
+
+  city String?
+
+  age Int?
+
+  purpose String?
+
+  currentStatus String?
+
+  bestTimeToReach String?
+
+  willingToAttendTraining Boolean?
+
+  status LeadStatus @default(NEW)
+
+  completion LeadCompletion @default(INCOMPLETE)
+
+  remarks String?
+
+  // =====================
+  // FOLLOW UP TRACKING
+  // =====================
+
+  followUpCount Int @default(0)
+
+  lastFollowUp DateTime?
+
+  nextFollowUp DateTime?
+
+  assignedToId String?
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  // Relations
+
+  assignedTo User? @relation(fields: [assignedToId], references: [id])
+
+  followups FollowUp[]
+
+  statusHistory StatusHistory[]
+
+  activityLogs ActivityLog[]
+}
+
+// =====================
+// FOLLOW UP MODEL
+// =====================
+
+model FollowUp {
+  id String @id @default(cuid())
+
+  remarks String
+
+  // 1 = First Follow Up
+  // 2 = Second Follow Up
+  // 3 = Third Follow Up
+
+  followUpNumber Int @default(1)
+
+  nextFollowUp DateTime?
+
+  createdAt DateTime @default(now())
+
+  // Relations
+
+  leadId String
+
+  userId String
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// =====================
+// STATUS HISTORY MODEL
+// =====================
+
+model StatusHistory {
+  id String @id @default(cuid())
+
+  oldStatus LeadStatus
+
+  newStatus LeadStatus
+
+  changedAt DateTime @default(now())
+
+  // Relations
+
+  leadId String
+
+  changedById String
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  changedBy User @relation(fields: [changedById], references: [id])
+}
+
+// =====================
+// NOTIFICATION MODEL
+// =====================
+
+model Notification {
+  id String @id @default(cuid())
+
+  title String
+
+  message String
+
+  isRead Boolean @default(false)
+
+  userId String
+
+  announcementId String?
+
+  createdAt DateTime @default(now())
+
+  // Relations
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  announcement Announcement? @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+}
+
+// =====================
+// CRM SETTINGS MODEL
+// =====================
+
+model CRMSetting {
+  id String @id @default(cuid())
+
+  firstFollowUpDays Int @default(0)
+
+  secondFollowUpDays Int @default(7)
+
+  thirdFollowUpDays Int @default(20)
+
+  maxFollowUps Int @default(3)
+
+  autoDeadEnabled Boolean @default(true)
+
+  deadAfterDays Int @default(30)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+
+// =====================
+// ANNOUNCEMENT MODEL   
+
+model Announcement {
+  id String @id @default(cuid())
+
+  title String
+
+  message String
+
+  isPinned Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  createdById String
+
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  notifications Notification[]
+}
+
+// =====================
+// ACTIVITY LOG MODEL
+// =====================
+
+model ActivityLog {
+  id String @id @default(cuid())
+
+  action ActivityAction
+
+  description String
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  // Relations
+
+  userId String
+
+  leadId String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  lead Lead? @relation(fields: [leadId], references: [id], onDelete: Cascade)
+}
