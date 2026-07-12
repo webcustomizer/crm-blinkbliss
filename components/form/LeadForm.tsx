@@ -255,20 +255,6 @@ transition
       <div className="mx-auto max-w-3xl">
         {/* HERO */}
 
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-[#D4AF37]/10">
-            <Sparkles className="h-10 w-10 text-[#D4AF37]" />
-          </div>
-
-          <h1 className="text-3xl font-bold text-white">
-            Start Your Online Journey
-          </h1>
-
-          <p className="mt-3 text-gray-400">
-            Fill in the form below and our team will contact you shortly.
-          </p>
-        </div>
-
         <form
           onSubmit={submit}
           className="rounded-3xl border border-[#D4AF37]/20 bg-[#111111] p-6 md:p-10"

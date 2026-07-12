@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -47,6 +48,16 @@ export default function LeadFormCard() {
   if (submitted) {
     return (
       <div className="flex flex-col items-center justify-center text-center p-10">
+        <div className="mb-6 relative h-24 w-24">
+          <Image
+            src="/logo.png"
+            alt="Blink and Bliss"
+            fill
+            className="object-contain"
+            priority
+          />
+        </div>
+
         <div
           className="
           mb-8
@@ -132,6 +143,16 @@ export default function LeadFormCard() {
       "
     >
       <div className="mb-8 text-center">
+        <div className="mx-auto mb-4 relative h-20 w-20">
+          <Image
+            src="/logo.png"
+            alt="Blink and Bliss"
+            fill
+            className="object-contain"
+            priority
+          />
+        </div>
+
         <h2
           className="
           text-3xl
