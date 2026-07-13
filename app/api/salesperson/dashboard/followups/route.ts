@@ -4,6 +4,28 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 
+// Pakistan Standard Time = UTC+5 (no daylight saving)
+const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
+
+/**
+ * Returns a UTC Date object that represents the start or end of TODAY
+ * in PKT, correctly converted back to UTC for DB comparisons.
+ * Works correctly regardless of the server's system timezone.
+ */
+function getPKTDayBoundary(daysOffset: number, endOfDay: boolean): Date {
+  const pktNow = new Date(Date.now() + PKT_OFFSET_MS);
+
+  const year = pktNow.getUTCFullYear();
+  const month = pktNow.getUTCMonth();
+  const day = pktNow.getUTCDate() + daysOffset;
+
+  const boundaryInPKT = endOfDay
+    ? new Date(Date.UTC(year, month, day, 23, 59, 59, 999))
+    : new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+
+  return new Date(boundaryInPKT.getTime() - PKT_OFFSET_MS);
+}
+
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -34,13 +56,11 @@ export async function GET() {
       );
     }
 
-    const start = new Date();
+    // Today Start (00:00:00 PKT, converted to correct UTC instant)
+    const start = getPKTDayBoundary(0, false);
 
-    start.setHours(0, 0, 0, 0);
-
-    const end = new Date();
-
-    end.setHours(23, 59, 59, 999);
+    // Today End (23:59:59.999 PKT, converted to correct UTC instant)
+    const end = getPKTDayBoundary(0, true);
 
     const followUps = await prisma.lead.findMany({
       where: {

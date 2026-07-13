@@ -143,8 +143,24 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
 
   const maxFollowUpsReached = (lead?.followUpCount || 0) >= 4;
 
-  const nextFollowUpReached =
-    !lead?.nextFollowUp || new Date(lead.nextFollowUp) <= new Date();
+  const nextFollowUpReached = (() => {
+    if (!lead?.nextFollowUp) return true;
+
+    // Compare calendar dates in PKT, not exact timestamps.
+    // A follow-up is "due" the whole day it's scheduled for —
+    // not only after the exact stored time (e.g. 12:00 PM) has passed.
+    const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
+
+    const followUpPKT = new Date(
+      new Date(lead.nextFollowUp).getTime() + PKT_OFFSET_MS,
+    );
+    const nowPKT = new Date(Date.now() + PKT_OFFSET_MS);
+
+    const followUpDateStr = followUpPKT.toISOString().split("T")[0];
+    const nowDateStr = nowPKT.toISOString().split("T")[0];
+
+    return followUpDateStr <= nowDateStr;
+  })();
 
   const [form, setForm] = useState({
     name: "",
@@ -843,11 +859,11 @@ text-white
                 >
                   <option value="NEW">NEW</option>
                   <option value="CALLED">CALLED</option>
+                  <option value="SEAT_RESERVED">SEAT RESERVED</option>
+                  <option value="TRAINING_ATTENDED">TRAINING ATTENDED</option>
                   <option value="NEED_MORE_FOLLOW_UP">
                     NEED MORE FOLLOW UP
                   </option>
-                  <option value="TRAINING_ATTENDED">TRAINING ATTENDED</option>
-                  <option value="SEAT_RESERVED">SEAT RESERVED</option>
                   <option value="JOINED">JOINED</option>
                   <option value="DEAD">DEAD</option>
                 </select>
