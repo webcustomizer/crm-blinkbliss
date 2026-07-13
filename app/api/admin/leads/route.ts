@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+const GOOGLE_SHEET_WEBHOOK = process.env.GOOGLE_SHEET_WEBHOOK;
 
 export async function GET(req: Request) {
   try {
@@ -237,6 +238,42 @@ export async function POST(req: Request) {
       },
     });
 
+    // =======================================
+    // SAVE TO GOOGLE SHEET
+    // =======================================
+
+    if (GOOGLE_SHEET_WEBHOOK) {
+      try {
+        const response = await fetch(GOOGLE_SHEET_WEBHOOK, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            leadId: lead.id,
+            name: lead.name,
+            phone: lead.phone,
+            email: lead.email,
+            city: lead.city,
+            age: lead.age,
+            purpose: lead.purpose,
+            currentStatus: lead.currentStatus,
+            bestTimeToReach: lead.bestTimeToReach,
+            willingToAttendTraining: lead.willingToAttendTraining,
+            assignedTo: "",
+            createdAt: lead.createdAt,
+          }),
+        });
+
+        console.log("Google Sheet Status:", response.status);
+
+        const text = await response.text();
+
+        console.log("Google Sheet Response:", text);
+      } catch (err) {
+        console.error("Google Sheet Error:", err);
+      }
+    }
     return NextResponse.json({
       success: true,
 
