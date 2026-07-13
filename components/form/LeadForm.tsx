@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 type LeadFormData = {
   name: string;
@@ -15,13 +15,20 @@ type LeadFormData = {
   willingToAttendTraining: boolean | null;
 };
 
+// Accepts either the old boolean-only contract, or the richer
+// success/message shape, so this component works with either
+// parent implementation and can show a real error message
+// whenever the parent provides one.
+type SubmitResult = boolean | { success: boolean; message?: string };
+
 interface LeadFormProps {
   loading: boolean;
-  onSubmit: (data: LeadFormData) => Promise<boolean>;
+  onSubmit: (data: LeadFormData) => Promise<SubmitResult>;
 }
 
 export default function LeadForm({ loading, onSubmit }: LeadFormProps) {
   const [success, setSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [errors, setErrors] = useState<
     Partial<Record<keyof LeadFormData, string>>
@@ -62,9 +69,14 @@ export default function LeadForm({ loading, onSubmit }: LeadFormProps) {
       ...prev,
       [name]: "",
     }));
+
+    setSubmitError(null);
   }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+
+    setSubmitError(null);
 
     const newErrors: Partial<Record<keyof LeadFormData, string>> = {};
 
@@ -122,8 +134,12 @@ export default function LeadForm({ loading, onSubmit }: LeadFormProps) {
     }
 
     try {
-      const ok = await onSubmit(form);
-      if (ok) {
+      const result = await onSubmit(form);
+
+      const isSuccess = typeof result === "boolean" ? result : result.success;
+      const message = typeof result === "boolean" ? undefined : result.message;
+
+      if (isSuccess) {
         setSuccess(true);
         setForm({
           name: "",
@@ -136,9 +152,11 @@ export default function LeadForm({ loading, onSubmit }: LeadFormProps) {
           bestTimeToReach: "",
           willingToAttendTraining: null,
         });
+      } else {
+        setSubmitError(message || "Failed to submit form. Please try again.");
       }
     } catch {
-      alert("Failed to submit form.");
+      setSubmitError("Failed to submit form. Please try again.");
     }
   }
 
@@ -166,6 +184,7 @@ text-white
 outline-none
 transition
 `;
+
   if (success) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black px-5">
@@ -197,7 +216,7 @@ transition
           text-5xl
           "
           >
-            ✅
+            {"\u2705"}
           </div>
 
           <h1 className="text-3xl font-bold text-[#D4AF37]">
@@ -250,17 +269,14 @@ transition
       </div>
     );
   }
+
   return (
     <div className="min-h-screen bg-black py-10 px-4 rounded-3xl">
       <div className="mx-auto max-w-3xl">
-        {/* HERO */}
-
         <form
           onSubmit={submit}
           className="rounded-3xl border border-[#D4AF37]/20 bg-[#111111] p-6 md:p-10"
         >
-          {/* BASIC */}
-
           <div>
             <h2 className="mb-6 text-xl font-bold text-[#D4AF37]">
               Basic Information
@@ -370,8 +386,6 @@ transition
             </div>
           </div>
 
-          {/* DETAILS */}
-
           <div className="mt-10">
             <h2 className="mb-6 text-xl font-bold text-[#D4AF37]">
               Your Details
@@ -426,13 +440,9 @@ transition
                   }`}
                 >
                   <option value="">Select Purpose</option>
-
                   <option>To earn extra income</option>
-
                   <option>To learn new skills</option>
-
                   <option>To start an online business</option>
-
                   <option>Looking for better career opportunities</option>
                 </select>
               </div>
@@ -460,17 +470,11 @@ transition
                   }`}
                 >
                   <option value="">Select Status</option>
-
                   <option value="Student">Student</option>
-
                   <option value="Job Holder">Job Holder</option>
-
                   <option value="Business Owner">Business Owner</option>
-
                   <option value="Housewife">Housewife</option>
-
                   <option value="Freelancer">Freelancer</option>
-
                   <option value="Unemployed">Unemployed</option>
                 </select>
               </div>
@@ -498,22 +502,15 @@ transition
                   }`}
                 >
                   <option value="">Select Time</option>
-
                   <option>9:00 AM - 12:00 PM</option>
-
                   <option>12:00 PM - 3:00 PM</option>
-
                   <option>3:00 PM - 6:00 PM</option>
-
                   <option>6:00 PM - 9:00 PM</option>
-
                   <option>9:00 PM - 11:00 PM</option>
                 </select>
               </div>
             </div>
           </div>
-
-          {/* TRAINING */}
 
           <div className="mt-10">
             <h2 className="mb-5 text-xl font-bold text-[#D4AF37]">Training</h2>
@@ -576,9 +573,12 @@ transition
             </div>
           </div>
 
-          {/* BUTTON */}
-
           <div className="mt-12">
+            {submitError && (
+              <div className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                {submitError}
+              </div>
+            )}
             <button
               disabled={loading}
               type="submit"

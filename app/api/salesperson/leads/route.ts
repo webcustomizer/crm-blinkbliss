@@ -44,74 +44,94 @@ export async function GET(req: Request) {
 
     const status = searchParams.get("status") || "ALL";
 
-    const leads = await prisma.lead.findMany({
-      where: {
-        assignedToId: salespersonId,
+    // Pagination params — default page 1, 10 per page (LeadsTable ka default pageSize)
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
 
-        ...(status !== "ALL" && {
-          status: status as any,
-        }),
+    const limit = Math.max(1, Number(searchParams.get("limit")) || 10);
 
-        ...(search && {
-          OR: [
-            {
-              name: {
-                contains: search,
-                mode: "insensitive",
-              },
+    const where = {
+      assignedToId: salespersonId,
+
+      ...(status !== "ALL" && {
+        status: status as any,
+      }),
+
+      ...(search && {
+        OR: [
+          {
+            name: {
+              contains: search,
+              mode: "insensitive" as const,
             },
+          },
 
-            {
-              phone: {
-                contains: search,
-              },
+          {
+            phone: {
+              contains: search,
             },
+          },
 
-            {
-              city: {
-                contains: search,
-                mode: "insensitive",
-              },
+          {
+            city: {
+              contains: search,
+              mode: "insensitive" as const,
             },
-          ],
-        }),
-      },
+          },
+        ],
+      }),
+    };
 
-      orderBy: {
-        createdAt: "desc",
-      },
+    // Total count aur current page ka data dono ek sath (parallel) fetch karte hain
+    const [total, leads] = await Promise.all([
+      prisma.lead.count({ where }),
 
-      select: {
-        id: true,
+      prisma.lead.findMany({
+        where,
 
-        name: true,
+        orderBy: {
+          createdAt: "desc",
+        },
 
-        phone: true,
+        skip: (page - 1) * limit,
 
-        email: true,
+        take: limit,
 
-        city: true,
+        select: {
+          id: true,
 
-        age: true,
+          name: true,
 
-        purpose: true,
+          phone: true,
 
-        status: true,
+          email: true,
 
-        remarks: true,
+          city: true,
 
-        nextFollowUp: true,
+          age: true,
 
-        createdAt: true,
+          purpose: true,
 
-        updatedAt: true,
-      },
-    });
+          status: true,
+
+          remarks: true,
+
+          nextFollowUp: true,
+
+          createdAt: true,
+
+          updatedAt: true,
+        },
+      }),
+    ]);
 
     return NextResponse.json({
       leads,
 
-      total: leads.length,
+      total,
+
+      page,
+
+      totalPages: Math.max(1, Math.ceil(total / limit)),
     });
   } catch (error) {
     console.error("Salesperson Leads Error:", error);

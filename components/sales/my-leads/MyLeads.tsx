@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
 
-import LeadCard from "./LeadCard";
 import LeadsTable from "./LeadsTable";
 import LeadFilters from "./LeadFilters";
 import LeadDetails from "./LeadDetails";
@@ -27,8 +26,16 @@ interface Lead {
   remarks: string | null;
 }
 
+const PAGE_SIZE = 10;
+
 export default function MyLeads() {
   const [leads, setLeads] = useState<Lead[]>([]);
+
+  const [total, setTotal] = useState(0);
+
+  const [totalPages, setTotalPages] = useState(1);
+
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Sirf first page load ke liye
   const [loading, setLoading] = useState(true);
@@ -39,7 +46,7 @@ export default function MyLeads() {
 
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
-  async function getLeads(showLoader = false) {
+  async function getLeads(showLoader = false, page = currentPage) {
     try {
       if (showLoader) {
         setLoading(true);
@@ -55,6 +62,9 @@ export default function MyLeads() {
         params.append("status", status);
       }
 
+      params.append("page", String(page));
+      params.append("limit", String(PAGE_SIZE));
+
       const res = await fetch(`/api/salesperson/leads?${params.toString()}`, {
         cache: "no-store",
       });
@@ -63,6 +73,8 @@ export default function MyLeads() {
 
       if (res.ok) {
         setLeads(data.leads || []);
+        setTotal(data.total || 0);
+        setTotalPages(data.totalPages || 1);
       }
     } catch (error) {
       console.log("My Leads Error:", error);
@@ -75,7 +87,7 @@ export default function MyLeads() {
 
   useEffect(() => {
     // Defer initial load to avoid synchronous setState within effect
-    const t = setTimeout(() => void getLeads(true), 0);
+    const t = setTimeout(() => void getLeads(true, 1), 0);
 
     const channel = supabase
       .channel("sales-my-leads")
@@ -88,7 +100,7 @@ export default function MyLeads() {
         },
         () => {
           console.log("My Leads Updated");
-          void getLeads(false);
+          void getLeads(false, currentPage);
         },
       )
       .subscribe((status) => {
@@ -99,15 +111,24 @@ export default function MyLeads() {
       clearTimeout(t);
       supabase.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Search/status change hone par page 1 par reset karke fetch karein
   useEffect(() => {
     const timer = setTimeout(() => {
-      void getLeads(false);
+      setCurrentPage(1);
+      void getLeads(false, 1);
     }, 400);
 
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, status]);
+
+  function handlePageChange(page: number) {
+    setCurrentPage(page);
+    void getLeads(false, page);
+  }
 
   if (loading) {
     return (
@@ -156,26 +177,16 @@ export default function MyLeads() {
         setStatus={setStatus}
       />
 
-      {/* Desktop */}
-      <div className="hidden lg:block">
-        <LeadsTable leads={leads} onView={(lead) => setSelectedLead(lead)} />
-      </div>
-
-      {/* Mobile */}
-      <div
-        className="
-          space-y-4
-          lg:hidden
-        "
-      >
-        {leads.map((lead) => (
-          <LeadCard
-            key={lead.id}
-            lead={lead}
-            onView={() => setSelectedLead(lead)}
-          />
-        ))}
-      </div>
+      {/* Responsive: table on desktop, cards on mobile — server-side pagination */}
+      <LeadsTable
+        leads={leads}
+        onView={(lead) => setSelectedLead(lead)}
+        total={total}
+        totalPages={totalPages}
+        currentPage={currentPage}
+        onPageChange={handlePageChange}
+        pageSize={PAGE_SIZE}
+      />
 
       {selectedLead && (
         <LeadDetails

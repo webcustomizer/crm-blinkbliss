@@ -29,17 +29,23 @@ export default function LeadFormCard() {
       const json = await res.json();
 
       if (!json.success) {
+        // Show it as a toast too (in case Toaster is mounted),
+        // and return the real message so LeadForm can display it
+        // inline as well.
         toast.error(json.message || "Failed to submit form.");
-        return false;
+        return { success: false, message: json.message };
       }
 
       setSubmitted(true);
-      return true;
+      return { success: true };
     } catch (error) {
       console.log(error);
 
       toast.error("Something went wrong.");
-      return false;
+      return {
+        success: false,
+        message: "Something went wrong. Please try again.",
+      };
     } finally {
       setLoading(false);
     }
@@ -47,8 +53,44 @@ export default function LeadFormCard() {
 
   if (submitted) {
     return (
-      <div className="flex flex-col items-center justify-center text-center p-10">
-        <div className="mb-6 relative h-24 w-24">
+      <div
+        className="
+      relative
+      flex
+      flex-col
+      items-center
+      justify-center
+      overflow-hidden
+      rounded-3xl
+      border
+      border-[#D4AF37]/30
+      bg-gradient-to-b
+      from-[#1a1a1a]
+      to-black
+      p-10
+      text-center
+      shadow-2xl
+      shadow-[#D4AF37]/10
+      md:p-16
+      "
+      >
+        {/* Decorative glow */}
+        <div
+          className="
+        pointer-events-none
+        absolute
+        -top-24
+        left-1/2
+        h-64
+        w-64
+        -translate-x-1/2
+        rounded-full
+        bg-[#D4AF37]/20
+        blur-3xl
+        "
+        />
+
+        <div className="relative mb-6 h-20 w-20 md:h-24 md:w-24">
           <Image
             src="/logo.png"
             alt="Blink and Bliss"
@@ -60,49 +102,94 @@ export default function LeadFormCard() {
 
         <div
           className="
-          mb-8
-          flex
-          h-28
-          w-28
-          items-center
-          justify-center
-          rounded-full
-          bg-[#D4AF37]/10
-          ring-8
-          ring-[#D4AF37]/10
-          "
+  relative
+  mb-8
+  flex
+  h-28
+  w-28
+  items-center
+  justify-center
+  rounded-full
+  bg-gradient-to-br
+  from-green-500/20
+  to-green-500/5
+  ring-1
+  ring-green-500/40
+  ring-offset-4
+  ring-offset-black
+  "
         >
-          <CheckCircle2 size={60} className="text-[#D4AF37]" />
+          <div
+            className="
+    absolute
+    inset-0
+    animate-ping
+    rounded-full
+    bg-green-500/10
+    "
+          />
+          <CheckCircle2
+            size={56}
+            strokeWidth={1.75}
+            className="relative text-green-500 drop-shadow-[0_0_8px_rgba(34,197,94,0.5)]"
+          />
         </div>
+
+        <span
+          className="
+  mb-3
+  rounded-full
+  border
+  border-[#D4AF37]/30
+  bg-[#D4AF37]/10
+  px-4
+  py-1
+  text-xs
+  font-semibold
+  uppercase
+  tracking-widest
+  text-[#D4AF37]
+  "
+        >
+          Application Received
+        </span>
 
         <h2
           className="
-          text-4xl
-          font-bold
-          text-[#D4AF37]
-          "
+        relative
+        bg-gradient-to-b
+        from-[#f2d478]
+        to-[#D4AF37]
+        bg-clip-text
+        text-4xl
+        font-bold
+        text-transparent
+        md:text-5xl
+        "
         >
           Thank You!
         </h2>
 
         <p
           className="
-          mt-5
-          max-w-md
-          text-lg
-          leading-8
-          text-gray-300
-          "
+        relative
+        mt-5
+        max-w-md
+        text-lg
+        leading-8
+        text-gray-300
+        "
         >
           Your information has been received successfully.
         </p>
 
         <p
           className="
-          mt-3
-          max-w-md
-          text-gray-400
-          "
+        relative
+        mt-3
+        max-w-md
+        text-gray-400
+        "
         >
           One of our business consultants will contact you soon through WhatsApp
           or Phone Call.
@@ -111,16 +198,22 @@ export default function LeadFormCard() {
         <button
           onClick={() => location.reload()}
           className="
-          mt-10
-          rounded-xl
-          bg-[#D4AF37]
-          px-8
-          py-3
-          font-semibold
-          text-black
-          transition
-          hover:scale-105
-          "
+        relative
+        mt-10
+        rounded-xl
+        bg-gradient-to-r
+        from-[#D4AF37]
+        to-[#c89d1d]
+        px-8
+        py-3
+        font-semibold
+        text-black
+        shadow-lg
+        shadow-[#D4AF37]/20
+        transition
+        hover:scale-105
+        hover:shadow-[#D4AF37]/40
+        "
         >
           Submit Another Response
         </button>
