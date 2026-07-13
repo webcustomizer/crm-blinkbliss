@@ -276,63 +276,69 @@ export async function PATCH(
         id,
       },
 
-      data: {
-        ...(body.name !== undefined && {
-          name: body.name,
-        }),
+      data: isDeadToNewReset
+        ? {
+            // 🔒 Sirf reset + status change allow — baqi fields is action mein touch nahi honge
+            status: body.status,
+            ...resetUpdate,
+          }
+        : {
+            ...(body.name !== undefined && {
+              name: body.name,
+            }),
 
-        ...(body.phone !== undefined && {
-          phone: body.phone,
-        }),
+            ...(body.phone !== undefined && {
+              phone: body.phone,
+            }),
 
-        ...(body.email !== undefined && {
-          email: body.email,
-        }),
+            ...(body.email !== undefined && {
+              email: body.email,
+            }),
 
-        ...(body.city !== undefined && {
-          city: body.city,
-        }),
+            ...(body.city !== undefined && {
+              city: body.city,
+            }),
 
-        ...(body.age !== undefined && {
-          age: body.age,
-        }),
+            ...(body.age !== undefined && {
+              age: body.age,
+            }),
 
-        ...(body.purpose !== undefined && {
-          purpose: body.purpose,
-        }),
+            ...(body.purpose !== undefined && {
+              purpose: body.purpose,
+            }),
 
-        ...(body.currentStatus !== undefined && {
-          currentStatus: body.currentStatus,
-        }),
+            ...(body.currentStatus !== undefined && {
+              currentStatus: body.currentStatus,
+            }),
 
-        ...(body.bestTimeToReach !== undefined && {
-          bestTimeToReach: body.bestTimeToReach,
-        }),
+            ...(body.bestTimeToReach !== undefined && {
+              bestTimeToReach: body.bestTimeToReach,
+            }),
 
-        ...(body.willingToAttendTraining !== undefined && {
-          willingToAttendTraining: body.willingToAttendTraining,
-        }),
+            ...(body.willingToAttendTraining !== undefined && {
+              willingToAttendTraining: body.willingToAttendTraining,
+            }),
 
-        ...(body.status !== undefined && {
-          status: body.status,
-        }),
+            ...(body.status !== undefined && {
+              status: body.status,
+            }),
 
-        ...(body.remarks !== undefined && {
-          remarks: body.remarks,
-        }),
+            ...(body.remarks !== undefined && {
+              remarks: body.remarks,
+            }),
 
-        ...(body.assignedToId !== undefined && {
-          assignedToId: body.assignedToId || null,
-        }),
+            ...(body.assignedToId !== undefined && {
+              assignedToId: body.assignedToId || null,
+            }),
 
-        ...(body.nextFollowUp !== undefined && {
-          nextFollowUp: body.nextFollowUp ? new Date(body.nextFollowUp) : null,
-        }),
+            ...(body.nextFollowUp !== undefined && {
+              nextFollowUp: body.nextFollowUp
+                ? new Date(body.nextFollowUp)
+                : null,
+            }),
 
-        ...followUpUpdate,
-
-        ...resetUpdate,
-      },
+            ...followUpUpdate,
+          },
     });
 
     // STATUS HISTORY SAVE
