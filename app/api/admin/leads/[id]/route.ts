@@ -170,6 +170,37 @@ export async function PATCH(
       );
     }
 
+    // ==========================
+    // DEAD -> NEW RESET
+    // ==========================
+    // Jab koi DEAD lead dobara NEW status mein le jayi jaye, usay
+    // bilkul fresh lead ki tarah reset karte hain: follow-up count,
+    // dates, remarks, aur poori follow-up/status history clear ho jati hai.
+    const isDeadToNewReset = oldLead.status === "DEAD" && body.status === "NEW";
+
+    let resetUpdate: any = {};
+
+    if (isDeadToNewReset) {
+      await prisma.followUp.deleteMany({
+        where: {
+          leadId: id,
+        },
+      });
+
+      await prisma.statusHistory.deleteMany({
+        where: {
+          leadId: id,
+        },
+      });
+
+      resetUpdate = {
+        followUpCount: 0,
+        lastFollowUp: null,
+        nextFollowUp: null,
+        remarks: null,
+      };
+    }
+
     let followUpUpdate: any = {};
 
     // ==========================
@@ -299,14 +330,18 @@ export async function PATCH(
         }),
 
         ...followUpUpdate,
+
+        ...resetUpdate,
       },
     });
 
     // STATUS HISTORY SAVE
+    // Reset case ke liye history save nahi karte, kyunke lead ab
+    // bilkul fresh hai — koi status history nahi honi chahiye.
 
     const finalStatus = followUpUpdate.status || body.status;
 
-    if (finalStatus && oldLead.status !== finalStatus) {
+    if (!isDeadToNewReset && finalStatus && oldLead.status !== finalStatus) {
       await prisma.statusHistory.create({
         data: {
           leadId: id,
