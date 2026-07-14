@@ -3,6 +3,7 @@
 import ActivitySettings from "@/components/admin/settings/ActivitySettings";
 import CreateAdminSettings from "@/components/admin/settings/CreateAdminSettings";
 import DeadLeadSettings from "@/components/admin/settings/DeadLeadSettings";
+import ExportLeadsSection from "@/components/admin/settings/ExportLeadsSection";
 import FollowUpSettings from "@/components/admin/settings/FollowUpSettings";
 
 export default function SettingsPage() {
@@ -22,6 +23,7 @@ export default function SettingsPage() {
 
       <CreateAdminSettings />
       <FollowUpSettings />
+      <ExportLeadsSection />
       <ActivitySettings />
       <DeadLeadSettings />
     </div>

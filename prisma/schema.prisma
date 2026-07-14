@@ -82,6 +82,7 @@ model User {
   notifications Notification[]
   activityLogs  ActivityLog[]
   announcements Announcement[]
+  exportLogs    ExportLog[]
 }
 
 // =====================
@@ -292,4 +293,28 @@ model ActivityLog {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   lead Lead? @relation(fields: [leadId], references: [id], onDelete: Cascade)
+}
+
+// =====================
+// EXPORT LOG MODEL
+// =====================
+
+model ExportLog {
+  id String @id @default(cuid())
+
+  type String // e.g. "all", "today", "status", "salesperson"
+
+  label String // e.g. "Export by Salesperson" — UI mein dikhane ke liye
+
+  filters Json? // jo filters use hue (status/city/salespersonId/dateRange)
+
+  recordCount Int @default(0) // kitne leads export hue
+
+  createdAt DateTime @default(now())
+
+  // Relations
+
+  exportedById String
+
+  exportedBy User @relation(fields: [exportedById], references: [id])
 }
