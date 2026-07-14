@@ -6,7 +6,11 @@ import { supabase } from "@/lib/supabase";
 
 import LeadsTable from "./LeadsTable";
 import LeadFilters from "./LeadFilters";
-import LeadDetails from "./LeadDetails";
+import dynamic from "next/dynamic";
+
+const LeadDetails = dynamic(() => import("./LeadDetails"), {
+  ssr: false,
+});
 
 interface Lead {
   id: string;
@@ -89,27 +93,33 @@ export default function MyLeads() {
     // Defer initial load to avoid synchronous setState within effect
     const t = setTimeout(() => void getLeads(true, 1), 0);
 
-    const channel = supabase
-      .channel("sales-my-leads")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "Lead",
-        },
-        () => {
-          console.log("My Leads Updated");
-          void getLeads(false, currentPage);
-        },
-      )
-      .subscribe((status) => {
-        console.log("My Leads Realtime:", status);
-      });
+    // Defer realtime subscription so the WebSocket doesn't open during
+    // initial render/TBT window — improves mobile perf + bfcache
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    const idle = setTimeout(() => {
+      channel = supabase
+        .channel("sales-my-leads")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "Lead",
+          },
+          () => {
+            console.log("My Leads Updated");
+            void getLeads(false, currentPage);
+          },
+        )
+        .subscribe((status) => {
+          console.log("My Leads Realtime:", status);
+        });
+    }, 1500);
 
     return () => {
       clearTimeout(t);
-      supabase.removeChannel(channel);
+      clearTimeout(idle);
+      if (channel) supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -71,9 +71,12 @@ export default function TodayFollowUps() {
       ) : (
         <div
           className="
-          mt-4
-          space-y-3
-          "
+  mt-4
+  max-h-[420px]
+  space-y-3
+  overflow-y-auto
+  overflow-x-hidden
+  "
         >
           {followUps.map((lead) => (
             <div

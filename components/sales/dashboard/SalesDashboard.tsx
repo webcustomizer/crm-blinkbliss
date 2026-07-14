@@ -84,29 +84,36 @@ export default function SalesDashboard() {
       }
     }, 0);
 
-    const channel = supabase
-      .channel("sales-dashboard")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "Lead",
-        },
-        () => {
-          if (mounted) scheduleRefresh();
-        },
-      )
-      .subscribe((status) => {
-        console.log("Sales Dashboard Realtime:", status);
-      });
+    // Defer realtime subscription so the WebSocket doesn't open
+    // during initial render/TBT window
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    const idle = setTimeout(() => {
+      if (!mounted) return;
+      channel = supabase
+        .channel("sales-dashboard")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "Lead",
+          },
+          () => {
+            if (mounted) scheduleRefresh();
+          },
+        )
+        .subscribe((status) => {
+          console.log("Sales Dashboard Realtime:", status);
+        });
+    }, 1500);
 
     return () => {
       mounted = false;
       clearTimeout(initialFetch);
+      clearTimeout(idle);
       if (debounceRef.current) clearTimeout(debounceRef.current);
       abortRef.current?.abort();
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [getDashboard, scheduleRefresh]);
 
