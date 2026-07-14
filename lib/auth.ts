@@ -1,5 +1,9 @@
 import { SignJWT, jwtVerify } from "jose";
 
+if (!process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET environment variable is not set");
+}
+
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
 export type TokenPayload = {
@@ -26,5 +30,14 @@ export async function createToken(payload: TokenPayload) {
 export async function verifyToken(token: string): Promise<TokenPayload> {
   const { payload } = await jwtVerify(token, secret);
 
-  return payload as TokenPayload;
+  if (
+    typeof payload.id !== "string" ||
+    typeof payload.name !== "string" ||
+    typeof payload.email !== "string" ||
+    (payload.role !== "ADMIN" && payload.role !== "SALESPERSON")
+  ) {
+    throw new Error("Invalid token payload");
+  }
+
+  return payload as unknown as TokenPayload;
 }

@@ -141,7 +141,7 @@ export default function AdminNotFound() {
               group-hover:-translate-x-1
               "
             />
-            Back to Dashboard
+            Back to login
           </Link>
         </div>
 
