@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getNextAutoAssignee } from "@/lib/auto-assign";
+
 const GOOGLE_SHEET_WEBHOOK = process.env.GOOGLE_SHEET_WEBHOOK;
 
 // Complete incomplete helper
@@ -258,6 +260,10 @@ export async function POST(req: Request) {
         );
       }
     }
+
+    // 👇 Automation check — agar toggle ON hai to next salesperson mil jayega
+    const autoAssignedId = await getNextAutoAssignee();
+
     const lead = await prisma.lead.create({
       data: {
         name: name || null,
@@ -293,6 +299,8 @@ export async function POST(req: Request) {
         }),
 
         remarks: null,
+
+        assignedToId: autoAssignedId, // 👈 naya field
       },
     });
 
@@ -318,7 +326,7 @@ export async function POST(req: Request) {
             currentStatus: lead.currentStatus,
             bestTimeToReach: lead.bestTimeToReach,
             willingToAttendTraining: lead.willingToAttendTraining,
-            assignedTo: "",
+            assignedTo: autoAssignedId ?? "", // 👈 ab actual value jayegi
             createdAt: lead.createdAt,
           }),
         });

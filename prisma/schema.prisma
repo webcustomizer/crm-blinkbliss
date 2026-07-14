@@ -241,6 +241,10 @@ model CRMSetting {
 
   deadAfterDays Int @default(30)
 
+  autoAssignEnabled Boolean @default(false)
+
+  lastAssignedSalespersonId String?
+
   createdAt DateTime @default(now())
 
   updatedAt DateTime @updatedAt

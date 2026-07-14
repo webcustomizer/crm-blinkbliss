@@ -1,10 +1,12 @@
 "use client";
 
 import ActivitySettings from "@/components/admin/settings/ActivitySettings";
+import AutomationSettings from "@/components/admin/settings/AutomationSettings";
 import CreateAdminSettings from "@/components/admin/settings/CreateAdminSettings";
 import DeadLeadSettings from "@/components/admin/settings/DeadLeadSettings";
 import ExportLeadsSection from "@/components/admin/settings/ExportLeadsSection";
 import FollowUpSettings from "@/components/admin/settings/FollowUpSettings";
+import ImportLeadsSection from "@/components/admin/settings/ImportLeadsSection";
 
 export default function SettingsPage() {
   return (
@@ -23,7 +25,9 @@ export default function SettingsPage() {
 
       <CreateAdminSettings />
       <FollowUpSettings />
+      <ImportLeadsSection />
       <ExportLeadsSection />
+      <AutomationSettings />
       <ActivitySettings />
       <DeadLeadSettings />
     </div>
