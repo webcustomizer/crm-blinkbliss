@@ -606,7 +606,8 @@ p-6
 shadow-xl
 "
             >
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start justify-between gap-4">
+                {/* Left Content */}
                 <div className="min-w-0 flex-1">
                   <h3
                     className="
@@ -621,65 +622,18 @@ break-words
                   </h3>
 
                   <div className="mt-5 space-y-4 text-sm text-zinc-400">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="flex min-w-0 items-center gap-3">
-                        <span className="shrink-0 rounded-xl bg-white/5 p-2">
-                          <Phone size={15} />
-                        </span>
+                    {/* Phone */}
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="shrink-0 rounded-xl bg-white/5 p-2">
+                        <Phone size={15} />
+                      </span>
 
-                        <span className="break-all">{lead.phone}</span>
-                      </p>
-
-                      {lead.phone && (
-                        <button
-                          type="button"
-                          onClick={() => smartCall(lead.phone)}
-                          title="Call (via WhatsApp if available)"
-                          className="
-inline-flex
-shrink-0
-items-center
-gap-2
-rounded-full
-border
-border-[#D4AF37]/25
-bg-gradient-to-b
-from-[#1e1e1e]
-to-[#151515]
-py-1.5
-pl-2
-pr-3.5
-text-xs
-font-medium
-tracking-wide
-text-[#e8e8e8]
-shadow-sm
-transition-all
-duration-300
-hover:border-[#D4AF37]/50
-hover:shadow-[0_0_14px_rgba(212,175,55,0.18)]
-active:scale-95
-"
-                        >
-                          <span
-                            className="
-flex
-h-5
-w-5
-items-center
-justify-center
-rounded-full
-bg-[#25D366]/15
-text-[#25D366]
-"
-                          >
-                            <WhatsAppIcon size={11} />
-                          </span>
-                          Call
-                        </button>
-                      )}
+                      <span className="min-w-0 break-all text-sm text-zinc-300">
+                        {lead.phone}
+                      </span>
                     </div>
 
+                    {/* City */}
                     <p className="flex min-w-0 items-center gap-3">
                       <span className="shrink-0 rounded-xl bg-white/5 p-2">
                         <MapPin size={15} />
@@ -688,6 +642,7 @@ text-[#25D366]
                       <span className="break-words">{lead.city || "-"}</span>
                     </p>
 
+                    {/* Follow Up */}
                     <p className="flex min-w-0 items-center gap-3">
                       <span className="shrink-0 rounded-xl bg-white/5 p-2">
                         <CalendarClock size={15} />
@@ -702,8 +657,40 @@ text-[#25D366]
                   </div>
                 </div>
 
-                <div className="mt-2 max-w-[40%] shrink-0">
-                  <LeadStatusBadge status={lead.status} />
+                {/* Right Actions */}
+                <div className="flex shrink-0 flex-col  items-end gap-3">
+                  {/* Status */}
+                  <div className="flex justify-center mb-4">
+                    <LeadStatusBadge status={lead.status} />
+                  </div>
+
+                  {/* WhatsApp */}
+                  {lead.phone && (
+                    <button
+                      onClick={() => smartCall(lead.phone)}
+                      className="
+inline-flex
+items-center
+gap-1.5
+rounded-full
+border
+border-[#25D366]/25
+bg-[#25D366]/10
+px-3
+py-1.5
+text-[10px]
+font-semibold
+uppercase
+tracking-wider
+text-[#25D366]
+transition-all
+hover:bg-[#25D366]/20
+"
+                    >
+                      <WhatsAppIcon size={11} />
+                      Call
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

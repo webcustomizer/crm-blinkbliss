@@ -10,7 +10,6 @@ const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
 /**
  * Returns a UTC Date object that represents the start or end of TODAY
  * in PKT, correctly converted back to UTC for DB comparisons.
- * Works correctly regardless of the server's system timezone.
  */
 function getPKTDayBoundary(daysOffset: number, endOfDay: boolean): Date {
   const pktNow = new Date(Date.now() + PKT_OFFSET_MS);
@@ -56,34 +55,33 @@ export async function GET() {
       );
     }
 
-    // Today Start (00:00:00 PKT, converted to correct UTC instant)
+    // Today Start (00:00:00 PKT)
     const start = getPKTDayBoundary(0, false);
 
-    // Today End (23:59:59.999 PKT, converted to correct UTC instant)
+    // Today End (23:59:59.999 PKT)
     const end = getPKTDayBoundary(0, true);
 
     const followUps = await prisma.lead.findMany({
       where: {
         assignedToId: user.id,
 
+        // Keep this identical to the stats API
+        status: {
+          notIn: ["JOINED", "DEAD"],
+        },
+
         nextFollowUp: {
           gte: start,
-
           lte: end,
         },
       },
 
       select: {
         id: true,
-
         name: true,
-
         phone: true,
-
         status: true,
-
         remarks: true,
-
         nextFollowUp: true,
       },
 
@@ -96,13 +94,12 @@ export async function GET() {
       followUps,
     });
   } catch (error) {
-    console.log("Followup Error:", error);
+    console.error("Followup Error:", error);
 
     return NextResponse.json(
       {
         message: "Something went wrong",
       },
-
       {
         status: 500,
       },

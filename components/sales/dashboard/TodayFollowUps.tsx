@@ -202,7 +202,7 @@ export default function TodayFollowUps() {
               </div>
 
               {/* Divider */}
-              <div className="my-3 h-px bg-gradient-to-r from-[#D4AF37]/15 via-[#D4AF37]/5 to-transparent" />
+              {/* <div className="my-3 h-px bg-gradient-to-r from-[#D4AF37]/15 via-[#D4AF37]/5 to-transparent" /> */}
 
               {/* Date + Call button */}
               <div

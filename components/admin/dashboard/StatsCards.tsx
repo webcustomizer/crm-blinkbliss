@@ -15,34 +15,48 @@ type Props = {
 export default function FollowUpCards({ leads }: Props) {
   const router = useRouter();
 
-  const today = new Date();
+  // Pakistan Standard Time UTC+5
+  const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
 
-  const isSameDay = (date1: Date, date2: Date) => {
-    return (
-      date1.getDate() === date2.getDate() &&
-      date1.getMonth() === date2.getMonth() &&
-      date1.getFullYear() === date2.getFullYear()
-    );
+  function getPKTDayBoundary(daysOffset: number, endOfDay: boolean): Date {
+    const pktNow = new Date(Date.now() + PKT_OFFSET_MS);
+
+    const year = pktNow.getUTCFullYear();
+    const month = pktNow.getUTCMonth();
+    const day = pktNow.getUTCDate() + daysOffset;
+
+    const boundaryInPKT = endOfDay
+      ? new Date(Date.UTC(year, month, day, 23, 59, 59, 999))
+      : new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+
+    return new Date(boundaryInPKT.getTime() - PKT_OFFSET_MS);
+  }
+
+  const todayStart = getPKTDayBoundary(0, false);
+  const todayEnd = getPKTDayBoundary(0, true);
+
+  const activeLead = (lead: Lead) => {
+    return lead.status !== "JOINED" && lead.status !== "DEAD";
   };
 
   const todayFollowUps = leads.filter((lead) => {
     if (!lead.nextFollowUp) return false;
 
-    if (lead.status === "JOINED" || lead.status === "DEAD") {
-      return false;
-    }
+    if (!activeLead(lead)) return false;
 
-    return isSameDay(new Date(lead.nextFollowUp), today);
+    const followUpDate = new Date(lead.nextFollowUp);
+
+    return followUpDate >= todayStart && followUpDate <= todayEnd;
   });
 
   const overdueFollowUps = leads.filter((lead) => {
     if (!lead.nextFollowUp) return false;
 
-    if (lead.status === "JOINED" || lead.status === "DEAD") {
-      return false;
-    }
+    if (!activeLead(lead)) return false;
 
-    return new Date(lead.nextFollowUp) < today;
+    const followUpDate = new Date(lead.nextFollowUp);
+
+    return followUpDate < todayStart;
   });
 
   const cards = [

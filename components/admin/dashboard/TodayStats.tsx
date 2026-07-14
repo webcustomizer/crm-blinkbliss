@@ -14,18 +14,32 @@ type Props = {
 };
 
 export default function TodayStats({ leads }: Props) {
-  const today = new Date();
+  // Pakistan Standard Time UTC+5
+  const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
+
+  function getPKTDayBoundary(daysOffset: number, endOfDay: boolean): Date {
+    const pktNow = new Date(Date.now() + PKT_OFFSET_MS);
+
+    const year = pktNow.getUTCFullYear();
+    const month = pktNow.getUTCMonth();
+    const day = pktNow.getUTCDate() + daysOffset;
+
+    const boundaryInPKT = endOfDay
+      ? new Date(Date.UTC(year, month, day, 23, 59, 59, 999))
+      : new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+
+    return new Date(boundaryInPKT.getTime() - PKT_OFFSET_MS);
+  }
+
+  const todayStart = getPKTDayBoundary(0, false);
+  const todayEnd = getPKTDayBoundary(0, true);
 
   const isToday = (date?: string | null) => {
     if (!date) return false;
 
     const d = new Date(date);
 
-    return (
-      d.getDate() === today.getDate() &&
-      d.getMonth() === today.getMonth() &&
-      d.getFullYear() === today.getFullYear()
-    );
+    return d >= todayStart && d <= todayEnd;
   };
 
   const activeLead = (lead: LeadDetails) => {
@@ -42,9 +56,7 @@ export default function TodayStats({ leads }: Props) {
     {
       title: "Today's Follow Ups",
       value: leads.filter(
-        (lead) =>
-          activeLead(lead) &&
-          isToday(lead.nextFollowUp),
+        (lead) => activeLead(lead) && isToday(lead.nextFollowUp),
       ).length,
       icon: <CalendarClock size={22} />,
     },
@@ -55,7 +67,7 @@ export default function TodayStats({ leads }: Props) {
         (lead) =>
           activeLead(lead) &&
           lead.nextFollowUp &&
-          new Date(lead.nextFollowUp) < today,
+          new Date(lead.nextFollowUp) < todayStart,
       ).length,
       icon: <AlertCircle size={22} />,
     },
@@ -63,9 +75,7 @@ export default function TodayStats({ leads }: Props) {
     {
       title: "Today's Joined",
       value: leads.filter(
-        (lead) =>
-          lead.status === "JOINED" &&
-          isToday(lead.updatedAt),
+        (lead) => lead.status === "JOINED" && isToday(lead.updatedAt),
       ).length,
       icon: <CheckCircle size={22} />,
     },
@@ -84,9 +94,7 @@ export default function TodayStats({ leads }: Props) {
           Today&apos;s Performance
         </h2>
 
-        <p className="text-sm text-gray-400">
-          Daily CRM activity overview
-        </p>
+        <p className="text-sm text-gray-400">Daily CRM activity overview</p>
       </div>
 
       <div

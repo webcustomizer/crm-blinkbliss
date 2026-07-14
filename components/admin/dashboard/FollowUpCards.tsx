@@ -6,12 +6,10 @@ import {
   Users,
   UserPlus,
   PhoneCall,
-  CalendarClock,
   GraduationCap,
   CalendarCheck,
   CheckCircle,
   XCircle,
-  AlertTriangle,
 } from "lucide-react";
 
 type Lead = {
@@ -26,35 +24,61 @@ type Props = {
 export default function FollowUpCards({ leads }: Props) {
   const router = useRouter();
 
-  const today = new Date();
+  // Pakistan Standard Time UTC+5
+  const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
+
+  /**
+   * Convert any date into PKT calendar date
+   */
+  const getPKTDateOnly = (date: string | Date) => {
+    const utcDate = new Date(date);
+
+    const pktDate = new Date(utcDate.getTime() + PKT_OFFSET_MS);
+
+    return {
+      year: pktDate.getUTCFullYear(),
+      month: pktDate.getUTCMonth(),
+      day: pktDate.getUTCDate(),
+    };
+  };
+
+  const todayPKT = getPKTDateOnly(new Date());
+
+  /**
+   * Compare only dates, ignore time
+   */
+  const comparePKTDates = (
+    first: ReturnType<typeof getPKTDateOnly>,
+    second: ReturnType<typeof getPKTDateOnly>,
+  ) => {
+    const firstDate = Date.UTC(first.year, first.month, first.day);
+
+    const secondDate = Date.UTC(second.year, second.month, second.day);
+
+    return firstDate - secondDate;
+  };
 
   const activeLead = (lead: Lead) => {
     return lead.status !== "JOINED" && lead.status !== "DEAD";
   };
 
-  const isToday = (date: string) => {
-    if (!date) return false;
+  const todayFollowUps = leads.filter((lead) => {
+    if (!lead.nextFollowUp) return false;
+    if (!activeLead(lead)) return false;
 
-    const d = new Date(date);
+    const followUpPKT = getPKTDateOnly(lead.nextFollowUp);
 
-    return (
-      d.getDate() === today.getDate() &&
-      d.getMonth() === today.getMonth() &&
-      d.getFullYear() === today.getFullYear()
-    );
-  };
+    return comparePKTDates(followUpPKT, todayPKT) === 0;
+  });
 
-  const todayFollowUps = leads.filter(
-    (lead) =>
-      lead.nextFollowUp && activeLead(lead) && isToday(lead.nextFollowUp),
-  );
+  const overdueFollowUps = leads.filter((lead) => {
+    if (!lead.nextFollowUp) return false;
+    if (!activeLead(lead)) return false;
 
-  const overdueFollowUps = leads.filter(
-    (lead) =>
-      lead.nextFollowUp &&
-      activeLead(lead) &&
-      new Date(lead.nextFollowUp) < today,
-  );
+    const followUpPKT = getPKTDateOnly(lead.nextFollowUp);
+
+    return comparePKTDates(followUpPKT, todayPKT) < 0;
+  });
 
   const cards = [
     {
