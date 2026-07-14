@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  UserPlus,
-  CalendarClock,
-  AlertCircle,
-  CheckCircle,
-} from "lucide-react";
+import { UserPlus, CheckCircle, TrendingUp } from "lucide-react";
 
 import type { LeadDetails } from "@/types/lead";
 
@@ -14,7 +9,6 @@ type Props = {
 };
 
 export default function TodayStats({ leads }: Props) {
-  // Pakistan Standard Time UTC+5
   const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
 
   function getPKTDayBoundary(daysOffset: number, endOfDay: boolean): Date {
@@ -32,6 +26,7 @@ export default function TodayStats({ leads }: Props) {
   }
 
   const todayStart = getPKTDayBoundary(0, false);
+
   const todayEnd = getPKTDayBoundary(0, true);
 
   const isToday = (date?: string | null) => {
@@ -42,100 +37,132 @@ export default function TodayStats({ leads }: Props) {
     return d >= todayStart && d <= todayEnd;
   };
 
-  const activeLead = (lead: LeadDetails) => {
-    return lead.status !== "JOINED" && lead.status !== "DEAD";
-  };
-
   const stats = [
     {
-      title: "Today's Leads",
+      title: "New Leads",
+
       value: leads.filter((lead) => isToday(lead.createdAt)).length,
-      icon: <UserPlus size={22} />,
+
+      icon: <UserPlus size={20} />,
+
+      label: "Received today",
     },
 
     {
-      title: "Today's Follow Ups",
-      value: leads.filter(
-        (lead) => activeLead(lead) && isToday(lead.nextFollowUp),
-      ).length,
-      icon: <CalendarClock size={22} />,
-    },
+      title: "Joined",
 
-    {
-      title: "Overdue Follow Ups",
-      value: leads.filter(
-        (lead) =>
-          activeLead(lead) &&
-          lead.nextFollowUp &&
-          new Date(lead.nextFollowUp) < todayStart,
-      ).length,
-      icon: <AlertCircle size={22} />,
-    },
-
-    {
-      title: "Today's Joined",
       value: leads.filter(
         (lead) => lead.status === "JOINED" && isToday(lead.updatedAt),
       ).length,
-      icon: <CheckCircle size={22} />,
+
+      icon: <CheckCircle size={20} />,
+
+      label: "Converted today",
     },
   ];
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2
-          className="
-          text-xl
-          font-bold
-          text-[#D4AF37]
-          "
-        >
-          Today&apos;s Performance
-        </h2>
-
-        <p className="text-sm text-gray-400">Daily CRM activity overview</p>
-      </div>
+    <section
+      className="
+      rounded-3xl
+      border
+      border-white/10
+      bg-[#151515]
+      p-6
+      shadow-xl
+      "
+    >
+      {/* HEADER */}
 
       <div
         className="
+        flex
+        items-center
+        justify-between
+        "
+      >
+        <div>
+          <h2
+            className="
+  text-xl
+  font-bold
+  text-[#D4AF37]
+  tracking-tight
+  "
+          >
+            Today&apos;s Performance
+          </h2>
+
+          <p
+            className="
+            mt-1
+            text-sm
+            text-gray-400
+            "
+          >
+            Real-time daily activity summary
+          </p>
+        </div>
+
+        <div
+          className="
+          flex
+          h-10
+          w-10
+          items-center
+          justify-center
+          rounded-xl
+          bg-[#D4AF37]/10
+          text-[#D4AF37]
+          "
+        >
+          <TrendingUp size={20} />
+        </div>
+      </div>
+
+      {/* STATS */}
+
+      <div
+        className="
+        mt-6
         grid
         grid-cols-1
-        gap-5
+        divide-y
+        divide-white/10
         sm:grid-cols-2
-        lg:grid-cols-4
+        sm:divide-x
+        sm:divide-y-0
         "
       >
         {stats.map((item) => (
           <div
             key={item.title}
             className="
-            rounded-2xl
-            border
-            border-[#D4AF37]/20
-            bg-[#111111]
-            p-5
-            transition
-            hover:border-[#D4AF37]/50
-            hover:shadow-lg
-            hover:shadow-[#D4AF37]/10
+            flex
+            items-center
+            justify-between
+            gap-5
+            py-5
+            sm:px-6
+            first:sm:pl-0
+            last:sm:pr-0
             "
           >
             <div
               className="
               flex
               items-center
-              justify-between
+              gap-4
               "
             >
               <div
                 className="
                 flex
-                h-11
-                w-11
+                h-12
+                w-12
                 items-center
                 justify-center
-                rounded-xl
+                rounded-2xl
                 bg-[#D4AF37]/10
                 text-[#D4AF37]
                 "
@@ -143,31 +170,41 @@ export default function TodayStats({ leads }: Props) {
                 {item.icon}
               </div>
 
-              <h3
-                className="
-                text-3xl
-                font-bold
-                text-white
-                "
-              >
-                {item.value}
-              </h3>
+              <div>
+                <p
+                  className="
+                  text-sm
+                  text-gray-400
+                  "
+                >
+                  {item.title}
+                </p>
+
+                <p
+                  className="
+                  mt-1
+                  text-xs
+                  text-gray-500
+                  "
+                >
+                  {item.label}
+                </p>
+              </div>
             </div>
 
-            <p
+            <div
               className="
-              mt-5
-              text-xs
-              uppercase
-              tracking-wide
-              text-gray-400
+              text-4xl
+              font-bold
+              tracking-tight
+              text-white
               "
             >
-              {item.title}
-            </p>
+              {item.value}
+            </div>
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }

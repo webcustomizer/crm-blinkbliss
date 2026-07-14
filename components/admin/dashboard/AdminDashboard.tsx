@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 import StatsCards from "./StatsCards";
 import TodayStats from "./TodayStats";
 import FollowUpCards from "./FollowUpCards";
-import RecentLeads from "./RecentLeads";
+import LeadAnalytics from "./LeadAnalytics";
 
 import type { LeadDetails } from "@/types/lead";
 
@@ -112,7 +112,7 @@ export default function AdminDashboard() {
 
       <FollowUpCards leads={leads} />
 
-      <RecentLeads leads={leads} />
+      <LeadAnalytics leads={leads} />
     </div>
   );
 }

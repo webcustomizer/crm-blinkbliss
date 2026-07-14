@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Users,
   UserCog,
+  UserRoundCheck,
   ChartColumn,
   Settings,
   LogOut,
@@ -24,6 +25,11 @@ const menuItems = [
     title: "Leads",
     href: "/admin/leads",
     icon: Users,
+  },
+  {
+    title: "Customers",
+    href: "/admin/customers",
+    icon: UserRoundCheck,
   },
   {
     title: "Salespersons",

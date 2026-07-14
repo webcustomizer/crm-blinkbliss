@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { Search, ChevronLeft, ChevronRight, ListFilter } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 import LeadDetailsDialog from "./LeadDetailsDialog";
@@ -236,129 +237,192 @@ export default function LeadsTable({ salespersons }: Props) {
     return (
       <div
         className="
-        p-10
-        text-center
-        text-gray-400
+        flex
+        min-h-[340px]
+        flex-col
+        items-center
+        justify-center
+        gap-3
+        rounded-[28px]
+        border
+        border-[#D4AF37]/15
+        bg-gradient-to-br
+        from-[#171717]
+        to-[#0d0d0d]
       "
       >
-        Loading leads...
+        <div
+          className="
+          h-8
+          w-8
+          animate-spin
+          rounded-full
+          border-2
+          border-[#D4AF37]/20
+          border-t-[#D4AF37]
+          "
+        />
+        <p className="text-sm text-white/40">Loading leads…</p>
       </div>
     );
   }
   return (
     <div
       className="
+      relative
       overflow-hidden
-      rounded-2xl
+      rounded-[28px]
       border
       border-[#D4AF37]/20
-      bg-[#111111]
-      shadow-xl
+      bg-gradient-to-br
+      from-[#171717]
+      to-[#0d0d0d]
+      shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)]
       "
     >
+      {/* ambient glow */}
+      <div
+        aria-hidden
+        className="
+        pointer-events-none
+        absolute
+        -right-20
+        -top-24
+        h-64
+        w-64
+        rounded-full
+        bg-[#D4AF37]/10
+        blur-[90px]
+        "
+      />
+
       {/* TOP FILTER BAR */}
 
       <div
         className="
+        relative
         flex
-        flex-wrap
-        items-center
-        gap-3
-        p-5
+        flex-col
+        gap-4
+        border-b
+        border-white/10
+        p-6
+        sm:p-7
         "
       >
-        {filters.map(([value, label]) => (
-          <button
-            key={value}
-            onClick={() => {
+        <div className="flex flex-wrap items-center gap-2.5">
+          {filters.map(([value, label]) => (
+            <button
+              key={value}
+              onClick={() => {
+                setPage(1);
+                setFilter(value);
+              }}
+              className={`
+                rounded-xl
+                border
+                px-4
+                py-2
+                text-sm
+                font-medium
+                transition-all
+
+                ${
+                  filter === value
+                    ? "border-[#D4AF37]/60 bg-[#D4AF37]/15 text-[#D4AF37]"
+                    : "border-white/10 text-white/50 hover:border-[#D4AF37]/30 hover:text-white"
+                }
+              `}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {/* SALESPERSON FILTER */}
+
+          <select
+            value={salespersonId}
+            onChange={(e) => {
               setPage(1);
-              setFilter(value);
+
+              setSalespersonId(e.target.value);
             }}
-            className={`
+            className="
+            cursor-pointer
+            rounded-xl
+            border
+            border-white/10
+            bg-black/30
+            px-4
+            py-2.5
+            text-sm
+            text-white
+            outline-none
+            transition-colors
+            hover:border-[#D4AF37]/40
+            focus:border-[#D4AF37]/60
+            "
+          >
+            <option value="">All Salespersons</option>
+
+            {salespersons.map((person) => (
+              <option
+                key={person.id}
+                value={person.id}
+                className="
+                bg-[#111111]
+                text-white
+                "
+              >
+                {person.name}
+              </option>
+            ))}
+          </select>
+
+          {/* SEARCH */}
+
+          <div className="relative sm:ml-auto sm:w-80">
+            <Search
+              size={16}
+              className="
+              pointer-events-none
+              absolute
+              left-3.5
+              top-1/2
+              -translate-y-1/2
+              text-white/30
+              "
+            />
+
+            <input
+              value={search}
+              onChange={(e) => {
+                setPage(1);
+
+                setSearch(e.target.value);
+              }}
+              placeholder="Search name or phone…"
+              className="
+              w-full
               rounded-xl
               border
-              px-4
-              py-2
+              border-white/10
+              bg-black/30
+              py-2.5
+              pl-10
+              pr-4
               text-sm
-              transition-all
-
-              ${
-                filter === value
-                  ? "border-[#D4AF37] bg-[#D4AF37]/20 text-[#D4AF37]"
-                  : "border-white/10 text-gray-300 hover:border-[#D4AF37]/40 hover:text-[#D4AF37]"
-              }
-            `}
-          >
-            {label}
-          </button>
-        ))}
-
-        {/* SALESPERSON FILTER */}
-
-        <select
-          value={salespersonId}
-          onChange={(e) => {
-            setPage(1);
-
-            setSalespersonId(e.target.value);
-          }}
-          className="
-          cursor-pointer
-          rounded-xl
-          border
-          border-[#D4AF37]/30
-          bg-black
-          px-4
-          py-2.5
-          text-sm
-          text-white
-          outline-none
-          transition
-          hover:border-[#D4AF37]
-          focus:border-[#D4AF37]
-          "
-        >
-          <option value="">All Salespersons</option>
-
-          {salespersons.map((person) => (
-            <option
-              key={person.id}
-              value={person.id}
-              className="
-              bg-[#111111]
               text-white
+              outline-none
+              transition-colors
+              placeholder:text-white/30
+              focus:border-[#D4AF37]/60
               "
-            >
-              {person.name}
-            </option>
-          ))}
-        </select>
-
-        {/* SEARCH */}
-
-        <input
-          value={search}
-          onChange={(e) => {
-            setPage(1);
-
-            setSearch(e.target.value);
-          }}
-          placeholder="Search name or phone..."
-          className="
-          ml-auto
-          rounded-xl
-          border
-          border-[#D4AF37]/30
-          bg-black
-          px-4
-          py-2.5
-          text-sm
-          text-white
-          outline-none
-          placeholder:text-gray-500
-          focus:border-[#D4AF37]
-          "
-        />
+            />
+          </div>
+        </div>
       </div>
 
       {/* TABLE */}
@@ -379,23 +443,38 @@ export default function LeadsTable({ salespersons }: Props) {
           >
             <div
               className="
-      rounded-xl
+      flex
+      items-center
+      gap-2.5
+      rounded-2xl
       border
-      border-[#D4AF37]/20
-      bg-[#111111]
-      px-6
-      py-3
+      border-[#D4AF37]/25
+      bg-[#111]/90
+      px-5
+      py-2.5
       text-sm
       font-medium
       text-[#D4AF37]
       shadow-xl
       "
             >
-              Updating leads...
+              <span
+                className="
+                h-3.5
+                w-3.5
+                animate-spin
+                rounded-full
+                border-2
+                border-[#D4AF37]/25
+                border-t-[#D4AF37]
+                "
+              />
+              Updating leads…
             </div>
           </div>
         )}
-        <div className="mb-5 flex justify-end px-5">
+
+        <div className="flex justify-end px-6 py-5 sm:px-7">
           <LeadDialog onLeadCreated={getLeads} />
         </div>
 
@@ -418,9 +497,9 @@ export default function LeadsTable({ salespersons }: Props) {
 
             <p
               className="
-              mt-2
+              mt-1.5
               text-sm
-              text-gray-400
+              text-white/40
               "
             >
               Try changing filters or selecting another salesperson.
@@ -439,26 +518,41 @@ export default function LeadsTable({ salespersons }: Props) {
               <tr
                 className="
               border-b
-              border-[#D4AF37]/20
-              bg-black/40
-              text-[#D4AF37]
+              border-white/10
+              bg-black/20
               "
               >
-                <th className="p-4 text-left">Name</th>
+                <th className="p-4 text-left text-xs font-semibold uppercase tracking-wider text-[#D4AF37]/70">
+                  Name
+                </th>
 
-                <th className="p-4 text-left">Phone</th>
+                <th className="p-4 text-left text-xs font-semibold uppercase tracking-wider text-[#D4AF37]/70">
+                  Phone
+                </th>
 
-                <th className="p-4 text-left">City</th>
+                <th className="p-4 text-left text-xs font-semibold uppercase tracking-wider text-[#D4AF37]/70">
+                  City
+                </th>
 
-                <th className="p-4 text-left">Employment</th>
+                <th className="p-4 text-left text-xs font-semibold uppercase tracking-wider text-[#D4AF37]/70">
+                  Employment
+                </th>
 
-                <th className="p-4 text-left">Purpose</th>
+                <th className="p-4 text-left text-xs font-semibold uppercase tracking-wider text-[#D4AF37]/70">
+                  Purpose
+                </th>
 
-                <th className="p-4 text-left">Status</th>
+                <th className="p-4 text-left text-xs font-semibold uppercase tracking-wider text-[#D4AF37]/70">
+                  Status
+                </th>
 
-                <th className="p-4 text-left">Assigned</th>
+                <th className="p-4 text-left text-xs font-semibold uppercase tracking-wider text-[#D4AF37]/70">
+                  Assigned
+                </th>
 
-                <th className="p-4 text-left">Action</th>
+                <th className="p-4 text-left text-xs font-semibold uppercase tracking-wider text-[#D4AF37]/70">
+                  Action
+                </th>
               </tr>
             </thead>
 
@@ -475,22 +569,22 @@ export default function LeadsTable({ salespersons }: Props) {
                   className="
               border-b
               border-white/5
-              text-gray-200
-              transition
-              hover:bg-[#D4AF37]/5
+              text-white/70
+              transition-colors
+              hover:bg-[#D4AF37]/[0.04]
               "
                 >
-                  <td className="p-4 text-white font-medium">
-                    {lead.name || "-"}
+                  <td className="p-4 font-medium text-white">
+                    {lead.name || "—"}
                   </td>
 
                   <td className="p-4">{lead.phone}</td>
 
-                  <td className="p-4">{lead.city || "-"}</td>
+                  <td className="p-4">{lead.city || "—"}</td>
 
-                  <td className="p-4">{lead.currentStatus || "-"}</td>
+                  <td className="p-4">{lead.currentStatus || "—"}</td>
 
-                  <td className="p-4">{lead.purpose || "-"}</td>
+                  <td className="p-4">{lead.purpose || "—"}</td>
 
                   <td className="p-4">
                     <span
@@ -501,6 +595,7 @@ export default function LeadsTable({ salespersons }: Props) {
                   px-3
                   py-1
                   text-xs
+                  font-medium
                   ${statusStyle(lead.status)}
                   `}
                     >
@@ -516,13 +611,15 @@ export default function LeadsTable({ salespersons }: Props) {
                   cursor-pointer
                   rounded-lg
                   border
-                  border-[#D4AF37]/30
-                  bg-black
+                  border-white/10
+                  bg-black/30
                   px-3
                   py-2
                   text-white
                   outline-none
-                  hover:border-[#D4AF37]
+                  transition-colors
+                  hover:border-[#D4AF37]/40
+                  focus:border-[#D4AF37]/60
                   "
                     >
                       <option value="">Select</option>
@@ -560,12 +657,13 @@ export default function LeadsTable({ salespersons }: Props) {
           border-t
           border-white/10
           p-5
+          sm:p-6
           "
         >
           <p
             className="
           text-sm
-          text-gray-400
+          text-white/40
           "
           >
             Page {pagination.page} of {pagination.totalPages}
@@ -576,15 +674,25 @@ export default function LeadsTable({ salespersons }: Props) {
               disabled={page === 1}
               onClick={() => setPage((p) => p - 1)}
               className="
-              rounded-lg
+              flex
+              items-center
+              gap-1.5
+              rounded-xl
               border
-              border-[#D4AF37]/30
+              border-white/10
               px-4
               py-2
+              text-sm
+              font-medium
               text-white
-              disabled:opacity-40
+              transition-colors
+              hover:border-[#D4AF37]/40
+              hover:bg-[#D4AF37]/[0.06]
+              disabled:pointer-events-none
+              disabled:opacity-30
               "
             >
+              <ChevronLeft size={16} />
               Previous
             </button>
 
@@ -592,16 +700,26 @@ export default function LeadsTable({ salespersons }: Props) {
               disabled={page >= pagination.totalPages}
               onClick={() => setPage((p) => p + 1)}
               className="
-              rounded-lg
+              flex
+              items-center
+              gap-1.5
+              rounded-xl
               border
-              border-[#D4AF37]/30
+              border-white/10
               px-4
               py-2
+              text-sm
+              font-medium
               text-white
-              disabled:opacity-40
+              transition-colors
+              hover:border-[#D4AF37]/40
+              hover:bg-[#D4AF37]/[0.06]
+              disabled:pointer-events-none
+              disabled:opacity-30
               "
             >
               Next
+              <ChevronRight size={16} />
             </button>
           </div>
         </div>

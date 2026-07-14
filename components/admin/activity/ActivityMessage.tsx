@@ -29,25 +29,57 @@ export interface ActivityMessageProps {
       changes?: Record<string, { old: unknown; new: unknown }>;
     };
   };
+
+  isLast?: boolean;
 }
 
-export default function ActivityMessage({ activity }: ActivityMessageProps) {
+export default function ActivityMessage({
+  activity,
+  isLast,
+}: ActivityMessageProps) {
   return (
     <div
       className="
+      relative
       flex
       gap-4
-      border-b
-      border-white/5
-      pb-4
+      pb-6
       animate-in
       fade-in
       slide-in-from-top-2
       "
     >
+      {/* timeline connector */}
+      {!isLast && (
+        <span
+          aria-hidden
+          className="
+          absolute
+          left-[17px]
+          top-9
+          h-[calc(100%-2rem)]
+          w-px
+          bg-gradient-to-b
+          from-white/10
+          to-transparent
+          "
+        />
+      )}
+
       <ActivityIcon action={activity.action} />
 
-      <div className="flex-1">
+      <div
+        className="
+        flex-1
+        rounded-2xl
+        border
+        border-white/[0.07]
+        bg-white/[0.02]
+        p-4
+        transition-colors
+        hover:border-[#D4AF37]/20
+        "
+      >
         <div
           className="
           flex
@@ -68,8 +100,9 @@ export default function ActivityMessage({ activity }: ActivityMessageProps) {
 
           <span
             className="
+            shrink-0
             text-[11px]
-            text-zinc-500
+            text-white/35
             "
           >
             {new Date(activity.createdAt).toLocaleTimeString()}
@@ -81,12 +114,17 @@ export default function ActivityMessage({ activity }: ActivityMessageProps) {
         <div
           className="
           mt-2
+          flex
+          items-center
+          gap-1.5
           text-xs
-          text-zinc-400
+          text-white/40
           "
         >
-          By:
-          <span className="text-[#D4AF37]"> {activity.user.name}</span>
+          <span>By</span>
+          <span className="font-medium text-[#D4AF37]">
+            {activity.user.name}
+          </span>
         </div>
 
         {/* LEAD */}
@@ -95,13 +133,15 @@ export default function ActivityMessage({ activity }: ActivityMessageProps) {
           <p
             className="
             mt-1
+            flex
+            items-center
+            gap-1.5
             text-xs
-            text-zinc-400
+            text-white/40
             "
           >
-            Lead:
-            <span className="text-white">
-              {" "}
+            <span>Lead</span>
+            <span className="font-medium text-white/80">
               {activity.lead?.name ||
                 activity.metadata?.leadName ||
                 activity.lead?.phone}
@@ -115,20 +155,24 @@ export default function ActivityMessage({ activity }: ActivityMessageProps) {
           <div
             className="
             mt-3
-            rounded-lg
-            bg-[#D4AF37]/5
+            rounded-xl
+            border
+            border-white/5
+            bg-black/25
             p-3
             text-xs
             "
           >
-            <p className="text-zinc-400">Status Changed:</p>
+            <p className="text-white/40">Status changed</p>
 
-            <p className="mt-1 text-white">
-              {activity.metadata?.oldStatus}
-
-              <span className="mx-2 text-[#D4AF37]">→</span>
-
-              {activity.metadata?.newStatus}
+            <p className="mt-1.5 flex items-center gap-2 font-medium text-white">
+              <span className="text-white/60">
+                {activity.metadata?.oldStatus}
+              </span>
+              <span className="text-[#D4AF37]">→</span>
+              <span className="text-[#D4AF37]">
+                {activity.metadata?.newStatus}
+              </span>
             </p>
           </div>
         )}
@@ -139,30 +183,33 @@ export default function ActivityMessage({ activity }: ActivityMessageProps) {
           <div
             className="
             mt-3
-            rounded-lg
-            bg-[#D4AF37]/5
+            space-y-1.5
+            rounded-xl
+            border
+            border-white/5
+            bg-black/25
             p-3
-            space-y-1
             text-xs
             "
           >
-            <p className="text-zinc-400">
-              Follow Up #
-              <span className="text-white">
+            <p className="text-white/40">
+              Follow up #
+              <span className="font-medium text-white">
                 {activity.metadata?.followUpNumber}
               </span>
             </p>
 
-            <p className="text-zinc-400">
-              Remarks:
-              <span className="text-white"> {activity.metadata?.remarks}</span>
+            <p className="text-white/40">
+              Remarks:{" "}
+              <span className="font-medium text-white">
+                {activity.metadata?.remarks}
+              </span>
             </p>
 
             {activity.metadata?.nextFollowUp && (
-              <p className="text-zinc-400">
-                Next Follow Up:
-                <span className="text-white">
-                  {" "}
+              <p className="text-white/40">
+                Next follow up:{" "}
+                <span className="font-medium text-white">
                   {new Date(
                     activity.metadata.nextFollowUp,
                   ).toLocaleDateString()}
@@ -172,30 +219,56 @@ export default function ActivityMessage({ activity }: ActivityMessageProps) {
           </div>
         )}
 
+        {/* REMARK UPDATE DETAILS */}
+
+        {activity.action === "REMARK_UPDATED" && activity.metadata?.remarks && (
+          <div
+            className="
+              mt-3
+              rounded-xl
+              border
+              border-white/5
+              bg-black/25
+              p-3
+              text-xs
+              "
+          >
+            <p className="text-white/40">New remarks</p>
+            <p className="mt-1.5 whitespace-pre-wrap font-medium text-white">
+              {activity.metadata.remarks}
+            </p>
+          </div>
+        )}
+
         {/* LEAD UPDATE DETAILS */}
 
         {activity.action === "LEAD_UPDATED" && (
           <div
             className="
             mt-3
-            rounded-lg
-            bg-[#D4AF37]/5
+            space-y-1
+            rounded-xl
+            border
+            border-white/5
+            bg-black/25
             p-3
             text-xs
             "
           >
-            <p className="text-zinc-400 mb-2">Updated Fields:</p>
+            <p className="mb-1 text-white/40">Updated fields</p>
 
             {Object.entries(activity.metadata?.changes || {}).map(
               ([key, value]) => {
                 const change = value as { old: unknown; new: unknown };
 
                 return (
-                  <p key={key} className="text-white">
-                    {key}:
-                    <span className="text-zinc-400"> {String(change.old)}</span>
-                    <span className="mx-2 text-[#D4AF37]">→</span>
-                    <span className="text-[#D4AF37]">{String(change.new)}</span>
+                  <p key={key} className="flex flex-wrap items-center gap-1.5">
+                    <span className="font-medium text-white">{key}:</span>
+                    <span className="text-white/40">{String(change.old)}</span>
+                    <span className="text-[#D4AF37]">→</span>
+                    <span className="font-medium text-[#D4AF37]">
+                      {String(change.new)}
+                    </span>
                   </p>
                 );
               },

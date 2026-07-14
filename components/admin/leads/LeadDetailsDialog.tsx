@@ -13,6 +13,9 @@ import {
   Calendar,
   Clock,
   CheckCircle,
+  History,
+  MessageSquareText,
+  ArrowRight,
 } from "lucide-react";
 import {
   Dialog,
@@ -141,10 +144,14 @@ export default function LeadDetailsDialog({
         render={
           <Button
             className="
-            bg-[#111111]
+            gap-1.5
+            rounded-xl
             border
             border-[#D4AF37]/30
+            bg-[#D4AF37]/[0.06]
             text-[#D4AF37]
+            transition-colors
+            hover:border-[#D4AF37]/50
             hover:bg-[#D4AF37]/10
             "
           >
@@ -168,10 +175,14 @@ export default function LeadDetailsDialog({
     w-[70vw]
     max-h-[90vh]
     overflow-y-auto
-    bg-[#111111]
+    rounded-[28px]
     border
-    border-[#D4AF37]/30
+    border-[#D4AF37]/20
+    bg-gradient-to-br
+    from-[#171717]
+    to-[#0d0d0d]
     text-white
+    shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)]
     /* Scrollbar Styling Classes */
     scrollbar-thin 
     scrollbar-thumb-[#D4AF37] 
@@ -179,25 +190,38 @@ export default function LeadDetailsDialog({
   "
       >
         <DialogHeader>
-          <DialogTitle className="text-2xl text-[#D4AF37]">
+          <DialogTitle
+            className="
+            text-2xl
+            font-semibold
+            tracking-tight
+            text-white
+            "
+          >
             Lead Details
           </DialogTitle>
         </DialogHeader>
-        <div className="flex justify-between items-center">
+
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-6">
           <div
             className="
-    rounded-xl
+    rounded-2xl
     border
     border-[#D4AF37]/20
-    bg-[#D4AF37]/10
-    px-4
-    py-2
+    bg-[#D4AF37]/[0.06]
+    px-5
+    py-3
     "
           >
-            <p className="text-xs text-gray-400">Follow Ups Done</p>
+            <p className="text-[11px] uppercase tracking-wide text-white/40">
+              Follow Ups Done
+            </p>
 
-            <p className="text-xl font-bold text-[#D4AF37]">
+            <p className="mt-0.5 text-2xl font-semibold text-[#D4AF37]">
               {lead?.followUpCount || 0}
+              <span className="ml-1 text-sm font-normal text-white/30">
+                / 4
+              </span>
             </p>
           </div>
 
@@ -210,21 +234,27 @@ export default function LeadDetailsDialog({
               }
               onClick={completeFollowUp}
               className="
+  gap-1.5
+  rounded-xl
   bg-emerald-500
   text-black
+  transition-colors
   hover:bg-emerald-400
-  disabled:opacity-50
+  disabled:opacity-40
   "
             >
-              {followLoading ? "Processing..." : "Complete Follow Up"}
+              <CheckCircle size={16} />
+              {followLoading ? "Processing…" : "Complete Follow Up"}
             </Button>
 
             <Button
               onClick={() => setEditOpen(true)}
               className="
+      rounded-xl
       bg-[#D4AF37]
       text-black
-      hover:bg-[#D4AF37]/80
+      transition-colors
+      hover:bg-[#D4AF37]/85
       "
             >
               Edit Lead
@@ -233,79 +263,93 @@ export default function LeadDetailsDialog({
         </div>
 
         {loading ? (
-          <div className="py-16 text-center text-gray-400">Loading Lead...</div>
+          <div className="flex flex-col items-center justify-center gap-3 py-20">
+            <div
+              className="
+              h-8
+              w-8
+              animate-spin
+              rounded-full
+              border-2
+              border-[#D4AF37]/20
+              border-t-[#D4AF37]
+              "
+            />
+            <p className="text-sm text-white/40">Loading lead…</p>
+          </div>
         ) : lead ? (
-          <div className="space-y-8">
+          <div className="space-y-9 pt-2">
             {/* BASIC INFORMATION */}
 
             <div>
-              <h2 className="mb-5 text-xl font-bold text-[#D4AF37]">
-                Lead Information
-              </h2>
+              <SectionTitle
+                icon={<User size={16} />}
+                title="Lead Information"
+              />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                 <Info
-                  icon={<User size={18} />}
+                  icon={<User size={16} />}
                   label="Name"
                   value={lead.name}
                 />
 
                 <Info
-                  icon={<Phone size={18} />}
+                  icon={<Phone size={16} />}
                   label="Phone"
                   value={lead.phone}
                 />
 
                 <Info
-                  icon={<Mail size={18} />}
+                  icon={<Mail size={16} />}
                   label="Email"
                   value={lead.email}
                 />
 
                 <Info
-                  icon={<MapPin size={18} />}
+                  icon={<MapPin size={16} />}
                   label="City"
                   value={lead.city}
                 />
 
                 <Info
-                  icon={<Briefcase size={18} />}
+                  icon={<Briefcase size={16} />}
                   label="Employment"
                   value={lead.currentStatus}
                 />
 
                 <Info
-                  icon={<Target size={18} />}
+                  icon={<Target size={16} />}
                   label="Purpose"
                   value={lead.purpose}
                 />
 
                 <Info
-                  icon={<Calendar size={18} />}
+                  icon={<Calendar size={16} />}
                   label="Status"
                   value={lead.status}
                 />
 
                 <Info
-                  icon={<User size={18} />}
+                  icon={<User size={16} />}
                   label="Assigned To"
                   value={lead.assignedTo?.name}
                 />
 
                 <Info
-                  icon={<Clock size={18} />}
+                  icon={<Clock size={16} />}
                   label="Best Time To Reach"
                   value={lead.bestTimeToReach}
                 />
 
                 <Info
-                  icon={<CheckCircle size={18} />}
+                  icon={<CheckCircle size={16} />}
                   label="Training"
                   value={lead.willingToAttendTraining ? "Yes" : "No"}
                 />
 
                 <Info
-                  icon={<Calendar size={18} />}
+                  icon={<Calendar size={16} />}
                   label="Next Follow Up"
                   value={
                     lead.nextFollowUp
@@ -314,18 +358,19 @@ export default function LeadDetailsDialog({
                   }
                 />
 
-                <Info icon={<User size={18} />} label="Age" value={lead.age} />
+                <Info icon={<User size={16} />} label="Age" value={lead.age} />
               </div>
             </div>
             {/* CURRENT REMARKS */}
 
             <div>
-              <h2 className="mb-5 text-xl font-bold text-[#D4AF37]">
-                Current Lead Remarks
-              </h2>
+              <SectionTitle
+                icon={<MessageSquareText size={16} />}
+                title="Current Lead Remarks"
+              />
 
-              <div className="rounded-xl border border-[#D4AF37]/20 bg-black/30 p-5">
-                <p className="whitespace-pre-wrap text-gray-200">
+              <div className="rounded-2xl border border-white/10 bg-black/25 p-5">
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-white/70">
                   {lead.remarks || "No remarks available."}
                 </p>
               </div>
@@ -334,45 +379,69 @@ export default function LeadDetailsDialog({
             {/* FOLLOW UP HISTORY */}
 
             <div>
-              <h2 className="mb-5 text-xl font-bold text-[#D4AF37]">
-                Follow Up History
-              </h2>
+              <SectionTitle
+                icon={<History size={16} />}
+                title="Follow Up History"
+              />
 
               {lead.followups?.length ? (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {lead.followups.map((item) => (
                     <div
                       key={item.id}
                       className="
-                      rounded-xl
+                      rounded-2xl
                       border
-                      border-[#D4AF37]/20
-                      bg-black/30
+                      border-white/10
+                      bg-black/25
                       p-5
+                      transition-colors
+                      hover:border-[#D4AF37]/25
                       "
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-semibold text-[#D4AF37]">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className="
+                            flex
+                            h-8
+                            w-8
+                            shrink-0
+                            items-center
+                            justify-center
+                            rounded-full
+                            border
+                            border-[#D4AF37]/25
+                            bg-[#D4AF37]/[0.08]
+                            text-xs
+                            font-semibold
+                            uppercase
+                            text-[#D4AF37]
+                            "
+                          >
+                            {(item.user?.name || "U")[0]}
+                          </div>
+                          <p className="font-medium text-white">
                             {item.user?.name || "Unknown User"}
                           </p>
-
-                          <p className="mt-1 text-xs text-gray-400">
-                            {new Date(item.createdAt).toLocaleString()}
-                          </p>
                         </div>
+
+                        <p className="text-xs text-white/35">
+                          {new Date(item.createdAt).toLocaleString()}
+                        </p>
                       </div>
 
-                      <div className="mt-4 rounded-lg bg-[#D4AF37]/5 p-4">
-                        <p className="whitespace-pre-wrap text-white">
+                      <div className="mt-3.5 rounded-xl border border-white/5 bg-white/[0.03] p-4">
+                        <p className="whitespace-pre-wrap text-sm text-white/70">
                           {item.remarks}
                         </p>
                       </div>
 
                       {item.nextFollowUp && (
-                        <div className="mt-4 rounded-lg border border-[#D4AF37]/20 bg-[#D4AF37]/10 p-3">
+                        <div className="mt-3.5 flex items-center gap-2 rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.06] px-4 py-2.5">
+                          <Calendar size={14} className="text-[#D4AF37]" />
                           <p className="text-sm text-[#D4AF37]">
-                            <strong>Next Follow Up:</strong>{" "}
+                            Next Follow Up:{" "}
                             {new Date(item.nextFollowUp).toLocaleString()}
                           </p>
                         </div>
@@ -381,19 +450,7 @@ export default function LeadDetailsDialog({
                   ))}
                 </div>
               ) : (
-                <div
-                  className="
-                  rounded-xl
-                  border
-                  border-white/10
-                  bg-black/30
-                  p-6
-                  text-center
-                  text-gray-400
-                  "
-                >
-                  No Follow Up History Found.
-                </div>
+                <EmptyState label="No follow up history found." />
               )}
             </div>
 
@@ -402,67 +459,113 @@ export default function LeadDetailsDialog({
             {/* STATUS HISTORY */}
 
             <div>
-              <h2 className="mb-5 text-xl font-bold text-[#D4AF37]">
-                Status History
-              </h2>
+              <SectionTitle
+                icon={<History size={16} />}
+                title="Status History"
+              />
 
               {lead.statusHistory?.length ? (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {lead.statusHistory.map((item) => (
                     <div
                       key={item.id}
                       className="
-                      rounded-xl
+                      flex
+                      items-center
+                      justify-between
+                      gap-4
+                      rounded-2xl
                       border
-                      border-[#D4AF37]/20
-                      bg-black/30
+                      border-white/10
+                      bg-black/25
                       p-5
+                      transition-colors
+                      hover:border-[#D4AF37]/25
                       "
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-semibold text-[#D4AF37]">
+                      <div>
+                        <p className="flex items-center gap-2 font-medium">
+                          <span className="text-white/50">
                             {item.oldStatus}
-
-                            <span className="mx-2 text-white">→</span>
-
+                          </span>
+                          <ArrowRight size={14} className="text-[#D4AF37]" />
+                          <span className="text-[#D4AF37]">
                             {item.newStatus}
-                          </p>
+                          </span>
+                        </p>
 
-                          <p className="mt-2 text-sm text-gray-400">
-                            Changed By: {item.changedBy?.name || "Unknown User"}
-                          </p>
-                        </div>
+                        <p className="mt-1.5 text-xs text-white/35">
+                          Changed by {item.changedBy?.name || "Unknown User"}
+                        </p>
+                      </div>
 
-                        <div className="text-xs text-gray-500">
-                          {new Date(item.changedAt).toLocaleString()}
-                        </div>
+                      <div className="shrink-0 text-xs text-white/30">
+                        {new Date(item.changedAt).toLocaleString()}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div
-                  className="
-                  rounded-xl
-                  border
-                  border-white/10
-                  bg-black/30
-                  p-6
-                  text-center
-                  text-gray-400
-                  "
-                >
-                  No Status History Available.
-                </div>
+                <EmptyState label="No status history available." />
               )}
             </div>
           </div>
         ) : (
-          <div className="py-16 text-center text-gray-400">Lead not found.</div>
+          <div className="py-20 text-center text-sm text-white/40">
+            Lead not found.
+          </div>
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function SectionTitle({
+  icon,
+  title,
+}: {
+  icon?: React.ReactNode;
+  title: string;
+}) {
+  return (
+    <div className="mb-4 flex items-center gap-2.5">
+      <div
+        className="
+        flex
+        h-7
+        w-7
+        items-center
+        justify-center
+        rounded-lg
+        border
+        border-[#D4AF37]/25
+        bg-[#D4AF37]/[0.08]
+        text-[#D4AF37]
+        "
+      >
+        {icon}
+      </div>
+      <h2 className="text-base font-semibold text-white">{title}</h2>
+    </div>
+  );
+}
+
+function EmptyState({ label }: { label: string }) {
+  return (
+    <div
+      className="
+      rounded-2xl
+      border
+      border-white/10
+      bg-black/25
+      p-6
+      text-center
+      text-sm
+      text-white/35
+      "
+    >
+      {label}
+    </div>
   );
 }
 
@@ -478,23 +581,26 @@ function Info({ icon, label, value }: InfoProps) {
       className="
       rounded-xl
       border
-      border-[#D4AF37]/20
-      bg-black/30
+      border-white/10
+      bg-black/25
       p-4
-      transition
-      hover:border-[#D4AF37]/50
+      transition-colors
+      hover:border-[#D4AF37]/35
       "
     >
-      <div className="flex items-center gap-2 text-[#D4AF37]">
+      <div className="flex items-center gap-2 text-[#D4AF37]/80">
         {icon}
-        <p className="text-xs uppercase tracking-wide">{label}</p>
+        <p className="text-[11px] font-medium uppercase tracking-wide">
+          {label}
+        </p>
       </div>
 
       <p
         className="
-        mt-3
+        mt-2.5
         wrap-break-word
         text-sm
+        font-medium
         text-white
         "
       >

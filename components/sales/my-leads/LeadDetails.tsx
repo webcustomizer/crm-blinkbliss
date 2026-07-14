@@ -73,6 +73,27 @@ function smartCall(phone: string) {
   }, 1200);
 }
 
+// small helper purely for visual section headers — no state, no logic
+function SectionTitle({
+  icon,
+  title,
+  trailing,
+}: {
+  icon?: React.ReactNode;
+  title: string;
+  trailing?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-4 flex items-center justify-between">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-[#D4AF37]">
+        {icon}
+        {title}
+      </h3>
+      {trailing}
+    </div>
+  );
+}
+
 const LeadField = memo(function LeadField({
   label,
   value,
@@ -92,19 +113,19 @@ const LeadField = memo(function LeadField({
       group
       rounded-2xl
       border
-      border-white/5
+      border-white/[0.06]
       bg-gradient-to-br
-      from-[#1b1b1b]
-      to-[#121212]
+      from-[#181818]
+      to-[#111111]
       p-4
-      transition
+      transition-colors
       duration-150
-      active:border-[#D4AF37]/20
-      sm:hover:border-[#D4AF37]/30
+      active:border-[#D4AF37]/25
+      sm:hover:border-[#D4AF37]/25
       "
     >
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-white/35">
           {label}
         </p>
 
@@ -114,6 +135,8 @@ const LeadField = memo(function LeadField({
             className="
             min-h-[32px]
             rounded-full
+            border
+            border-[#D4AF37]/20
             bg-[#D4AF37]/10
             px-3
             py-1
@@ -141,7 +164,7 @@ const LeadField = memo(function LeadField({
           w-full
           rounded-xl
           border
-          border-[#D4AF37]/20
+          border-[#D4AF37]/25
           bg-black/40
           px-4
           py-3
@@ -154,8 +177,8 @@ const LeadField = memo(function LeadField({
           "
         />
       ) : (
-        <p className="mt-3 text-sm font-medium text-white">
-          {value || <span className="text-zinc-600">Not Added</span>}
+        <p className="mt-2 text-sm font-medium text-white">
+          {value || <span className="text-white/25">Not added</span>}
         </p>
       )}
     </div>
@@ -176,6 +199,14 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [noteSaving, setNoteSaving] = useState(false);
+  // Separate flag just for the status dropdown, so we can show a
+  // dedicated loading overlay on it without touching the shared
+  // `saving` flag other buttons already rely on.
+  const [statusSaving, setStatusSaving] = useState(false);
+  // Same idea, but for the "Save Lead Information" action.
+  const [infoSaving, setInfoSaving] = useState(false);
+  // Same idea, but for completing a follow up.
+  const [followUpSaving, setFollowUpSaving] = useState(false);
 
   const [showAllFollowups, setShowAllFollowups] = useState(false);
   const [showAllStatusHistory, setShowAllStatusHistory] = useState(false);
@@ -291,6 +322,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
   async function updateLeadStatus(newStatus: string) {
     try {
       setSaving(true);
+      setStatusSaving(true);
 
       const res = await fetch(`/api/salesperson/leads/${leadId}/status`, {
         method: "PATCH",
@@ -317,6 +349,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
       toast.error("Something went wrong");
     } finally {
       setSaving(false);
+      setStatusSaving(false);
     }
   }
 
@@ -374,6 +407,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
 
     try {
       setSaving(true);
+      setFollowUpSaving(true);
 
       const res = await fetch(
         `/api/salesperson/leads/${leadId}/complete-followup`,
@@ -403,6 +437,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
       toast.error("Something went wrong");
     } finally {
       setSaving(false);
+      setFollowUpSaving(false);
     }
   }
 
@@ -420,8 +455,21 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
 
   if (loading) {
     return createPortal(
-      <div className="fixed inset-0 z-50 flex h-[100dvh] items-center justify-center bg-black/60">
-        <div className="text-[#D4AF37]">Loading Lead...</div>
+      <div className="fixed inset-0 z-50 flex h-[100dvh] items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="flex flex-col items-center gap-3">
+          <div
+            className="
+            h-8
+            w-8
+            animate-spin
+            rounded-full
+            border-2
+            border-[#D4AF37]/20
+            border-t-[#D4AF37]
+            "
+          />
+          <p className="text-sm text-white/50">Loading lead…</p>
+        </div>
       </div>,
       document.body,
     );
@@ -429,8 +477,8 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
 
   if (!lead) {
     return createPortal(
-      <div className="fixed inset-0 z-50 flex h-[100dvh] items-center justify-center bg-black/60">
-        <div className="rounded-xl border border-[#D4AF37]/20 bg-[#161616] px-6 py-4 text-[#D4AF37]">
+      <div className="fixed inset-0 z-50 flex h-[100dvh] items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="rounded-2xl border border-[#D4AF37]/20 bg-[#161616] px-6 py-4 text-[#D4AF37]">
           Lead not found
         </div>
       </div>,
@@ -441,6 +489,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
   async function saveLeadInformation() {
     try {
       setSaving(true);
+      setInfoSaving(true);
 
       const res = await fetch(`/api/salesperson/leads/${leadId}`, {
         method: "PATCH",
@@ -467,6 +516,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
       toast.error("Something went wrong.");
     } finally {
       setSaving(false);
+      setInfoSaving(false);
     }
   }
 
@@ -493,7 +543,10 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
   return createPortal(
     <div className="fixed inset-0 z-50 flex h-[100dvh]">
       {/* Overlay */}
-      <div onClick={onClose} className="flex-1 bg-black/60" />
+      <div
+        onClick={onClose}
+        className="flex-1 bg-black/60 backdrop-blur-[2px] animate-in fade-in duration-200"
+      />
 
       {/* Sidebar */}
       <div
@@ -507,9 +560,57 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
   border-l
   border-white/10
   bg-[#080808]
-  shadow-[0_0_50px_rgba(212,175,55,0.08)]
+  shadow-[0_0_60px_rgba(212,175,55,0.10)]
+  animate-in
+  slide-in-from-right
+  duration-200
   "
       >
+        {statusSaving && (
+          <div
+            className="
+            absolute
+            inset-0
+            z-40
+            flex
+            items-center
+            justify-center
+            bg-black/50
+            backdrop-blur-[2px]
+            "
+          >
+            <div
+              className="
+              flex
+              items-center
+              gap-3
+              rounded-2xl
+              border
+              border-[#D4AF37]/25
+              bg-[#111]/95
+              px-6
+              py-4
+              shadow-xl
+              "
+            >
+              <span
+                className="
+                h-5
+                w-5
+                animate-spin
+                rounded-full
+                border-2
+                border-[#D4AF37]/25
+                border-t-[#D4AF37]
+                "
+              />
+              <span className="text-sm font-medium text-[#D4AF37]">
+                Updating status…
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Sticky header */}
         <div
           className="
@@ -540,11 +641,13 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
         items-center
         justify-center
         rounded-2xl
-        bg-[#D4AF37]/10
+        border
+        border-[#D4AF37]/20
+        bg-[#D4AF37]/[0.08]
         text-[#D4AF37]
         "
             >
-              <History size={20} />
+              <History size={20} strokeWidth={1.75} />
             </div>
 
             <div>
@@ -552,7 +655,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
                 Lead Details
               </h2>
 
-              <p className="mt-0.5 text-xs text-zinc-500 sm:text-sm">
+              <p className="mt-0.5 text-xs text-white/35 sm:text-sm">
                 Manage lead information and follow ups
               </p>
             </div>
@@ -568,7 +671,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
     border-white/10
     bg-white/5
     p-2.5
-    text-zinc-400
+    text-white/50
     transition
     duration-150
     active:scale-95
@@ -596,9 +699,11 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
             {/* Basic Information */}
             <div
               className="
+relative
+overflow-hidden
 rounded-3xl
 border
-border-white/10
+border-[#D4AF37]/15
 bg-gradient-to-br
 from-[#171717]
 to-[#0d0d0d]
@@ -606,7 +711,23 @@ p-6
 shadow-xl
 "
             >
-              <div className="flex items-start justify-between gap-4">
+              {/* ambient glow, purely decorative */}
+              <div
+                aria-hidden
+                className="
+                pointer-events-none
+                absolute
+                -right-16
+                -top-16
+                h-48
+                w-48
+                rounded-full
+                bg-[#D4AF37]/10
+                blur-[80px]
+                "
+              />
+
+              <div className="relative flex items-start justify-between gap-4">
                 {/* Left Content */}
                 <div className="min-w-0 flex-1">
                   <h3
@@ -621,21 +742,21 @@ break-words
                     {lead.name || "Unknown Lead"}
                   </h3>
 
-                  <div className="mt-5 space-y-4 text-sm text-zinc-400">
+                  <div className="mt-5 space-y-3.5 text-sm text-white/50">
                     {/* Phone */}
                     <div className="flex min-w-0 items-center gap-3">
-                      <span className="shrink-0 rounded-xl bg-white/5 p-2">
+                      <span className="shrink-0 rounded-xl border border-white/10 bg-white/[0.04] p-2 text-white/40">
                         <Phone size={15} />
                       </span>
 
-                      <span className="min-w-0 break-all text-sm text-zinc-300">
+                      <span className="min-w-0 break-all text-sm text-white/70">
                         {lead.phone}
                       </span>
                     </div>
 
                     {/* City */}
                     <p className="flex min-w-0 items-center gap-3">
-                      <span className="shrink-0 rounded-xl bg-white/5 p-2">
+                      <span className="shrink-0 rounded-xl border border-white/10 bg-white/[0.04] p-2 text-white/40">
                         <MapPin size={15} />
                       </span>
 
@@ -644,7 +765,7 @@ break-words
 
                     {/* Follow Up */}
                     <p className="flex min-w-0 items-center gap-3">
-                      <span className="shrink-0 rounded-xl bg-white/5 p-2">
+                      <span className="shrink-0 rounded-xl border border-white/10 bg-white/[0.04] p-2 text-white/40">
                         <CalendarClock size={15} />
                       </span>
 
@@ -658,9 +779,9 @@ break-words
                 </div>
 
                 {/* Right Actions */}
-                <div className="flex shrink-0 flex-col  items-end gap-3">
+                <div className="flex shrink-0 flex-col items-end gap-3">
                   {/* Status */}
-                  <div className="flex justify-center mb-4">
+                  <div className="mb-4 flex justify-center">
                     <LeadStatusBadge status={lead.status} />
                   </div>
 
@@ -696,15 +817,45 @@ hover:bg-[#25D366]/20
             </div>
 
             {/* Lead Information */}
-            <div className="mt-6 rounded-xl bg-[#111111] p-5">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-[#D4AF37]">
-                  Lead Information
-                </h3>
-                <Edit3 size={16} className="text-zinc-500" />
-              </div>
+            <div className="relative mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+              {infoSaving && (
+                <div
+                  className="
+                  absolute
+                  inset-0
+                  z-10
+                  flex
+                  items-center
+                  justify-center
+                  gap-3
+                  rounded-2xl
+                  bg-black/70
+                  backdrop-blur-sm
+                  "
+                >
+                  <span
+                    className="
+                    h-5
+                    w-5
+                    animate-spin
+                    rounded-full
+                    border-2
+                    border-[#D4AF37]/25
+                    border-t-[#D4AF37]
+                    "
+                  />
+                  <span className="text-sm font-medium text-[#D4AF37]">
+                    Saving lead information…
+                  </span>
+                </div>
+              )}
 
-              <div className="space-y-4">
+              <SectionTitle
+                icon={<Edit3 size={15} strokeWidth={1.75} />}
+                title="Lead Information"
+              />
+
+              <div className="space-y-3">
                 <LeadField
                   label="Name"
                   value={lead.name}
@@ -807,21 +958,21 @@ hover:bg-[#25D366]/20
             </div>
 
             {/* Follow Up History */}
-            <div className="mt-6 rounded-xl bg-[#111111] p-5">
-              <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[#D4AF37]">
-                <History size={16} />
-                Follow Up History
-              </h3>
-              <div className="space-y-3">
+            <div className="mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+              <SectionTitle
+                icon={<History size={15} strokeWidth={1.75} />}
+                title="Follow Up History"
+              />
+              <div className="space-y-2.5">
                 {followups.length > 0 ? (
                   <>
                     {visibleFollowups.map((item) => (
                       <div
                         key={item.id}
-                        className="rounded-lg border border-white/5 bg-[#1a1a1a] p-3"
+                        className="rounded-xl border border-white/[0.05] bg-black/25 p-3.5 transition-colors hover:border-[#D4AF37]/20"
                       >
-                        <p className="text-sm text-white">{item.remarks}</p>
-                        <div className="mt-2 flex items-center justify-between text-xs text-zinc-500">
+                        <p className="text-sm text-white/85">{item.remarks}</p>
+                        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-white/30">
                           <span>
                             {item.followUpNumber === 0
                               ? "Note"
@@ -838,7 +989,7 @@ hover:bg-[#25D366]/20
                     {followups.length > 3 && (
                       <button
                         onClick={() => setShowAllFollowups((prev) => !prev)}
-                        className="min-h-[40px] w-full rounded-lg border border-white/10 text-xs font-medium text-zinc-400 transition duration-150 active:border-[#D4AF37]/30 active:text-[#D4AF37]"
+                        className="min-h-[40px] w-full rounded-lg border border-white/10 text-xs font-medium text-white/40 transition duration-150 active:border-[#D4AF37]/30 active:text-[#D4AF37]"
                       >
                         {showAllFollowups
                           ? "Show Less"
@@ -847,24 +998,88 @@ hover:bg-[#25D366]/20
                     )}
                   </>
                 ) : (
-                  <p className="text-sm text-zinc-500">No follow ups yet</p>
+                  <p className="text-sm text-white/30">No follow ups yet</p>
                 )}
               </div>
             </div>
 
             {/* Complete Follow Up */}
-            <div className="mt-6 rounded-xl bg-[#111111] p-5">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-[#D4AF37]">
-                  Complete Follow Up
-                </h3>
-                <span className="rounded-full bg-[#1d1d1d] px-3 py-1 text-xs text-zinc-400">
-                  Total: {lead.followUpCount || 0}
-                </span>
-              </div>
+            <div className="relative mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+              {followUpSaving && (
+                <div
+                  className="
+                  absolute
+                  inset-0
+                  z-10
+                  flex
+                  items-center
+                  justify-center
+                  gap-3
+                  rounded-2xl
+                  bg-black/70
+                  backdrop-blur-sm
+                  "
+                >
+                  <span
+                    className="
+                    h-5
+                    w-5
+                    animate-spin
+                    rounded-full
+                    border-2
+                    border-[#D4AF37]/25
+                    border-t-[#D4AF37]
+                    "
+                  />
+                  <span className="text-sm font-medium text-[#D4AF37]">
+                    Completing follow up…
+                  </span>
+                </div>
+              )}
+
+              <SectionTitle
+                title="Complete Follow Up"
+                trailing={
+                  <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-white/40">
+                    Total: {lead.followUpCount || 0}
+                  </span>
+                }
+              />
 
               <div className="space-y-4">
-                <div>
+                <div className="relative">
+                  {noteSaving && (
+                    <div
+                      className="
+                      absolute
+                      inset-0
+                      z-10
+                      flex
+                      items-center
+                      justify-center
+                      gap-2
+                      rounded-xl
+                      bg-black/70
+                      backdrop-blur-sm
+                      "
+                    >
+                      <span
+                        className="
+                        h-4
+                        w-4
+                        animate-spin
+                        rounded-full
+                        border-2
+                        border-[#D4AF37]/25
+                        border-t-[#D4AF37]
+                        "
+                      />
+                      <span className="text-xs font-medium text-[#D4AF37]">
+                        Saving note…
+                      </span>
+                    </div>
+                  )}
+
                   <textarea
                     rows={4}
                     disabled={remarksDisabled}
@@ -873,16 +1088,17 @@ hover:bg-[#25D366]/20
                     placeholder="Write remarks or notes..."
                     className="
     w-full
-    rounded-lg
+    rounded-xl
     border
-    border-white/5
-    bg-[#1d1d1d]
+    border-white/[0.06]
+    bg-black/25
     p-3
     text-sm
     text-white
     outline-none
     transition
     duration-150
+    placeholder:text-white/25
     focus:border-[#D4AF37]/40
     disabled:cursor-not-allowed
     disabled:opacity-50
@@ -891,7 +1107,7 @@ hover:bg-[#25D366]/20
 
                   <div className="mt-2 flex items-center justify-between gap-3">
                     {remarksMissing && !remarksDisabled ? (
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-white/30">
                         Required to complete a follow up
                       </p>
                     ) : (
@@ -925,17 +1141,18 @@ hover:bg-[#25D366]/20
                   </div>
                 </div>
 
-                <select
-                  value={lead.status}
-                  disabled={isClosed || saving}
-                  onChange={(e) => updateLeadStatus(e.target.value)}
-                  className="
+                <div className="relative">
+                  <select
+                    value={lead.status}
+                    disabled={isClosed || saving}
+                    onChange={(e) => updateLeadStatus(e.target.value)}
+                    className="
   min-h-[48px]
   w-full
-  rounded-lg
+  rounded-xl
   border
-  border-white/5
-  bg-[#1d1d1d]
+  border-white/[0.06]
+  bg-black/25
   p-3
   text-sm
   text-white
@@ -945,17 +1162,52 @@ hover:bg-[#25D366]/20
   focus:border-[#D4AF37]/40
   disabled:opacity-50
   "
-                >
-                  <option value="NEW">NEW</option>
-                  <option value="CALLED">CALLED</option>
-                  <option value="SEAT_RESERVED">SEAT RESERVED</option>
-                  <option value="TRAINING_ATTENDED">TRAINING ATTENDED</option>
-                  <option value="NEED_MORE_FOLLOW_UP">
-                    NEED MORE FOLLOW UP
-                  </option>
-                  <option value="JOINED">JOINED</option>
-                  <option value="DEAD">DEAD</option>
-                </select>
+                  >
+                    <option value="NEW">NEW</option>
+                    <option value="CALLED">CALLED</option>
+                    <option value="SEAT_RESERVED">SEAT RESERVED</option>
+                    <option value="TRAINING_ATTENDED">TRAINING ATTENDED</option>
+                    <option value="NEED_MORE_FOLLOW_UP">
+                      NEED MORE FOLLOW UP
+                    </option>
+                    <option value="JOINED">JOINED</option>
+                    <option value="DEAD">DEAD</option>
+                  </select>
+
+                  {statusSaving && (
+                    <div
+                      className="
+                      absolute
+                      inset-0
+                      z-10
+                      flex
+                      items-center
+                      justify-center
+                      gap-2
+                      rounded-xl
+                      border
+                      border-[#D4AF37]/20
+                      bg-black/70
+                      backdrop-blur-sm
+                      "
+                    >
+                      <span
+                        className="
+                        h-4
+                        w-4
+                        animate-spin
+                        rounded-full
+                        border-2
+                        border-[#D4AF37]/25
+                        border-t-[#D4AF37]
+                        "
+                      />
+                      <span className="text-xs font-medium text-[#D4AF37]">
+                        Updating status…
+                      </span>
+                    </div>
+                  )}
+                </div>
 
                 {/* Desktop / inline button — hidden on mobile, sticky bar takes over there */}
                 <button
@@ -963,7 +1215,7 @@ hover:bg-[#25D366]/20
                   disabled={followUpDisabled}
                   className={`hidden min-h-[48px] w-full rounded-xl py-3 font-semibold transition duration-150 active:scale-[0.98] md:block ${
                     followUpDisabled
-                      ? "cursor-not-allowed bg-zinc-700 text-zinc-400"
+                      ? "cursor-not-allowed bg-white/10 text-white/30"
                       : "bg-[#D4AF37] text-black active:opacity-90"
                   }`}
                 >
@@ -973,12 +1225,12 @@ hover:bg-[#25D366]/20
             </div>
 
             {/* Status History */}
-            <div className="mt-6 rounded-xl bg-[#111111] p-5">
-              <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[#D4AF37]">
-                <History size={16} />
-                Status History
-              </h3>
-              <div className="space-y-3">
+            <div className="mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+              <SectionTitle
+                icon={<History size={15} strokeWidth={1.75} />}
+                title="Status History"
+              />
+              <div className="space-y-2.5">
                 {statusHistory.length > 0 ? (
                   <>
                     {visibleStatusHistory.map(
@@ -991,10 +1243,10 @@ hover:bg-[#25D366]/20
                       }) => (
                         <div
                           key={item.id}
-                          className="rounded-lg border border-white/5 bg-[#1a1a1a] p-3"
+                          className="rounded-xl border border-white/[0.05] bg-black/25 p-3.5 transition-colors hover:border-[#D4AF37]/20"
                         >
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white">
-                            <span className="break-words">
+                            <span className="break-words text-white/60">
                               {item.oldStatus}
                             </span>
                             <span className="shrink-0 text-[#D4AF37]">→</span>
@@ -1002,7 +1254,7 @@ hover:bg-[#25D366]/20
                               {item.newStatus}
                             </span>
                           </div>
-                          <p className="mt-1 text-xs text-zinc-500">
+                          <p className="mt-1 text-xs text-white/30">
                             By {item.changedBy?.name || "Unknown"} •{" "}
                             {new Date(item.changedAt).toLocaleString()}
                           </p>
@@ -1013,7 +1265,7 @@ hover:bg-[#25D366]/20
                     {statusHistory.length > 3 && (
                       <button
                         onClick={() => setShowAllStatusHistory((prev) => !prev)}
-                        className="min-h-[40px] w-full rounded-lg border border-white/10 text-xs font-medium text-zinc-400 transition duration-150 active:border-[#D4AF37]/30 active:text-[#D4AF37]"
+                        className="min-h-[40px] w-full rounded-lg border border-white/10 text-xs font-medium text-white/40 transition duration-150 active:border-[#D4AF37]/30 active:text-[#D4AF37]"
                       >
                         {showAllStatusHistory
                           ? "Show Less"
@@ -1022,7 +1274,7 @@ hover:bg-[#25D366]/20
                     )}
                   </>
                 ) : (
-                  <p className="text-sm text-zinc-500">No status history</p>
+                  <p className="text-sm text-white/30">No status history</p>
                 )}
               </div>
             </div>
@@ -1037,9 +1289,10 @@ hover:bg-[#25D366]/20
           shrink-0
           border-t
           border-white/10
-          bg-[#080808]
+          bg-[#080808]/95
           p-4
           pb-[calc(1rem+env(safe-area-inset-bottom))]
+          backdrop-blur-md
           md:hidden
           "
         >
@@ -1048,7 +1301,7 @@ hover:bg-[#25D366]/20
             disabled={followUpDisabled}
             className={`min-h-[48px] w-full rounded-xl py-3 font-semibold transition duration-150 active:scale-[0.98] ${
               followUpDisabled
-                ? "cursor-not-allowed bg-zinc-700 text-zinc-400"
+                ? "cursor-not-allowed bg-white/10 text-white/30"
                 : "bg-[#D4AF37] text-black active:opacity-90"
             }`}
           >
