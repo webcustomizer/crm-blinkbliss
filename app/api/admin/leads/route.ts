@@ -2,6 +2,37 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 const GOOGLE_SHEET_WEBHOOK = process.env.GOOGLE_SHEET_WEBHOOK;
 
+// Complete incomplete helper
+function checkLeadCompletion(data: {
+  name?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  city?: string | null;
+  age?: number | null;
+  purpose?: string | null;
+  currentStatus?: string | null;
+  bestTimeToReach?: string | null;
+  willingToAttendTraining?: boolean | null;
+}) {
+  const fields = [
+    data.phone,
+    data.name,
+    data.email,
+    data.city,
+    data.age,
+    data.purpose,
+    data.currentStatus,
+    data.bestTimeToReach,
+    data.willingToAttendTraining,
+  ];
+
+  const allFilled = fields.every(
+    (field) => field !== null && field !== undefined && field !== "",
+  );
+
+  return allFilled ? "COMPLETE" : "INCOMPLETE";
+}
+
 // Pakistan Standard Time = UTC+5
 const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
 
@@ -249,7 +280,17 @@ export async function POST(req: Request) {
 
         status: "NEW",
 
-        completion: "INCOMPLETE",
+        completion: checkLeadCompletion({
+          name,
+          phone,
+          email,
+          city,
+          age: age ? Number(age) : null,
+          purpose,
+          currentStatus,
+          bestTimeToReach,
+          willingToAttendTraining,
+        }),
 
         remarks: null,
       },
