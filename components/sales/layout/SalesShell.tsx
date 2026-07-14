@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 import Sidebar from "@/components/sales/layout/Sidebar";
@@ -22,14 +22,14 @@ export default function SalesShell({ children, user }: SalesShellProps) {
 
   const router = useRouter();
 
+  const handleNewNotification = useCallback(() => {
+    console.log("Refreshing salesperson dashboard");
+    router.refresh();
+  }, [router]);
+
   useSalesNotifications({
     userId: user?.id,
-
-    onNewNotification: () => {
-      console.log("Refreshing salesperson dashboard");
-
-      router.refresh();
-    },
+    onNewNotification: handleNewNotification,
   });
 
   return (
