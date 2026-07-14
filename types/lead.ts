@@ -26,15 +26,15 @@ export interface LeadFollowUp {
   } | null;
 }
 
-export interface LeadActivity {
-  id: string;
-  message: string;
-  createdAt: string;
-  user?: {
-    id: string;
-    name: string;
-  } | null;
-}
+// export interface LeadActivity {
+//   id: string;
+//   message: string;
+//   createdAt: string;
+//   user?: {
+//     id: string;
+//     name: string;
+//   } | null;
+// }
 
 export interface LeadStatusHistory {
   id: string;
@@ -69,6 +69,6 @@ export interface LeadDetails {
   nextFollowUp?: string | null;
   assignedTo?: LeadAssignedTo | null;
   followups?: LeadFollowUp[];
-  activities?: LeadActivity[];
+  // activities?: LeadActivity[];
   statusHistory?: LeadStatusHistory[];
 }

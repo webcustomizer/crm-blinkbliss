@@ -399,53 +399,6 @@ export default function LeadDetailsDialog({
 
             {/* ACTIVITY HISTORY */}
 
-            <div>
-              <h2 className="mb-5 text-xl font-bold text-[#D4AF37]">
-                Activity History
-              </h2>
-
-              {lead.activities?.length ? (
-                <div className="space-y-4">
-                  {lead.activities.map((item) => (
-                    <div
-                      key={item.id}
-                      className="
-rounded-xl
-border
-border-[#D4AF37]/20
-bg-black/30
-p-5
-"
-                    >
-                      <p className="font-semibold text-[#D4AF37]">
-                        {item.user?.name}
-                      </p>
-
-                      <p className="text-xs text-gray-400">
-                        {new Date(item.createdAt).toLocaleString()}
-                      </p>
-
-                      <p className="mt-3 text-white">{item.message}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div
-                  className="
-rounded-xl
-border
-border-white/10
-bg-black/30
-p-6
-text-center
-text-gray-400
-"
-                >
-                  No Activity Found
-                </div>
-              )}
-            </div>
-
             {/* STATUS HISTORY */}
 
             <div>
