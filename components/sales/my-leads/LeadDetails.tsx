@@ -592,7 +592,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
           [-webkit-overflow-scrolling:touch]
           "
         >
-          <div className="p-6 pb-6 sm:p-8">
+          <div className="p-4 pb-6 sm:p-6">
             {/* Basic Information */}
             <div
               className="
@@ -606,14 +606,15 @@ p-6
 shadow-xl
 "
             >
-              <div className="flex items-start justify-between gap-4">
-                <div>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <h3
                     className="
 text-2xl
 font-bold
 tracking-tight
 text-white
+break-words
 "
                   >
                     {lead.name || "Unknown Lead"}
@@ -621,12 +622,12 @@ text-white
 
                   <div className="mt-5 space-y-4 text-sm text-zinc-400">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="flex items-center gap-3">
-                        <span className="rounded-xl bg-white/5 p-2">
+                      <p className="flex min-w-0 items-center gap-3">
+                        <span className="shrink-0 rounded-xl bg-white/5 p-2">
                           <Phone size={15} />
                         </span>
 
-                        {lead.phone}
+                        <span className="break-all">{lead.phone}</span>
                       </p>
 
                       {lead.phone && (
@@ -635,42 +636,42 @@ text-white
                           onClick={() => smartCall(lead.phone)}
                           title="Call (via WhatsApp if available)"
                           className="
-                          inline-flex
-                          shrink-0
-                          items-center
-                          gap-2
-                          rounded-full
-                          border
-                          border-[#D4AF37]/25
-                          bg-gradient-to-b
-                          from-[#1e1e1e]
-                          to-[#151515]
-                          py-1.5
-                          pl-2
-                          pr-3.5
-                          text-xs
-                          font-medium
-                          tracking-wide
-                          text-[#e8e8e8]
-                          shadow-sm
-                          transition-all
-                          duration-300
-                          hover:border-[#D4AF37]/50
-                          hover:shadow-[0_0_14px_rgba(212,175,55,0.18)]
-                          active:scale-95
-                          "
+inline-flex
+shrink-0
+items-center
+gap-2
+rounded-full
+border
+border-[#D4AF37]/25
+bg-gradient-to-b
+from-[#1e1e1e]
+to-[#151515]
+py-1.5
+pl-2
+pr-3.5
+text-xs
+font-medium
+tracking-wide
+text-[#e8e8e8]
+shadow-sm
+transition-all
+duration-300
+hover:border-[#D4AF37]/50
+hover:shadow-[0_0_14px_rgba(212,175,55,0.18)]
+active:scale-95
+"
                         >
                           <span
                             className="
-                            flex
-                            h-5
-                            w-5
-                            items-center
-                            justify-center
-                            rounded-full
-                            bg-[#25D366]/15
-                            text-[#25D366]
-                            "
+flex
+h-5
+w-5
+items-center
+justify-center
+rounded-full
+bg-[#25D366]/15
+text-[#25D366]
+"
                           >
                             <WhatsAppIcon size={11} />
                           </span>
@@ -679,27 +680,29 @@ text-white
                       )}
                     </div>
 
-                    <p className="flex items-center gap-3">
-                      <span className="rounded-xl bg-white/5 p-2">
+                    <p className="flex min-w-0 items-center gap-3">
+                      <span className="shrink-0 rounded-xl bg-white/5 p-2">
                         <MapPin size={15} />
                       </span>
 
-                      {lead.city || "-"}
+                      <span className="break-words">{lead.city || "-"}</span>
                     </p>
 
-                    <p className="flex items-center gap-3">
-                      <span className="rounded-xl bg-white/5 p-2">
+                    <p className="flex min-w-0 items-center gap-3">
+                      <span className="shrink-0 rounded-xl bg-white/5 p-2">
                         <CalendarClock size={15} />
                       </span>
 
-                      {lead.nextFollowUp
-                        ? new Date(lead.nextFollowUp).toLocaleString()
-                        : "No Follow Up"}
+                      <span className="break-words">
+                        {lead.nextFollowUp
+                          ? new Date(lead.nextFollowUp).toLocaleString()
+                          : "No Follow Up"}
+                      </span>
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-2 shrink-0">
+                <div className="mt-2 max-w-[40%] shrink-0">
                   <LeadStatusBadge status={lead.status} />
                 </div>
               </div>
