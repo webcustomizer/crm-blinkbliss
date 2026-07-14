@@ -4,7 +4,7 @@ import LeadFormCard from "./LeadFormCard";
 
 export default function LeadLandingPage() {
   return (
-    <main className="min-h-screen  flex items-center justify-center bg-[#090909] py-20 md:p-4">
+    <main className="flex min-h-screen items-start justify-center bg-[#090909] py-6 md:items-center md:py-20 md:p-4">
       {/* Form Container */}
       <div
         className="
