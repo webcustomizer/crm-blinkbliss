@@ -46,10 +46,11 @@ export default function LoginForm() {
       }
 
       if (data.user.role === "ADMIN") {
-        router.push("/admin/dashboard");
+        router.replace("/admin/dashboard");
       } else {
-        router.push("/sales/dashboard");
+        router.replace("/sales/dashboard");
       }
+      router.refresh();
     } catch {
       setError("Something went wrong.");
     } finally {
