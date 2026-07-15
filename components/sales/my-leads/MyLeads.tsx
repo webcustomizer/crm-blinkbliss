@@ -167,10 +167,13 @@ export default function MyLeads() {
   function openLead(lead: Lead) {
     setSelectedLeadId(lead.id);
 
-    // Keep the URL in sync so refresh/share/back-button behave sensibly
+    // Keep the URL in sync so refresh/share/back-button behave sensibly.
+    // push (not replace) so opening a lead adds a real history entry —
+    // this makes swipe/back navigation go: lead detail -> list -> dashboard,
+    // instead of skipping straight back to dashboard.
     const params = new URLSearchParams(searchParams.toString());
     params.set("leadId", lead.id);
-    router.replace(`?${params.toString()}`, { scroll: false });
+    router.push(`?${params.toString()}`, { scroll: false });
   }
 
   function closeLead() {
