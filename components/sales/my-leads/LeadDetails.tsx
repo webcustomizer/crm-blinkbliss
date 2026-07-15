@@ -15,6 +15,7 @@ import {
 
 import LeadStatusBadge from "./LeadStatusBadge";
 import { toast } from "sonner";
+import { getLeadCached, invalidateLead } from "@/lib/leadCache";
 
 interface LeadDetailsProps {
   leadId: string;
@@ -303,15 +304,15 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
     );
   }, []);
 
+  // Reads through the shared cache — if LeadsTable already prefetched
+  // this lead on pointerdown, this resolves instantly (or almost
+  // instantly if the request is still in flight) instead of starting
+  // a fresh fetch from scratch.
   const getLeadDetails = useCallback(async () => {
     try {
-      const res = await fetch(`/api/salesperson/leads/${leadId}`, {
-        cache: "no-store",
-      });
+      const data = await getLeadCached(leadId);
 
-      const data = await res.json();
-
-      if (res.ok) {
+      if (data?.lead) {
         const leadData = data.lead;
         setLead(leadData);
 
@@ -359,6 +360,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
         return;
       }
 
+      invalidateLead(leadId); // status changed server-side — old cache entry is stale
       await getLeadDetails();
 
       toast.success("Status updated successfully");
@@ -406,6 +408,11 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
         followups: [data.note, ...(prev?.followups || [])],
       }));
 
+      // We updated local state directly instead of refetching, so the
+      // cached copy of this lead is now behind reality — drop it so the
+      // next open (or any prefetch) doesn't hand back the old followups.
+      invalidateLead(leadId);
+
       setForm((prev) => ({ ...prev, remarks: "" }));
 
       toast.success("Note saved successfully");
@@ -445,6 +452,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
         return;
       }
 
+      invalidateLead(leadId); // follow-up count / history changed server-side
       await getLeadDetails();
 
       setForm((prev) => ({ ...prev, remarks: "" }));
@@ -481,6 +489,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
 
       setEditingFields([]);
 
+      invalidateLead(leadId); // field values changed server-side
       await getLeadDetails();
 
       toast.success("Lead information updated successfully.");

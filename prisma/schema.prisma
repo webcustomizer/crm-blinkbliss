@@ -141,6 +141,12 @@ model Lead {
   statusHistory StatusHistory[]
 
   activityLogs ActivityLog[]
+
+  // Speeds up the leads-table listing query (findMany by assignedToId)
+  // and the detail-page lookup (findFirst by id + assignedToId).
+  @@index([assignedToId])
+  // Supports filtering/sorting the leads table by status per salesperson.
+  @@index([assignedToId, status])
 }
 
 // =====================
@@ -171,6 +177,9 @@ model FollowUp {
   lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   user User @relation(fields: [userId], references: [id])
+
+  // Matches the lead-detail query: WHERE leadId = ? ORDER BY createdAt DESC
+  @@index([leadId, createdAt])
 }
 
 // =====================
@@ -195,6 +204,9 @@ model StatusHistory {
   lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   changedBy User @relation(fields: [changedById], references: [id])
+
+  // Matches the lead-detail query: WHERE leadId = ? ORDER BY changedAt DESC
+  @@index([leadId, changedAt])
 }
 
 // =====================
@@ -224,6 +236,9 @@ model Notification {
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   announcement Announcement? @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  // Speeds up "unread notifications for this user" queries
+  @@index([userId, isRead])
 }
 
 // =====================
@@ -301,6 +316,12 @@ model ActivityLog {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   lead Lead? @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  // Supports the admin activity feed (ORDER BY createdAt DESC) and any
+  // per-lead or per-user activity lookups.
+  @@index([createdAt])
+  @@index([leadId])
+  @@index([userId])
 }
 
 // =====================

@@ -3,6 +3,7 @@
 import { Phone, CalendarClock, ChevronLeft, ChevronRight } from "lucide-react";
 
 import LeadStatusBadge from "./LeadStatusBadge";
+import { prefetchLead } from "@/lib/leadCache";
 
 interface Lead {
   id: string;
@@ -93,6 +94,7 @@ export default function LeadsTable({
               leads.map((lead) => (
                 <tr
                   key={lead.id}
+                  onPointerDown={() => prefetchLead(lead.id)}
                   className="border-b border-[#D4AF37]/10 transition hover:bg-[#D4AF37]/5"
                 >
                   <td className="px-5 py-4">
@@ -129,6 +131,10 @@ export default function LeadsTable({
 
                   <td className="px-5 py-4 text-right">
                     <button
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        prefetchLead(lead.id);
+                      }}
                       onClick={() => onView(lead)}
                       className="
                       rounded-xl
@@ -164,6 +170,7 @@ export default function LeadsTable({
           leads.map((lead) => (
             <div
               key={lead.id}
+              onPointerDown={() => prefetchLead(lead.id)}
               className="rounded-2xl border border-[#D4AF37]/20 bg-[#161616] p-4"
             >
               <div className="flex items-start justify-between gap-3">
@@ -193,6 +200,10 @@ export default function LeadsTable({
               </div>
 
               <button
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  prefetchLead(lead.id);
+                }}
                 onClick={() => onView(lead)}
                 className="
                 mt-3
