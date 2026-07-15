@@ -115,8 +115,8 @@ export default function ImportLeadsSection() {
       },
       error: (err) => {
         console.error(err);
-        toast.error("CSV parse nahi ho saki", {
-          description: "File format check karein aur dobara try karein.",
+        toast.error("CSV can't be parsed", {
+          description: "First check your File format then re-try.",
           icon: <XCircle className="h-4 w-4 text-red-400" />,
         });
         resetSelection();
