@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-
+import { sendPushNotification } from "@/lib/push";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 import { ActivityAction } from "@/app/generated/prisma/client";
@@ -98,6 +98,20 @@ export async function POST(req: Request) {
 
       return announcement;
     });
+
+    // ADD THIS:
+    if (salespersons.length > 0) {
+      await Promise.all(
+        salespersons.map((salesperson) =>
+          sendPushNotification({
+            userId: salesperson.id,
+            title: "📢 New Announcement",
+            message: title,
+            link: `/sales/announcements?announcementId=${announcement.id}`,
+          }),
+        ),
+      );
+    }
 
     await logActivity({
       userId: user.id,

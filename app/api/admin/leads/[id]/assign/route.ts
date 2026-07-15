@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendPushNotification } from "@/lib/push";
 
 export async function PATCH(
   req: Request,
@@ -83,7 +84,9 @@ export async function PATCH(
       data: {
         title: "🔔 New Lead Assigned",
 
-        message: `${lead.name || "New lead"} has been assigned to you check it out!`,
+        message: `${
+          lead.name || "New lead"
+        } has been assigned to you check it out!`,
 
         userId: salespersonId,
 
@@ -92,7 +95,14 @@ export async function PATCH(
         link: `/sales/my-leads?leadId=${lead.id}`,
       },
     });
-
+    await sendPushNotification({
+      userId: salespersonId,
+      title: "🔔 New Lead Assigned",
+      message: `${
+        lead.name || "New lead"
+      } has been assigned to you check it out!`,
+      link: `/sales/my-leads?leadId=${lead.id}`,
+    });
     return NextResponse.json({
       success: true,
       data: lead,
