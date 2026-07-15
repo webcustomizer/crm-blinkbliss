@@ -11,7 +11,7 @@ if (!getApps().length) {
     }),
   });
 }
-// coment
+
 interface SendPushParams {
   userId: string;
   title: string;
