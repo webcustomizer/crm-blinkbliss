@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { supabase } from "@/lib/supabase";
 
@@ -33,6 +34,9 @@ interface Lead {
 const PAGE_SIZE = 10;
 
 export default function MyLeads() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [leads, setLeads] = useState<Lead[]>([]);
 
   const [total, setTotal] = useState(0);
@@ -48,7 +52,11 @@ export default function MyLeads() {
 
   const [status, setStatus] = useState("");
 
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  // LeadDetails sirf leadId use karta hai (khud fetch kar leta hai),
+  // isliye poora Lead object rakhne ki zaroorat nahi — sirf id.
+  // Isse notification se seedha ek lead open karna aasan ho jata hai,
+  // chahe woh lead current page/filter mein listed ho ya na ho.
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
   async function getLeads(showLoader = false, page = currentPage) {
     try {
@@ -135,9 +143,45 @@ export default function MyLeads() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, status]);
 
+  // Deep-link support: /sales/my-leads?leadId=xyz auto-opens that lead's
+  // detail panel. This is what notification clicks (lead assigned, etc.)
+  // navigate to.
+  useEffect(() => {
+    const leadIdFromUrl = searchParams.get("leadId");
+
+    if (leadIdFromUrl) {
+      const timer = setTimeout(() => {
+        setSelectedLeadId(leadIdFromUrl);
+      }, 0);
+
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   function handlePageChange(page: number) {
     setCurrentPage(page);
     void getLeads(false, page);
+  }
+
+  function openLead(lead: Lead) {
+    setSelectedLeadId(lead.id);
+
+    // Keep the URL in sync so refresh/share/back-button behave sensibly
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("leadId", lead.id);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }
+
+  function closeLead() {
+    setSelectedLeadId(null);
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("leadId");
+    const query = params.toString();
+    router.replace(query ? `?${query}` : window.location.pathname, {
+      scroll: false,
+    });
   }
 
   if (loading) {
@@ -190,7 +234,7 @@ export default function MyLeads() {
       {/* Responsive: table on desktop, cards on mobile — server-side pagination */}
       <LeadsTable
         leads={leads}
-        onView={(lead) => setSelectedLead(lead)}
+        onView={openLead}
         total={total}
         totalPages={totalPages}
         currentPage={currentPage}
@@ -198,11 +242,8 @@ export default function MyLeads() {
         pageSize={PAGE_SIZE}
       />
 
-      {selectedLead && (
-        <LeadDetails
-          leadId={selectedLead.id}
-          onClose={() => setSelectedLead(null)}
-        />
+      {selectedLeadId && (
+        <LeadDetails leadId={selectedLeadId} onClose={closeLead} />
       )}
     </div>
   );

@@ -35,6 +35,14 @@ export async function PATCH(
         },
       });
 
+      // No one owns this lead anymore — any existing "lead assigned"
+      // notification (for whoever had it before) is now stale, so remove it.
+      await prisma.notification.deleteMany({
+        where: {
+          leadId: id,
+        },
+      });
+
       return NextResponse.json({
         success: true,
         data: lead,
@@ -61,6 +69,15 @@ export async function PATCH(
       },
     });
 
+    // Reassigning: clear out any previous "lead assigned" notification for
+    // this lead (e.g. the old salesperson's copy) before creating the new one,
+    // so it doesn't stick around pointing at a lead they no longer own.
+    await prisma.notification.deleteMany({
+      where: {
+        leadId: id,
+      },
+    });
+
     // Create Notification
     await prisma.notification.create({
       data: {
@@ -69,6 +86,10 @@ export async function PATCH(
         message: `${lead.name || "New lead"} has been assigned to you check it out!`,
 
         userId: salespersonId,
+
+        leadId: id,
+
+        link: `/sales/my-leads?leadId=${lead.id}`,
       },
     });
 

@@ -91,6 +91,7 @@ export async function POST(req: Request) {
             title: "📢 New Announcement",
             message: title,
             announcementId: announcement.id,
+            link: `/sales/announcements?announcementId=${announcement.id}`,
           })),
         });
       }

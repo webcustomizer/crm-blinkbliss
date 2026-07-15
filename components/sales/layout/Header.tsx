@@ -133,7 +133,8 @@ export default function Header({
           sm:gap-3
           "
         >
-          <NotificationBell />
+          {/* // Header.tsx mein */}
+          <NotificationBell userId={user?.id ?? ""} />
 
           {/* Desktop User */}
 

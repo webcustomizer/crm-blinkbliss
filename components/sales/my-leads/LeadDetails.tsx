@@ -3,7 +3,15 @@
 import { useCallback, useEffect, useState, memo } from "react";
 import { createPortal } from "react-dom";
 
-import { X, Phone, MapPin, CalendarClock, History, Edit3 } from "lucide-react";
+import {
+  X,
+  Phone,
+  MapPin,
+  CalendarClock,
+  History,
+  Edit3,
+  AlertCircle,
+} from "lucide-react";
 
 import LeadStatusBadge from "./LeadStatusBadge";
 import { toast } from "sonner";
@@ -91,6 +99,16 @@ function SectionTitle({
       </h3>
       {trailing}
     </div>
+  );
+}
+
+// Skeleton block — mimics the shape of a loaded section so the panel
+// never has to jump-cut between "empty" and "full" layouts.
+function SkeletonBlock({ className = "" }: { className?: string }) {
+  return (
+    <div
+      className={`animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.03] ${className}`}
+    />
   );
 }
 
@@ -441,51 +459,6 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
     }
   }
 
-  useEffect(() => {
-    async function loadLeadDetails() {
-      await getLeadDetails();
-    }
-
-    loadLeadDetails();
-  }, [leadId, getLeadDetails]);
-
-  if (!mounted) {
-    return null;
-  }
-
-  if (loading) {
-    return createPortal(
-      <div className="fixed inset-0 z-50 flex h-[100dvh] items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div className="flex flex-col items-center gap-3">
-          <div
-            className="
-            h-8
-            w-8
-            animate-spin
-            rounded-full
-            border-2
-            border-[#D4AF37]/20
-            border-t-[#D4AF37]
-            "
-          />
-          <p className="text-sm text-white/50">Loading lead…</p>
-        </div>
-      </div>,
-      document.body,
-    );
-  }
-
-  if (!lead) {
-    return createPortal(
-      <div className="fixed inset-0 z-50 flex h-[100dvh] items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div className="rounded-2xl border border-[#D4AF37]/20 bg-[#161616] px-6 py-4 text-[#D4AF37]">
-          Lead not found
-        </div>
-      </div>,
-      document.body,
-    );
-  }
-
   async function saveLeadInformation() {
     try {
       setSaving(true);
@@ -520,10 +493,24 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
     }
   }
 
-  const followups: FollowupItem[] = lead.followups || [];
+  useEffect(() => {
+    async function loadLeadDetails() {
+      await getLeadDetails();
+    }
+
+    loadLeadDetails();
+  }, [leadId, getLeadDetails]);
+
+  if (!mounted) {
+    return null;
+  }
+
+  const notFound = !loading && !lead;
+
+  const followups: FollowupItem[] = lead?.followups || [];
   const visibleFollowups = showAllFollowups ? followups : followups.slice(0, 3);
 
-  const statusHistory = lead.statusHistory || [];
+  const statusHistory = lead?.statusHistory || [];
   const visibleStatusHistory = showAllStatusHistory
     ? statusHistory
     : statusHistory.slice(0, 3);
@@ -540,6 +527,10 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
             ? "Add Remarks To Continue"
             : "Complete Follow Up";
 
+  // One sliding panel, mounted once on open. Loading / not-found / loaded
+  // states only swap what renders *inside* it, so the slide-from-right
+  // motion always happens exactly once, immediately on open — never a
+  // jump-cut between a centered modal and a separate sliding panel.
   return createPortal(
     <div className="fixed inset-0 z-50 flex h-[100dvh]">
       {/* Overlay */}
@@ -563,7 +554,9 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
   shadow-[0_0_60px_rgba(212,175,55,0.10)]
   animate-in
   slide-in-from-right
-  duration-200
+  duration-300
+  ease-out
+  fill-mode-both
   "
       >
         {statusSaving && (
@@ -696,9 +689,33 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
           "
         >
           <div className="p-4 pb-6 sm:p-6">
-            {/* Basic Information */}
-            <div
-              className="
+            {loading ? (
+              // Skeleton — same rhythm/spacing as the real layout below,
+              // so nothing reflows once the data arrives.
+              <div className="space-y-5">
+                <SkeletonBlock className="h-44" />
+                <SkeletonBlock className="h-72" />
+                <SkeletonBlock className="h-40" />
+              </div>
+            ) : notFound ? (
+              <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] px-6 py-16 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.08] text-[#D4AF37]">
+                  <AlertCircle size={22} strokeWidth={1.75} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">
+                    Lead not found
+                  </p>
+                  <p className="mt-1 text-xs text-white/35">
+                    It may have been reassigned or no longer exists.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Basic Information */}
+                <div
+                  className="
 relative
 overflow-hidden
 rounded-3xl
@@ -710,86 +727,88 @@ to-[#0d0d0d]
 p-6
 shadow-xl
 "
-            >
-              {/* ambient glow, purely decorative */}
-              <div
-                aria-hidden
-                className="
-                pointer-events-none
-                absolute
-                -right-16
-                -top-16
-                h-48
-                w-48
-                rounded-full
-                bg-[#D4AF37]/10
-                blur-[80px]
-                "
-              />
-
-              <div className="relative flex items-start justify-between gap-4">
-                {/* Left Content */}
-                <div className="min-w-0 flex-1">
-                  <h3
+                >
+                  {/* ambient glow, purely decorative */}
+                  <div
+                    aria-hidden
                     className="
+                    pointer-events-none
+                    absolute
+                    -right-16
+                    -top-16
+                    h-48
+                    w-48
+                    rounded-full
+                    bg-[#D4AF37]/10
+                    blur-[80px]
+                    "
+                  />
+
+                  <div className="relative flex items-start justify-between gap-4">
+                    {/* Left Content */}
+                    <div className="min-w-0 flex-1">
+                      <h3
+                        className="
 text-2xl
 font-bold
 tracking-tight
 text-white
 break-words
 "
-                  >
-                    {lead.name || "Unknown Lead"}
-                  </h3>
+                      >
+                        {lead.name || "Unknown Lead"}
+                      </h3>
 
-                  <div className="mt-5 space-y-3.5 text-sm text-white/50">
-                    {/* Phone */}
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className="shrink-0 rounded-xl border border-white/10 bg-white/[0.04] p-2 text-white/40">
-                        <Phone size={15} />
-                      </span>
+                      <div className="mt-5 space-y-3.5 text-sm text-white/50">
+                        {/* Phone */}
+                        <div className="flex min-w-0 items-center gap-3">
+                          <span className="shrink-0 rounded-xl border border-white/10 bg-white/[0.04] p-2 text-white/40">
+                            <Phone size={15} />
+                          </span>
 
-                      <span className="min-w-0 break-all text-sm text-white/70">
-                        {lead.phone}
-                      </span>
+                          <span className="min-w-0 break-all text-sm text-white/70">
+                            {lead.phone}
+                          </span>
+                        </div>
+
+                        {/* City */}
+                        <p className="flex min-w-0 items-center gap-3">
+                          <span className="shrink-0 rounded-xl border border-white/10 bg-white/[0.04] p-2 text-white/40">
+                            <MapPin size={15} />
+                          </span>
+
+                          <span className="break-words">
+                            {lead.city || "-"}
+                          </span>
+                        </p>
+
+                        {/* Follow Up */}
+                        <p className="flex min-w-0 items-center gap-3">
+                          <span className="shrink-0 rounded-xl border border-white/10 bg-white/[0.04] p-2 text-white/40">
+                            <CalendarClock size={15} />
+                          </span>
+
+                          <span className="break-words">
+                            {lead.nextFollowUp
+                              ? new Date(lead.nextFollowUp).toLocaleString()
+                              : "No Follow Up"}
+                          </span>
+                        </p>
+                      </div>
                     </div>
 
-                    {/* City */}
-                    <p className="flex min-w-0 items-center gap-3">
-                      <span className="shrink-0 rounded-xl border border-white/10 bg-white/[0.04] p-2 text-white/40">
-                        <MapPin size={15} />
-                      </span>
+                    {/* Right Actions */}
+                    <div className="flex shrink-0 flex-col items-end gap-3">
+                      {/* Status */}
+                      <div className="mb-4 flex justify-center">
+                        <LeadStatusBadge status={lead.status} />
+                      </div>
 
-                      <span className="break-words">{lead.city || "-"}</span>
-                    </p>
-
-                    {/* Follow Up */}
-                    <p className="flex min-w-0 items-center gap-3">
-                      <span className="shrink-0 rounded-xl border border-white/10 bg-white/[0.04] p-2 text-white/40">
-                        <CalendarClock size={15} />
-                      </span>
-
-                      <span className="break-words">
-                        {lead.nextFollowUp
-                          ? new Date(lead.nextFollowUp).toLocaleString()
-                          : "No Follow Up"}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-
-                {/* Right Actions */}
-                <div className="flex shrink-0 flex-col items-end gap-3">
-                  {/* Status */}
-                  <div className="mb-4 flex justify-center">
-                    <LeadStatusBadge status={lead.status} />
-                  </div>
-
-                  {/* WhatsApp */}
-                  {lead.phone && (
-                    <button
-                      onClick={() => smartCall(lead.phone)}
-                      className="
+                      {/* WhatsApp */}
+                      {lead.phone && (
+                        <button
+                          onClick={() => smartCall(lead.phone)}
+                          className="
 inline-flex
 items-center
 gap-1.5
@@ -807,248 +826,18 @@ text-[#25D366]
 transition-all
 hover:bg-[#25D366]/20
 "
-                    >
-                      <WhatsAppIcon size={11} />
-                      Call
-                    </button>
-                  )}
+                        >
+                          <WhatsAppIcon size={11} />
+                          Call
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Lead Information */}
-            <div className="relative mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-              {infoSaving && (
-                <div
-                  className="
-                  absolute
-                  inset-0
-                  z-10
-                  flex
-                  items-center
-                  justify-center
-                  gap-3
-                  rounded-2xl
-                  bg-black/70
-                  backdrop-blur-sm
-                  "
-                >
-                  <span
-                    className="
-                    h-5
-                    w-5
-                    animate-spin
-                    rounded-full
-                    border-2
-                    border-[#D4AF37]/25
-                    border-t-[#D4AF37]
-                    "
-                  />
-                  <span className="text-sm font-medium text-[#D4AF37]">
-                    Saving lead information…
-                  </span>
-                </div>
-              )}
-
-              <SectionTitle
-                icon={<Edit3 size={15} strokeWidth={1.75} />}
-                title="Lead Information"
-              />
-
-              <div className="space-y-3">
-                <LeadField
-                  label="Name"
-                  value={lead.name}
-                  field="name"
-                  formValue={form.name}
-                  editingFields={editingFields}
-                  toggleEdit={toggleEdit}
-                  updateField={updateField}
-                  disabled={isClosed}
-                />
-
-                <LeadField
-                  label="Email"
-                  value={lead.email}
-                  field="email"
-                  formValue={form.email}
-                  editingFields={editingFields}
-                  toggleEdit={toggleEdit}
-                  updateField={updateField}
-                  disabled={isClosed}
-                />
-
-                <LeadField
-                  label="City"
-                  value={lead.city}
-                  field="city"
-                  formValue={form.city}
-                  editingFields={editingFields}
-                  toggleEdit={toggleEdit}
-                  updateField={updateField}
-                  disabled={isClosed}
-                />
-
-                <LeadField
-                  label="Age"
-                  value={lead.age}
-                  field="age"
-                  formValue={form.age}
-                  editingFields={editingFields}
-                  toggleEdit={toggleEdit}
-                  updateField={updateField}
-                  disabled={isClosed}
-                  type="number"
-                />
-
-                <LeadField
-                  label="Purpose"
-                  value={lead.purpose}
-                  field="purpose"
-                  formValue={form.purpose}
-                  editingFields={editingFields}
-                  toggleEdit={toggleEdit}
-                  updateField={updateField}
-                  disabled={isClosed}
-                />
-
-                <LeadField
-                  label="Current Status"
-                  value={lead.currentStatus}
-                  field="currentStatus"
-                  formValue={form.currentStatus}
-                  editingFields={editingFields}
-                  toggleEdit={toggleEdit}
-                  updateField={updateField}
-                  disabled={isClosed}
-                />
-
-                <LeadField
-                  label="Best Time To Reach"
-                  value={lead.bestTimeToReach}
-                  field="bestTimeToReach"
-                  formValue={form.bestTimeToReach}
-                  editingFields={editingFields}
-                  toggleEdit={toggleEdit}
-                  updateField={updateField}
-                  disabled={isClosed}
-                />
-
-                <LeadField
-                  label="Willing To Attend Training"
-                  value={lead.willingToAttendTraining ? "YES" : "NO"}
-                  field="willingToAttendTraining"
-                  formValue={form.willingToAttendTraining}
-                  editingFields={editingFields}
-                  toggleEdit={toggleEdit}
-                  updateField={updateField}
-                  disabled={isClosed}
-                />
-
-                {editingFields.length > 0 && (
-                  <button
-                    onClick={saveLeadInformation}
-                    disabled={saving}
-                    className="mt-5 min-h-[48px] w-full rounded-xl bg-[#D4AF37] py-3 font-semibold text-black transition duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {saving ? "Saving..." : "Save Lead Information"}
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Follow Up History */}
-            <div className="mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-              <SectionTitle
-                icon={<History size={15} strokeWidth={1.75} />}
-                title="Follow Up History"
-              />
-              <div className="space-y-2.5">
-                {followups.length > 0 ? (
-                  <>
-                    {visibleFollowups.map((item) => (
-                      <div
-                        key={item.id}
-                        className="rounded-xl border border-white/[0.05] bg-black/25 p-3.5 transition-colors hover:border-[#D4AF37]/20"
-                      >
-                        <p className="text-sm text-white/85">{item.remarks}</p>
-                        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-white/30">
-                          <span>
-                            {item.followUpNumber === 0
-                              ? "Note"
-                              : `Follow Up #${item.followUpNumber}`}
-                            {item.user?.name ? ` • ${item.user.name}` : ""}
-                          </span>
-                          <span>
-                            {new Date(item.createdAt).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-
-                    {followups.length > 3 && (
-                      <button
-                        onClick={() => setShowAllFollowups((prev) => !prev)}
-                        className="min-h-[40px] w-full rounded-lg border border-white/10 text-xs font-medium text-white/40 transition duration-150 active:border-[#D4AF37]/30 active:text-[#D4AF37]"
-                      >
-                        {showAllFollowups
-                          ? "Show Less"
-                          : `Show ${followups.length - 3} More`}
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-sm text-white/30">No follow ups yet</p>
-                )}
-              </div>
-            </div>
-
-            {/* Complete Follow Up */}
-            <div className="relative mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-              {followUpSaving && (
-                <div
-                  className="
-                  absolute
-                  inset-0
-                  z-10
-                  flex
-                  items-center
-                  justify-center
-                  gap-3
-                  rounded-2xl
-                  bg-black/70
-                  backdrop-blur-sm
-                  "
-                >
-                  <span
-                    className="
-                    h-5
-                    w-5
-                    animate-spin
-                    rounded-full
-                    border-2
-                    border-[#D4AF37]/25
-                    border-t-[#D4AF37]
-                    "
-                  />
-                  <span className="text-sm font-medium text-[#D4AF37]">
-                    Completing follow up…
-                  </span>
-                </div>
-              )}
-
-              <SectionTitle
-                title="Complete Follow Up"
-                trailing={
-                  <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-white/40">
-                    Total: {lead.followUpCount || 0}
-                  </span>
-                }
-              />
-
-              <div className="space-y-4">
-                <div className="relative">
-                  {noteSaving && (
+                {/* Lead Information */}
+                <div className="relative mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+                  {infoSaving && (
                     <div
                       className="
                       absolute
@@ -1057,16 +846,16 @@ hover:bg-[#25D366]/20
                       flex
                       items-center
                       justify-center
-                      gap-2
-                      rounded-xl
+                      gap-3
+                      rounded-2xl
                       bg-black/70
                       backdrop-blur-sm
                       "
                     >
                       <span
                         className="
-                        h-4
-                        w-4
+                        h-5
+                        w-5
                         animate-spin
                         rounded-full
                         border-2
@@ -1074,19 +863,251 @@ hover:bg-[#25D366]/20
                         border-t-[#D4AF37]
                         "
                       />
-                      <span className="text-xs font-medium text-[#D4AF37]">
-                        Saving note…
+                      <span className="text-sm font-medium text-[#D4AF37]">
+                        Saving lead information…
                       </span>
                     </div>
                   )}
 
-                  <textarea
-                    rows={4}
-                    disabled={remarksDisabled}
-                    value={form.remarks}
-                    onChange={(e) => updateField("remarks", e.target.value)}
-                    placeholder="Write remarks or notes..."
-                    className="
+                  <SectionTitle
+                    icon={<Edit3 size={15} strokeWidth={1.75} />}
+                    title="Lead Information"
+                  />
+
+                  <div className="space-y-3">
+                    <LeadField
+                      label="Name"
+                      value={lead.name}
+                      field="name"
+                      formValue={form.name}
+                      editingFields={editingFields}
+                      toggleEdit={toggleEdit}
+                      updateField={updateField}
+                      disabled={isClosed}
+                    />
+
+                    <LeadField
+                      label="Email"
+                      value={lead.email}
+                      field="email"
+                      formValue={form.email}
+                      editingFields={editingFields}
+                      toggleEdit={toggleEdit}
+                      updateField={updateField}
+                      disabled={isClosed}
+                    />
+
+                    <LeadField
+                      label="City"
+                      value={lead.city}
+                      field="city"
+                      formValue={form.city}
+                      editingFields={editingFields}
+                      toggleEdit={toggleEdit}
+                      updateField={updateField}
+                      disabled={isClosed}
+                    />
+
+                    <LeadField
+                      label="Age"
+                      value={lead.age}
+                      field="age"
+                      formValue={form.age}
+                      editingFields={editingFields}
+                      toggleEdit={toggleEdit}
+                      updateField={updateField}
+                      disabled={isClosed}
+                      type="number"
+                    />
+
+                    <LeadField
+                      label="Purpose"
+                      value={lead.purpose}
+                      field="purpose"
+                      formValue={form.purpose}
+                      editingFields={editingFields}
+                      toggleEdit={toggleEdit}
+                      updateField={updateField}
+                      disabled={isClosed}
+                    />
+
+                    <LeadField
+                      label="Current Status"
+                      value={lead.currentStatus}
+                      field="currentStatus"
+                      formValue={form.currentStatus}
+                      editingFields={editingFields}
+                      toggleEdit={toggleEdit}
+                      updateField={updateField}
+                      disabled={isClosed}
+                    />
+
+                    <LeadField
+                      label="Best Time To Reach"
+                      value={lead.bestTimeToReach}
+                      field="bestTimeToReach"
+                      formValue={form.bestTimeToReach}
+                      editingFields={editingFields}
+                      toggleEdit={toggleEdit}
+                      updateField={updateField}
+                      disabled={isClosed}
+                    />
+
+                    <LeadField
+                      label="Willing To Attend Training"
+                      value={lead.willingToAttendTraining ? "YES" : "NO"}
+                      field="willingToAttendTraining"
+                      formValue={form.willingToAttendTraining}
+                      editingFields={editingFields}
+                      toggleEdit={toggleEdit}
+                      updateField={updateField}
+                      disabled={isClosed}
+                    />
+
+                    {editingFields.length > 0 && (
+                      <button
+                        onClick={saveLeadInformation}
+                        disabled={saving}
+                        className="mt-5 min-h-[48px] w-full rounded-xl bg-[#D4AF37] py-3 font-semibold text-black transition duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {saving ? "Saving..." : "Save Lead Information"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Follow Up History */}
+                <div className="mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+                  <SectionTitle
+                    icon={<History size={15} strokeWidth={1.75} />}
+                    title="Follow Up History"
+                  />
+                  <div className="space-y-2.5">
+                    {followups.length > 0 ? (
+                      <>
+                        {visibleFollowups.map((item) => (
+                          <div
+                            key={item.id}
+                            className="rounded-xl border border-white/[0.05] bg-black/25 p-3.5 transition-colors hover:border-[#D4AF37]/20"
+                          >
+                            <p className="text-sm text-white/85">
+                              {item.remarks}
+                            </p>
+                            <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-white/30">
+                              <span>
+                                {item.followUpNumber === 0
+                                  ? "Note"
+                                  : `Follow Up #${item.followUpNumber}`}
+                                {item.user?.name ? ` • ${item.user.name}` : ""}
+                              </span>
+                              <span>
+                                {new Date(item.createdAt).toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+
+                        {followups.length > 3 && (
+                          <button
+                            onClick={() => setShowAllFollowups((prev) => !prev)}
+                            className="min-h-[40px] w-full rounded-lg border border-white/10 text-xs font-medium text-white/40 transition duration-150 active:border-[#D4AF37]/30 active:text-[#D4AF37]"
+                          >
+                            {showAllFollowups
+                              ? "Show Less"
+                              : `Show ${followups.length - 3} More`}
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-sm text-white/30">No follow ups yet</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Complete Follow Up */}
+                <div className="relative mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+                  {followUpSaving && (
+                    <div
+                      className="
+                      absolute
+                      inset-0
+                      z-10
+                      flex
+                      items-center
+                      justify-center
+                      gap-3
+                      rounded-2xl
+                      bg-black/70
+                      backdrop-blur-sm
+                      "
+                    >
+                      <span
+                        className="
+                        h-5
+                        w-5
+                        animate-spin
+                        rounded-full
+                        border-2
+                        border-[#D4AF37]/25
+                        border-t-[#D4AF37]
+                        "
+                      />
+                      <span className="text-sm font-medium text-[#D4AF37]">
+                        Completing follow up…
+                      </span>
+                    </div>
+                  )}
+
+                  <SectionTitle
+                    title="Complete Follow Up"
+                    trailing={
+                      <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-white/40">
+                        Total: {lead.followUpCount || 0}
+                      </span>
+                    }
+                  />
+
+                  <div className="space-y-4">
+                    <div className="relative">
+                      {noteSaving && (
+                        <div
+                          className="
+                          absolute
+                          inset-0
+                          z-10
+                          flex
+                          items-center
+                          justify-center
+                          gap-2
+                          rounded-xl
+                          bg-black/70
+                          backdrop-blur-sm
+                          "
+                        >
+                          <span
+                            className="
+                            h-4
+                            w-4
+                            animate-spin
+                            rounded-full
+                            border-2
+                            border-[#D4AF37]/25
+                            border-t-[#D4AF37]
+                            "
+                          />
+                          <span className="text-xs font-medium text-[#D4AF37]">
+                            Saving note…
+                          </span>
+                        </div>
+                      )}
+
+                      <textarea
+                        rows={4}
+                        disabled={remarksDisabled}
+                        value={form.remarks}
+                        onChange={(e) => updateField("remarks", e.target.value)}
+                        placeholder="Write remarks or notes..."
+                        className="
     w-full
     rounded-xl
     border
@@ -1103,21 +1124,21 @@ hover:bg-[#25D366]/20
     disabled:cursor-not-allowed
     disabled:opacity-50
   "
-                  />
+                      />
 
-                  <div className="mt-2 flex items-center justify-between gap-3">
-                    {remarksMissing && !remarksDisabled ? (
-                      <p className="text-xs text-white/30">
-                        Required to complete a follow up
-                      </p>
-                    ) : (
-                      <span />
-                    )}
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        {remarksMissing && !remarksDisabled ? (
+                          <p className="text-xs text-white/30">
+                            Required to complete a follow up
+                          </p>
+                        ) : (
+                          <span />
+                        )}
 
-                    <button
-                      onClick={saveRemarksOnly}
-                      disabled={remarksDisabled || remarksMissing}
-                      className="
+                        <button
+                          onClick={saveRemarksOnly}
+                          disabled={remarksDisabled || remarksMissing}
+                          className="
                       min-h-[40px]
                       shrink-0
                       rounded-lg
@@ -1135,18 +1156,18 @@ hover:bg-[#25D366]/20
                       disabled:cursor-not-allowed
                       disabled:opacity-40
                       "
-                    >
-                      {noteSaving ? "Saving..." : "Save Note"}
-                    </button>
-                  </div>
-                </div>
+                        >
+                          {noteSaving ? "Saving..." : "Save Note"}
+                        </button>
+                      </div>
+                    </div>
 
-                <div className="relative">
-                  <select
-                    value={lead.status}
-                    disabled={isClosed || saving}
-                    onChange={(e) => updateLeadStatus(e.target.value)}
-                    className="
+                    <div className="relative">
+                      <select
+                        value={lead.status}
+                        disabled={isClosed || saving}
+                        onChange={(e) => updateLeadStatus(e.target.value)}
+                        className="
   min-h-[48px]
   w-full
   rounded-xl
@@ -1162,130 +1183,140 @@ hover:bg-[#25D366]/20
   focus:border-[#D4AF37]/40
   disabled:opacity-50
   "
-                  >
-                    <option value="NEW">NEW</option>
-                    <option value="CALLED">CALLED</option>
-                    <option value="SEAT_RESERVED">SEAT RESERVED</option>
-                    <option value="TRAINING_ATTENDED">TRAINING ATTENDED</option>
-                    <option value="NEED_MORE_FOLLOW_UP">
-                      NEED MORE FOLLOW UP
-                    </option>
-                    <option value="JOINED">JOINED</option>
-                    <option value="DEAD">DEAD</option>
-                  </select>
+                      >
+                        <option value="NEW">NEW</option>
+                        <option value="CALLED">CALLED</option>
+                        <option value="SEAT_RESERVED">SEAT RESERVED</option>
+                        <option value="TRAINING_ATTENDED">
+                          TRAINING ATTENDED
+                        </option>
+                        <option value="NEED_MORE_FOLLOW_UP">
+                          NEED MORE FOLLOW UP
+                        </option>
+                        <option value="JOINED">JOINED</option>
+                        <option value="DEAD">DEAD</option>
+                      </select>
 
-                  {statusSaving && (
-                    <div
-                      className="
-                      absolute
-                      inset-0
-                      z-10
-                      flex
-                      items-center
-                      justify-center
-                      gap-2
-                      rounded-xl
-                      border
-                      border-[#D4AF37]/20
-                      bg-black/70
-                      backdrop-blur-sm
-                      "
-                    >
-                      <span
-                        className="
-                        h-4
-                        w-4
-                        animate-spin
-                        rounded-full
-                        border-2
-                        border-[#D4AF37]/25
-                        border-t-[#D4AF37]
-                        "
-                      />
-                      <span className="text-xs font-medium text-[#D4AF37]">
-                        Updating status…
-                      </span>
+                      {statusSaving && (
+                        <div
+                          className="
+                          absolute
+                          inset-0
+                          z-10
+                          flex
+                          items-center
+                          justify-center
+                          gap-2
+                          rounded-xl
+                          border
+                          border-[#D4AF37]/20
+                          bg-black/70
+                          backdrop-blur-sm
+                          "
+                        >
+                          <span
+                            className="
+                            h-4
+                            w-4
+                            animate-spin
+                            rounded-full
+                            border-2
+                            border-[#D4AF37]/25
+                            border-t-[#D4AF37]
+                            "
+                          />
+                          <span className="text-xs font-medium text-[#D4AF37]">
+                            Updating status…
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  )}
+
+                    {/* Desktop / inline button — hidden on mobile, sticky bar takes over there */}
+                    <button
+                      onClick={completeFollowUp}
+                      disabled={followUpDisabled}
+                      className={`hidden min-h-[48px] w-full rounded-xl py-3 font-semibold transition duration-150 active:scale-[0.98] md:block ${
+                        followUpDisabled
+                          ? "cursor-not-allowed bg-white/10 text-white/30"
+                          : "bg-[#D4AF37] text-black active:opacity-90"
+                      }`}
+                    >
+                      {followUpButtonLabel}
+                    </button>
+                  </div>
                 </div>
 
-                {/* Desktop / inline button — hidden on mobile, sticky bar takes over there */}
-                <button
-                  onClick={completeFollowUp}
-                  disabled={followUpDisabled}
-                  className={`hidden min-h-[48px] w-full rounded-xl py-3 font-semibold transition duration-150 active:scale-[0.98] md:block ${
-                    followUpDisabled
-                      ? "cursor-not-allowed bg-white/10 text-white/30"
-                      : "bg-[#D4AF37] text-black active:opacity-90"
-                  }`}
-                >
-                  {followUpButtonLabel}
-                </button>
-              </div>
-            </div>
+                {/* Status History */}
+                <div className="mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+                  <SectionTitle
+                    icon={<History size={15} strokeWidth={1.75} />}
+                    title="Status History"
+                  />
+                  <div className="space-y-2.5">
+                    {statusHistory.length > 0 ? (
+                      <>
+                        {visibleStatusHistory.map(
+                          (item: {
+                            id: string;
+                            oldStatus: string;
+                            newStatus: string;
+                            changedBy?: { name: string };
+                            changedAt: string;
+                          }) => (
+                            <div
+                              key={item.id}
+                              className="rounded-xl border border-white/[0.05] bg-black/25 p-3.5 transition-colors hover:border-[#D4AF37]/20"
+                            >
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white">
+                                <span className="break-words text-white/60">
+                                  {item.oldStatus}
+                                </span>
+                                <span className="shrink-0 text-[#D4AF37]">
+                                  →
+                                </span>
+                                <span className="break-words">
+                                  {item.newStatus}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-xs text-white/30">
+                                By {item.changedBy?.name || "Unknown"} •{" "}
+                                {new Date(item.changedAt).toLocaleString()}
+                              </p>
+                            </div>
+                          ),
+                        )}
 
-            {/* Status History */}
-            <div className="mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-              <SectionTitle
-                icon={<History size={15} strokeWidth={1.75} />}
-                title="Status History"
-              />
-              <div className="space-y-2.5">
-                {statusHistory.length > 0 ? (
-                  <>
-                    {visibleStatusHistory.map(
-                      (item: {
-                        id: string;
-                        oldStatus: string;
-                        newStatus: string;
-                        changedBy?: { name: string };
-                        changedAt: string;
-                      }) => (
-                        <div
-                          key={item.id}
-                          className="rounded-xl border border-white/[0.05] bg-black/25 p-3.5 transition-colors hover:border-[#D4AF37]/20"
-                        >
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white">
-                            <span className="break-words text-white/60">
-                              {item.oldStatus}
-                            </span>
-                            <span className="shrink-0 text-[#D4AF37]">→</span>
-                            <span className="break-words">
-                              {item.newStatus}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-xs text-white/30">
-                            By {item.changedBy?.name || "Unknown"} •{" "}
-                            {new Date(item.changedAt).toLocaleString()}
-                          </p>
-                        </div>
-                      ),
+                        {statusHistory.length > 3 && (
+                          <button
+                            onClick={() =>
+                              setShowAllStatusHistory((prev) => !prev)
+                            }
+                            className="min-h-[40px] w-full rounded-lg border border-white/10 text-xs font-medium text-white/40 transition duration-150 active:border-[#D4AF37]/30 active:text-[#D4AF37]"
+                          >
+                            {showAllStatusHistory
+                              ? "Show Less"
+                              : `Show ${statusHistory.length - 3} More`}
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-sm text-white/30">No status history</p>
                     )}
-
-                    {statusHistory.length > 3 && (
-                      <button
-                        onClick={() => setShowAllStatusHistory((prev) => !prev)}
-                        className="min-h-[40px] w-full rounded-lg border border-white/10 text-xs font-medium text-white/40 transition duration-150 active:border-[#D4AF37]/30 active:text-[#D4AF37]"
-                      >
-                        {showAllStatusHistory
-                          ? "Show Less"
-                          : `Show ${statusHistory.length - 3} More`}
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-sm text-white/30">No status history</p>
-                )}
-              </div>
-            </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
         {/* Sticky bottom action bar — mobile only, thumb-reachable.
             pb uses env(safe-area-inset-bottom) so it never hides
-            behind the iOS home indicator / Android nav bar. */}
-        <div
-          className="
+            behind the iOS home indicator / Android nav bar. Only
+            shown once a lead is actually loaded. */}
+        {!loading && lead && (
+          <div
+            className="
           shrink-0
           border-t
           border-white/10
@@ -1295,19 +1326,20 @@ hover:bg-[#25D366]/20
           backdrop-blur-md
           md:hidden
           "
-        >
-          <button
-            onClick={completeFollowUp}
-            disabled={followUpDisabled}
-            className={`min-h-[48px] w-full rounded-xl py-3 font-semibold transition duration-150 active:scale-[0.98] ${
-              followUpDisabled
-                ? "cursor-not-allowed bg-white/10 text-white/30"
-                : "bg-[#D4AF37] text-black active:opacity-90"
-            }`}
           >
-            {followUpButtonLabel}
-          </button>
-        </div>
+            <button
+              onClick={completeFollowUp}
+              disabled={followUpDisabled}
+              className={`min-h-[48px] w-full rounded-xl py-3 font-semibold transition duration-150 active:scale-[0.98] ${
+                followUpDisabled
+                  ? "cursor-not-allowed bg-white/10 text-white/30"
+                  : "bg-[#D4AF37] text-black active:opacity-90"
+              }`}
+            >
+              {followUpButtonLabel}
+            </button>
+          </div>
+        )}
       </div>
     </div>,
     document.body,

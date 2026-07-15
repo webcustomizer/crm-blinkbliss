@@ -208,6 +208,10 @@ model Notification {
 
   message String
 
+  link String?
+
+  leadId String?
+
   isRead Boolean @default(false)
 
   userId String

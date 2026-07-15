@@ -18,9 +18,12 @@ export default function AdminDashboard() {
 
   async function getLeads() {
     try {
-      const res = await fetch("/api/admin/leads?page=1&limit=1000&filter=ALL", {
-        cache: "no-store",
-      });
+      const res = await fetch(
+        "/api/admin/leads?page=1&limit=10000000000000&filter=ALL",
+        {
+          cache: "no-store",
+        },
+      );
 
       const json = await res.json();
 

@@ -243,11 +243,11 @@ export default function ImportLeadsSection() {
         setLastSummary(combined);
       }
 
-      toast.error("Import fail ho gaya", {
+      toast.error("Import failed try again", {
         description:
           currentChunk > 0
-            ? `${processedRows} rows import ho chuki thin, us ke baad rok gaya. Dobara try karein.`
-            : "Dobara try karein ya file check karein.",
+            ? `${processedRows} rows were imported try again.`
+            : "try again and make sure your file ",
         icon: <XCircle className="h-4 w-4 text-red-400" />,
       });
     } finally {
