@@ -165,3 +165,30 @@
   );
   }
 }
+
+
+
+/* globals.css */
+html, body {
+  overscroll-behavior-y: contain;
+}
+
+/* globals.css */
+@keyframes splash-logo-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-splash-logo {
+  animation: splash-logo-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}

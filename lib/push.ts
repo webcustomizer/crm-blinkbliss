@@ -1,9 +1,10 @@
-import admin from "firebase-admin";
+import { initializeApp, getApps, cert } from "firebase-admin/app";
+import { getMessaging } from "firebase-admin/messaging";
 import { prisma } from "@/lib/prisma";
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
       privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
@@ -18,13 +19,6 @@ interface SendPushParams {
   link?: string;
 }
 
-/**
- * Sends a push notification to every device registered to a user.
- * Silently skips if the user has no registered devices (e.g. hasn't
- * opened the app yet, or denied notification permission).
- * Automatically cleans up tokens that Firebase reports as invalid
- * (e.g. app was uninstalled).
- */
 export async function sendPushNotification({
   userId,
   title,
@@ -43,7 +37,7 @@ export async function sendPushNotification({
 
     const results = await Promise.allSettled(
       tokens.map((t) =>
-        admin.messaging().send({
+        getMessaging().send({
           token: t.token,
           notification: {
             title,
@@ -60,7 +54,6 @@ export async function sendPushNotification({
       ),
     );
 
-    // Clean up tokens Firebase says are no longer valid
     const invalidTokenIds: string[] = [];
     results.forEach((result, i) => {
       if (
@@ -79,8 +72,6 @@ export async function sendPushNotification({
       });
     }
   } catch (error) {
-    // Push failures should never break the main request (lead assignment,
-    // announcement creation, etc.) — just log and move on.
     console.log("Push Notification Error:", error);
   }
 }

@@ -83,6 +83,7 @@ model User {
   activityLogs  ActivityLog[]
   announcements Announcement[]
   exportLogs    ExportLog[]
+  pushTokens    PushToken[]
 }
 
 // =====================
@@ -346,4 +347,26 @@ model ExportLog {
   exportedById String
 
   exportedBy User @relation(fields: [exportedById], references: [id])
+}
+
+// =====================
+// PUSH TOKEN MODEL
+// =====================
+
+model PushToken {
+  id String @id @default(cuid())
+
+  token String @unique
+
+  userId String
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Speeds up "get all tokens for this user" when sending a push
+  @@index([userId])
 }

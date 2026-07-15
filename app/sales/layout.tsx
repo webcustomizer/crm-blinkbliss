@@ -8,6 +8,7 @@ import SessionGuard from "@/components/sales/layout/SessionGuard";
 import { verifyToken, type TokenPayload } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Toaster } from "@/components/ui/sonner";
+import BackButtonHandler from "@/components/BackButtonHandler";
 
 interface SalesLayoutProps {
   children: ReactNode;
@@ -44,6 +45,7 @@ export default async function SalesLayout({ children }: SalesLayoutProps) {
   return (
     <SalesShell user={user}>
       <SessionGuard userId={user.id} />
+      <BackButtonHandler />
       {children}
       <Toaster position="top-right" richColors />
     </SalesShell>
