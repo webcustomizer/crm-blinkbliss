@@ -16,20 +16,14 @@
     "@capacitor/core": "^8.4.2",
     "@capacitor/keyboard": "^8.0.5",
     "@capacitor/network": "^8.0.1",
-<<<<<<< HEAD
     "@capacitor/preferences": "^8.0.1",
-=======
->>>>>>> 5e96d00d42fe7cff1606cae559d9204f95fff3e3
     "@capacitor/push-notifications": "^8.1.1",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@supabase/supabase-js": "^2.110.1",
-<<<<<<< HEAD
     "axios": "^1.18.1",
-=======
->>>>>>> 5e96d00d42fe7cff1606cae559d9204f95fff3e3
     "bcrypt": "^6.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
