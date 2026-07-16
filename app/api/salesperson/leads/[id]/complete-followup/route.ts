@@ -29,6 +29,24 @@ function getPKTFutureDate(daysToAdd: number): Date {
   return new Date(noonPKT.getTime() - PKT_OFFSET_MS);
 }
 
+/**
+ * Mirrors the frontend's `nextFollowUpReached` logic: a follow-up is
+ * "due" for the entire PKT calendar day it's scheduled on, not only
+ * after the exact stored time (noon PKT) has passed. Comparing raw
+ * instants instead of calendar dates is what caused "Follow up is not
+ * due yet" to fire on the due date before noon PKT even though the
+ * UI already showed the button as enabled.
+ */
+function isFollowUpDuePKT(nextFollowUp: Date): boolean {
+  const followUpPKT = new Date(nextFollowUp.getTime() + PKT_OFFSET_MS);
+  const nowPKT = new Date(Date.now() + PKT_OFFSET_MS);
+
+  const followUpDateStr = followUpPKT.toISOString().split("T")[0];
+  const nowDateStr = nowPKT.toISOString().split("T")[0];
+
+  return followUpDateStr <= nowDateStr;
+}
+
 export async function POST(
   req: Request,
   context: {
@@ -124,7 +142,7 @@ export async function POST(
     // FOLLOW UP DATE LOCK
     // =========================
 
-    if (lead.nextFollowUp && new Date() < new Date(lead.nextFollowUp)) {
+    if (lead.nextFollowUp && !isFollowUpDuePKT(new Date(lead.nextFollowUp))) {
       return NextResponse.json(
         {
           message: "Follow up is not due yet.",
