@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 import {
   Dialog,
@@ -52,7 +52,12 @@ export default function EditLeadDialog({
 
   const [form, setForm] = useState<EditLeadForm>(initialForm);
 
-  // LOAD CURRENT LEAD DATA
+  useEffect(() => {
+    if (open) {
+      setForm(initialForm);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, lead?.id]);
 
   function change(
     e: React.ChangeEvent<
@@ -123,10 +128,6 @@ export default function EditLeadDialog({
       open={open}
       onOpenChange={(value) => {
         setOpen(value);
-
-        if (value) {
-          setForm(initialForm);
-        }
       }}
     >
       <DialogContent
