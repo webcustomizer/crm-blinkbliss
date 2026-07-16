@@ -289,6 +289,10 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
 
   const [editingFields, setEditingFields] = useState<string[]>([]);
 
+  // Whether there are unsaved Lead Information edits in progress —
+  // drives which action the mobile sticky bar surfaces.
+  const hasUnsavedLeadInfo = editingFields.length > 0;
+
   const updateField = useCallback((name: string, value: string) => {
     setForm((prev) => ({
       ...prev,
@@ -972,11 +976,13 @@ hover:bg-[#25D366]/20
                       disabled={isClosed}
                     />
 
+                    {/* Desktop / inline save — hidden on mobile, sticky bar
+                        (below) takes over saving there while editing */}
                     {editingFields.length > 0 && (
                       <button
                         onClick={saveLeadInformation}
                         disabled={saving}
-                        className="mt-5 min-h-[48px] w-full rounded-xl bg-[#D4AF37] py-3 font-semibold text-black transition duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                        className="mt-5 hidden min-h-[48px] w-full rounded-xl bg-[#D4AF37] py-3 font-semibold text-black transition duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 md:block"
                       >
                         {saving ? "Saving..." : "Save Lead Information"}
                       </button>
@@ -1321,7 +1327,13 @@ hover:bg-[#25D366]/20
         {/* Sticky bottom action bar — mobile only, thumb-reachable.
             pb uses env(safe-area-inset-bottom) so it never hides
             behind the iOS home indicator / Android nav bar. Only
-            shown once a lead is actually loaded. */}
+            shown once a lead is actually loaded.
+
+            Context-aware: while the salesperson has unsaved Lead
+            Information edits open (Add/Edit on name, email, etc.),
+            this swaps to "Save Lead Information" so they don't lose
+            track of it on a small screen — then swaps back to
+            "Complete Follow Up" once there's nothing left to save. */}
         {!loading && lead && (
           <div
             className="
@@ -1335,17 +1347,31 @@ hover:bg-[#25D366]/20
           md:hidden
           "
           >
-            <button
-              onClick={completeFollowUp}
-              disabled={followUpDisabled}
-              className={`min-h-[48px] w-full rounded-xl py-3 font-semibold transition duration-150 active:scale-[0.98] ${
-                followUpDisabled
-                  ? "cursor-not-allowed bg-white/10 text-white/30"
-                  : "bg-[#D4AF37] text-black active:opacity-90"
-              }`}
-            >
-              {followUpButtonLabel}
-            </button>
+            {hasUnsavedLeadInfo ? (
+              <button
+                onClick={saveLeadInformation}
+                disabled={saving}
+                className={`min-h-[48px] w-full rounded-xl py-3 font-semibold transition duration-150 active:scale-[0.98] ${
+                  saving
+                    ? "cursor-not-allowed bg-white/10 text-white/30"
+                    : "bg-[#D4AF37] text-black active:opacity-90"
+                }`}
+              >
+                {infoSaving ? "Saving..." : "Save Lead Information"}
+              </button>
+            ) : (
+              <button
+                onClick={completeFollowUp}
+                disabled={followUpDisabled}
+                className={`min-h-[48px] w-full rounded-xl py-3 font-semibold transition duration-150 active:scale-[0.98] ${
+                  followUpDisabled
+                    ? "cursor-not-allowed bg-white/10 text-white/30"
+                    : "bg-[#D4AF37] text-black active:opacity-90"
+                }`}
+              >
+                {followUpButtonLabel}
+              </button>
+            )}
           </div>
         )}
       </div>
