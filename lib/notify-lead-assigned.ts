@@ -10,20 +10,26 @@ export async function notifyLeadAssigned({
   leadId: string;
   leadName: string | null;
 }) {
+  console.log("🔔 notifyLeadAssigned START", {
+    userId,
+    leadId,
+    leadName,
+  });
+
   try {
-    // Remove old notification for this lead
     await prisma.notification.deleteMany({
       where: {
         leadId,
       },
     });
 
+    console.log("✅ Old notifications deleted");
+
     const message = `${
       leadName || "New lead"
     } has been assigned to you check it out!`;
 
-    // Create in-app notification
-    await prisma.notification.create({
+    const notification = await prisma.notification.create({
       data: {
         title: "🔔 New Lead Assigned",
         message,
@@ -33,7 +39,8 @@ export async function notifyLeadAssigned({
       },
     });
 
-    // Send push notification
+    console.log("✅ DB notification created", notification.id);
+
     await sendPushNotification({
       userId,
       title: "🔔 New Lead Assigned",
@@ -41,11 +48,9 @@ export async function notifyLeadAssigned({
       link: `/sales/my-leads?leadId=${leadId}`,
     });
 
-    console.log("Lead assignment notification sent:", {
-      userId,
-      leadId,
-    });
+    console.log("✅ Push sent successfully");
   } catch (error) {
-    console.error("Lead assignment notification error:", error);
+    console.error("❌ Notification failed:", error);
+    throw error;
   }
 }
