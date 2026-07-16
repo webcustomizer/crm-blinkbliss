@@ -527,7 +527,6 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
   const followUpButtonLabel = saving
     ? "Saving..."
     : maxFollowUpsReached
-<<<<<<< HEAD
     ? "Max Follow Ups Completed"
     : isClosed
     ? "Lead Closed"
@@ -536,28 +535,13 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
     : remarksMissing
     ? "Add Remarks To Continue"
     : "Complete Follow Up";
-=======
-      ? "Max Follow Ups Completed"
-      : isClosed
-        ? "Lead Closed"
-        : !nextFollowUpReached
-          ? "Waiting For Next Follow Up"
-          : remarksMissing
-            ? "Add Remarks To Continue"
-            : "Complete Follow Up";
->>>>>>> 5e96d00d42fe7cff1606cae559d9204f95fff3e3
-
   // One sliding panel, mounted once on open. Loading / not-found / loaded
   // states only swap what renders *inside* it, so the slide-from-right
   // motion always happens exactly once, immediately on open — never a
   // jump-cut between a centered modal and a separate sliding panel.
+
   return createPortal(
-<<<<<<< HEAD
     <div data-no-ptr className="fixed inset-0 z-50 flex h-[100dvh]">
-=======
-    <div className="fixed inset-0 z-50 flex h-[100dvh]">
->>>>>>> 5e96d00d42fe7cff1606cae559d9204f95fff3e3
-      {/* Overlay */}
       <div
         onClick={onClose}
         className="flex-1 bg-black/60 backdrop-blur-[2px] animate-in fade-in duration-200"

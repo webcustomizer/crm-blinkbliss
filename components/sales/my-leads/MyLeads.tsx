@@ -145,7 +145,6 @@ export default function MyLeads() {
 
   // Deep-link support: /sales/my-leads?leadId=xyz auto-opens that lead's
   // detail panel. This is what notification clicks (lead assigned, etc.)
-<<<<<<< HEAD
   // navigate to. It's also what keeps the panel in sync with the back
   // button: when BackButtonHandler / router.back() removes ?leadId from
   // the URL, this effect needs to close the panel too — not just open
@@ -158,19 +157,6 @@ export default function MyLeads() {
     }, 0);
 
     return () => clearTimeout(timer);
-=======
-  // navigate to.
-  useEffect(() => {
-    const leadIdFromUrl = searchParams.get("leadId");
-
-    if (leadIdFromUrl) {
-      const timer = setTimeout(() => {
-        setSelectedLeadId(leadIdFromUrl);
-      }, 0);
-
-      return () => clearTimeout(timer);
-    }
->>>>>>> 5e96d00d42fe7cff1606cae559d9204f95fff3e3
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 

@@ -1,7 +1,6 @@
 // components/BackButtonHandler.tsx
 "use client";
 
-<<<<<<< HEAD
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { App } from "@capacitor/app";
@@ -24,30 +23,17 @@ function BackButtonHandlerInner() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-=======
-import { useEffect, useRef, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { App } from "@capacitor/app";
-import { Capacitor } from "@capacitor/core";
-
-export default function BackButtonHandler() {
-  const router = useRouter();
-  const pathname = usePathname();
->>>>>>> 5e96d00d42fe7cff1606cae559d9204f95fff3e3
 
   const pathnameRef = useRef(pathname);
   useEffect(() => {
     pathnameRef.current = pathname;
   }, [pathname]);
 
-<<<<<<< HEAD
   const searchParamsRef = useRef(searchParams);
   useEffect(() => {
     searchParamsRef.current = searchParams;
   }, [searchParams]);
 
-=======
->>>>>>> 5e96d00d42fe7cff1606cae559d9204f95fff3e3
   const [showExitDialog, setShowExitDialog] = useState(false);
 
   useEffect(() => {
@@ -55,7 +41,6 @@ export default function BackButtonHandler() {
 
     const listenerPromise = App.addListener("backButton", () => {
       const currentPath = pathnameRef.current;
-<<<<<<< HEAD
       const currentParams = searchParamsRef.current;
 
       // Agar URL mein koi query param hai jo ek panel/modal open kiye
@@ -67,8 +52,6 @@ export default function BackButtonHandler() {
         router.replace(currentPath, { scroll: false });
         return;
       }
-=======
->>>>>>> 5e96d00d42fe7cff1606cae559d9204f95fff3e3
 
       if (currentPath === "/" || currentPath === "/home") {
         setShowExitDialog(true);
