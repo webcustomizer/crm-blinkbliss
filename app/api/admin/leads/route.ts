@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getNextAutoAssignee } from "@/lib/auto-assign";
+import { notifyLeadAssigned } from "@/lib/notify-lead-assigned";
 
 const GOOGLE_SHEET_WEBHOOK = process.env.GOOGLE_SHEET_WEBHOOK;
 
@@ -303,7 +304,14 @@ export async function POST(req: Request) {
         assignedToId: autoAssignedId, // 👈 naya field
       },
     });
-
+    // 🔔 Send notification for auto assigned lead
+    if (autoAssignedId) {
+      await notifyLeadAssigned({
+        userId: autoAssignedId,
+        leadId: lead.id,
+        leadName: lead.name,
+      });
+    }
     // =======================================
     // SAVE TO GOOGLE SHEET
     // =======================================
