@@ -23,6 +23,7 @@ export default function PullToRefresh({
     if (!Capacitor.isNativePlatform()) return;
 
     const onTouchStart = (e: TouchEvent) => {
+<<<<<<< HEAD
       // Agar touch kisi modal/overlay/fixed panel ke andar shuru hua hai
       // (jaise LeadDetails jismein data-no-ptr laga hua hai), to
       // pull-to-refresh bilkul track hi na karein — us panel ka apna
@@ -33,6 +34,8 @@ export default function PullToRefresh({
         return;
       }
 
+=======
+>>>>>>> 5e96d00d42fe7cff1606cae559d9204f95fff3e3
       // Only start tracking if page is already scrolled to top
       if (window.scrollY === 0) {
         startY.current = e.touches[0].clientY;

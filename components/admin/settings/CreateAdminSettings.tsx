@@ -40,7 +40,11 @@ export default function CreateAdminSettings() {
       const data = await res.json();
 
       if (!res.ok) {
+<<<<<<< HEAD
         throw new Error(data?.message || "Admin account create fail");
+=======
+        throw new Error(data?.message || "Admin account create nahi ho saka");
+>>>>>>> 5e96d00d42fe7cff1606cae559d9204f95fff3e3
       }
 
       setMessage({
@@ -59,7 +63,12 @@ export default function CreateAdminSettings() {
     <div className="rounded-xl border border-gray-800 bg-[#111111] p-6">
       <h2 className="text-xl font-semibold text-[#D4AF37]">Create New Admin</h2>
       <p className="mt-1 text-sm text-gray-400">
+<<<<<<< HEAD
         Create new admin account this will be automatically new admin role
+=======
+        Naya admin account banayein — is account ka role automatically Admin
+        hoga
+>>>>>>> 5e96d00d42fe7cff1606cae559d9204f95fff3e3
       </p>
 
       <form

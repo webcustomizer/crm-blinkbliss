@@ -1,5 +1,8 @@
 import { SignJWT, jwtVerify } from "jose";
+<<<<<<< HEAD
 import { NextRequest } from "next/server";
+=======
+>>>>>>> 5e96d00d42fe7cff1606cae559d9204f95fff3e3
 
 if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET environment variable is not set");
@@ -42,6 +45,7 @@ export async function verifyToken(token: string): Promise<TokenPayload> {
 
   return payload as unknown as TokenPayload;
 }
+<<<<<<< HEAD
 
 export async function getTokenFromRequest(
   req: NextRequest,
@@ -58,3 +62,5 @@ export async function getTokenFromRequest(
 
   return null;
 }
+=======
+>>>>>>> 5e96d00d42fe7cff1606cae559d9204f95fff3e3

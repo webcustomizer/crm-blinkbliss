@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+<<<<<<< HEAD
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 export async function middleware(request: NextRequest) {
   const token = await getTokenFromRequest(request);
+=======
+import { verifyToken } from "@/lib/auth";
+
+export async function middleware(request: NextRequest) {
+  const token = request.cookies.get("token")?.value;
+>>>>>>> 5e96d00d42fe7cff1606cae559d9204f95fff3e3
 
   const { pathname } = request.nextUrl;
 

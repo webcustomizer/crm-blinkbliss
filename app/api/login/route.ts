@@ -54,8 +54,11 @@ export async function POST(req: Request) {
       role: user.role,
     });
 
+<<<<<<< HEAD
     // Only set the httpOnly cookie for browser/web clients.
     // Capacitor apps can't read httpOnly cookies anyway, so they rely on the token in the JSON body below.
+=======
+>>>>>>> 5e96d00d42fe7cff1606cae559d9204f95fff3e3
     const cookieStore = await cookies();
 
     cookieStore.set("token", token, {
@@ -80,7 +83,10 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
+<<<<<<< HEAD
       token, // <-- app stores this via Preferences; web client can just ignore it
+=======
+>>>>>>> 5e96d00d42fe7cff1606cae559d9204f95fff3e3
       user: {
         id: user.id,
         name: user.name,
