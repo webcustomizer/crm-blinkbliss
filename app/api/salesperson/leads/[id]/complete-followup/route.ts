@@ -9,6 +9,29 @@ import { ActivityAction } from "@/app/generated/prisma/client";
 // Pakistan Standard Time = UTC+5 (no daylight saving)
 const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
 
+// CRM settings (maxFollowUps, follow-up day intervals, etc.) change
+// rarely — caching them in-memory for a short window avoids a DB
+// round trip on every single follow-up completion. Falls back to a
+// fresh fetch automatically once the TTL expires or on cold start.
+const SETTINGS_CACHE_TTL_MS = 60_000;
+let settingsCache: {
+  value: Awaited<ReturnType<typeof prisma.cRMSetting.findFirst>>;
+  fetchedAt: number;
+} | null = null;
+
+async function getCachedCRMSettings() {
+  if (
+    settingsCache &&
+    Date.now() - settingsCache.fetchedAt < SETTINGS_CACHE_TTL_MS
+  ) {
+    return settingsCache.value;
+  }
+
+  const value = await prisma.cRMSetting.findFirst();
+  settingsCache = { value, fetchedAt: Date.now() };
+  return value;
+}
+
 /**
  * Returns a Date representing "today + daysToAdd" in PKT, fixed at
  * 12:00 PM PKT (noon). Storing at noon (instead of midnight or "now")
@@ -90,12 +113,29 @@ export async function POST(
 
     const { remarks, status } = body;
 
-    const lead = await prisma.lead.findFirst({
-      where: {
-        id,
-        assignedToId: user.id,
-      },
-    });
+    // These two lookups don't depend on each other — running them
+    // concurrently overlaps their latency instead of stacking it.
+    // (Settings are also cached — see getCachedCRMSettings — so most
+    // requests skip the DB for that half entirely.)
+    const [lead, settings] = await Promise.all([
+      prisma.lead.findFirst({
+        where: {
+          id,
+          assignedToId: user.id,
+        },
+        // Only what's actually read below — smaller round trip than
+        // pulling every column on the model.
+        select: {
+          id: true,
+          status: true,
+          followUpCount: true,
+          nextFollowUp: true,
+          name: true,
+          phone: true,
+        },
+      }),
+      getCachedCRMSettings(),
+    ]);
 
     if (!lead) {
       return NextResponse.json(
@@ -107,8 +147,6 @@ export async function POST(
         },
       );
     }
-
-    const settings = await prisma.cRMSetting.findFirst();
 
     if (!settings) {
       return NextResponse.json(
@@ -210,7 +248,13 @@ export async function POST(
       }
     }
     const finalStatus = status;
+    const statusChanged = lead.status !== finalStatus;
 
+    // Only the writes that must be atomic with each other stay in the
+    // transaction: the lead's own state, the follow-up record, and the
+    // status-history row (if the status changed). Activity-log entries
+    // are audit trail, not core state — they don't need to block the
+    // response or share a DB transaction with the state change.
     await prisma.$transaction(async (tx) => {
       await tx.lead.update({
         where: {
@@ -249,7 +293,7 @@ export async function POST(
         },
       });
 
-      if (lead.status !== finalStatus) {
+      if (statusChanged) {
         await tx.statusHistory.create({
           data: {
             leadId: id,
@@ -261,32 +305,43 @@ export async function POST(
             changedById: user.id,
           },
         });
-
-        await logActivity({
-          userId: user.id,
-          leadId: id,
-          action: ActivityAction.STATUS_CHANGED,
-          description: `${user.name} changed lead status`,
-          metadata: {
-            leadName: lead.name || lead.phone,
-            oldStatus: lead.status,
-            newStatus: finalStatus,
-          },
-        });
       }
+    });
 
-      await logActivity({
+    // Fire-and-forget: these are audit logs, not core state, so they
+    // run after the transaction commits without the client waiting on
+    // them. Errors are swallowed here (and should be surfaced via
+    // whatever logging/monitoring logActivity itself already reports
+    // to) rather than turning a successful follow-up into a 500.
+    if (statusChanged) {
+      logActivity({
         userId: user.id,
         leadId: id,
-        action: ActivityAction.FOLLOWUP_COMPLETED,
-        description: `${user.name} completed follow up`,
+        action: ActivityAction.STATUS_CHANGED,
+        description: `${user.name} changed lead status`,
         metadata: {
           leadName: lead.name || lead.phone,
-          followUpNumber: lead.followUpCount + 1,
-          remarks,
-          nextFollowUp: formattedNextFollowUp,
+          oldStatus: lead.status,
+          newStatus: finalStatus,
         },
+      }).catch((error) => {
+        console.error("Activity log error (status changed):", error);
       });
+    }
+
+    logActivity({
+      userId: user.id,
+      leadId: id,
+      action: ActivityAction.FOLLOWUP_COMPLETED,
+      description: `${user.name} completed follow up`,
+      metadata: {
+        leadName: lead.name || lead.phone,
+        followUpNumber: lead.followUpCount + 1,
+        remarks,
+        nextFollowUp: formattedNextFollowUp,
+      },
+    }).catch((error) => {
+      console.error("Activity log error (followup completed):", error);
     });
 
     return NextResponse.json({

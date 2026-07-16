@@ -36,6 +36,14 @@ export async function getLeadCached(leadId: string) {
   return inflight.get(leadId)!;
 }
 
+// Synchronous cache check — use this to paint instantly before the async
+// path resolves. Returns null on a cache miss (never triggers a fetch).
+export function getLeadFromCacheSync(leadId: string): LeadRecord | null {
+  const cached = cache.get(leadId);
+  if (cached && Date.now() - cached.ts < STALE_MS) return cached.data;
+  return null;
+}
+
 export function invalidateLead(leadId: string) {
   cache.delete(leadId);
 }

@@ -52,6 +52,14 @@ export async function PATCH(
         id,
         assignedToId: user.id,
       },
+      // Only what's read below — status/name/phone for the diff and
+      // activity-log metadata — instead of pulling the whole row.
+      select: {
+        id: true,
+        status: true,
+        name: true,
+        phone: true,
+      },
     });
 
     if (!lead) {
@@ -76,6 +84,12 @@ export async function PATCH(
       );
     }
 
+    const statusChanged = lead.status !== status;
+
+    // Only the lead update + status-history row need to be atomic with
+    // each other. The activity log is audit trail, not core state — it
+    // doesn't need to share a transaction with the state change, and it
+    // doesn't need to finish before the client gets a response.
     await prisma.$transaction(async (tx) => {
       await tx.lead.update({
         where: {
@@ -87,7 +101,7 @@ export async function PATCH(
         },
       });
 
-      if (lead.status !== status) {
+      if (statusChanged) {
         await tx.statusHistory.create({
           data: {
             leadId: id,
@@ -100,21 +114,26 @@ export async function PATCH(
           },
         });
       }
-
-      if (lead.status !== status) {
-        await logActivity({
-          userId: user.id,
-          leadId: id,
-          action: ActivityAction.STATUS_CHANGED,
-          description: `${user.name} changed lead status`,
-          metadata: {
-            leadName: lead.name || lead.phone,
-            oldStatus: lead.status,
-            newStatus: status,
-          },
-        });
-      }
     });
+
+    // Fire-and-forget — runs after the transaction commits without the
+    // client waiting on it. Errors are logged rather than turning a
+    // successful status update into a 500.
+    if (statusChanged) {
+      logActivity({
+        userId: user.id,
+        leadId: id,
+        action: ActivityAction.STATUS_CHANGED,
+        description: `${user.name} changed lead status`,
+        metadata: {
+          leadName: lead.name || lead.phone,
+          oldStatus: lead.status,
+          newStatus: status,
+        },
+      }).catch((error) => {
+        console.error("Activity log error (status changed):", error);
+      });
+    }
 
     return NextResponse.json({
       message: "Status updated",

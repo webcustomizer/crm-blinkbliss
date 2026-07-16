@@ -15,7 +15,11 @@ import {
 
 import LeadStatusBadge from "./LeadStatusBadge";
 import { toast } from "sonner";
-import { getLeadCached, invalidateLead } from "@/lib/leadCache";
+import {
+  getLeadCached,
+  invalidateLead,
+  getLeadFromCacheSync,
+} from "@/lib/leadCache";
 
 interface LeadDetailsProps {
   leadId: string;
@@ -212,10 +216,48 @@ interface FollowupItem {
   user?: { id: string; name: string };
 }
 
+// Builds the edit-form shape from a raw lead record. Pulled out so both
+// the initial (possibly cache-warm) mount and every subsequent refetch
+// populate the form identically.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildFormFromLead(leadData: any, prevRemarks: string) {
+  return {
+    name: leadData.name || "",
+    email: leadData.email || "",
+    city: leadData.city || "",
+    age: leadData.age?.toString() || "",
+    purpose: leadData.purpose || "",
+    currentStatus: leadData.currentStatus || "",
+    bestTimeToReach: leadData.bestTimeToReach || "",
+    willingToAttendTraining: leadData.willingToAttendTraining ? "YES" : "NO",
+    remarks: prevRemarks,
+    status: leadData.status,
+  };
+}
+
+const EMPTY_FORM = {
+  name: "",
+  email: "",
+  city: "",
+  age: "",
+  purpose: "",
+  currentStatus: "",
+  bestTimeToReach: "",
+  willingToAttendTraining: "",
+  remarks: "",
+  status: "NEW",
+};
+
 export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
+  // Synchronous cache check, run once per mount. If LeadsTable's
+  // onPointerDown prefetch already resolved, this is populated
+  // immediately — no skeleton flash, no waiting on a promise.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [lead, setLead] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cachedOnMount = getLeadFromCacheSync(leadId);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [lead, setLead] = useState<any | null>(cachedOnMount?.lead ?? null);
+  const [loading, setLoading] = useState(() => !cachedOnMount?.lead);
   const [saving, setSaving] = useState(false);
   const [noteSaving, setNoteSaving] = useState(false);
   // Separate flag just for the status dropdown, so we can show a
@@ -260,18 +302,11 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
     return followUpDateStr <= nowDateStr;
   })();
 
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    city: "",
-    age: "",
-    purpose: "",
-    currentStatus: "",
-    bestTimeToReach: "",
-    willingToAttendTraining: "",
-    remarks: "",
-    status: "NEW",
-  });
+  const [form, setForm] = useState(() =>
+    cachedOnMount?.lead
+      ? buildFormFromLead(cachedOnMount.lead, "")
+      : EMPTY_FORM,
+  );
 
   // Remarks textarea only blocked by saving/closed state —
   // salesperson can jot notes anytime, not tied to follow-up eligibility
@@ -319,21 +354,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
       if (data?.lead) {
         const leadData = data.lead;
         setLead(leadData);
-
-        setForm((prev) => ({
-          name: leadData.name || "",
-          email: leadData.email || "",
-          city: leadData.city || "",
-          age: leadData.age?.toString() || "",
-          purpose: leadData.purpose || "",
-          currentStatus: leadData.currentStatus || "",
-          bestTimeToReach: leadData.bestTimeToReach || "",
-          willingToAttendTraining: leadData.willingToAttendTraining
-            ? "YES"
-            : "NO",
-          remarks: prev.remarks,
-          status: leadData.status,
-        }));
+        setForm((prev) => buildFormFromLead(leadData, prev.remarks));
       }
     } catch (error) {
       console.log("Lead Details Error:", error);
