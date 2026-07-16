@@ -24,17 +24,43 @@ interface DashboardStats {
 
 export default function SalesDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+
+  const [userId, setUserId] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(true);
+
   const [refreshing, setRefreshing] = useState(false);
+
   const [error, setError] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
+
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Fetch logged in user
+  const getCurrentUser = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/me", {
+        cache: "no-store",
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        console.log("CURRENT USER:", data.user.id);
+
+        setUserId(data.user.id);
+      }
+    } catch (error) {
+      console.log("User fetch error:", error);
+    }
+  }, []);
+
   const getDashboard = useCallback(async (isBackground = false) => {
-    // Cancel any in-flight request before starting a new one
     abortRef.current?.abort();
+
     const controller = new AbortController();
+
     abortRef.current = controller;
 
     if (isBackground) {
@@ -54,89 +80,113 @@ export default function SalesDashboard() {
         setError(false);
       } else {
         console.log("Dashboard Fetch Failed:", res.status, data);
-        if (!isBackground) setError(true);
+
+        if (!isBackground) {
+          setError(true);
+        }
       }
     } catch (err) {
-      if ((err as Error).name === "AbortError") return;
+      if ((err as Error).name === "AbortError") {
+        return;
+      }
+
       console.log("Dashboard Error:", err);
-      if (!isBackground) setError(true);
+
+      if (!isBackground) {
+        setError(true);
+      }
     } finally {
       setLoading(false);
+
       setRefreshing(false);
     }
   }, []);
 
-  // Debounced background refetch, so bursts of realtime events
-  // collapse into a single API call instead of many
   const scheduleRefresh = useCallback(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
     debounceRef.current = setTimeout(() => {
       getDashboard(true);
     }, 600);
   }, [getDashboard]);
 
+  // Initial load + user fetch
   useEffect(() => {
     let mounted = true;
 
-    const initialFetch = setTimeout(() => {
+    const init = async () => {
+      await getCurrentUser();
+
       if (mounted) {
         getDashboard(false);
       }
-    }, 0);
+    };
 
-    // Defer realtime subscription so the WebSocket doesn't open
-    // during initial render/TBT window
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-    const idle = setTimeout(() => {
-      if (!mounted) return;
-      channel = supabase
-        .channel("sales-dashboard")
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "Lead",
-          },
-          () => {
-            if (mounted) scheduleRefresh();
-          },
-        )
-        .subscribe((status) => {
-          console.log("Sales Dashboard Realtime:", status);
-        });
-    }, 1500);
+    init();
 
     return () => {
       mounted = false;
-      clearTimeout(initialFetch);
-      clearTimeout(idle);
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+
       abortRef.current?.abort();
-      if (channel) supabase.removeChannel(channel);
+
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
     };
-  }, [getDashboard, scheduleRefresh]);
+  }, [getCurrentUser, getDashboard]);
+
+  // User specific realtime
+  useEffect(() => {
+    if (!userId) return;
+
+    console.log("Realtime started for user:", userId);
+
+    const channel = supabase
+      .channel(`sales-dashboard-${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "Lead",
+          filter: `assignedToId=eq.${userId}`,
+        },
+
+        (payload) => {
+          console.log("MY LEAD UPDATED:", payload);
+
+          scheduleRefresh();
+        },
+      )
+      .subscribe((status) => {
+        console.log("Realtime Status:", status);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, scheduleRefresh]);
 
   if (loading) {
     return (
       <div className="space-y-6">
         <div>
           <div className="h-8 w-48 animate-pulse rounded-lg bg-zinc-800" />
+
           <div className="mt-2 h-4 w-64 animate-pulse rounded bg-zinc-800/70" />
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
+          {Array.from({
+            length: 8,
+          }).map((_, i) => (
             <div
               key={i}
               className="h-24 animate-pulse rounded-2xl bg-zinc-900 border border-white/5"
             />
           ))}
-        </div>
-
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <div className="h-64 animate-pulse rounded-2xl bg-zinc-900 border border-white/5" />
-          <div className="h-64 animate-pulse rounded-2xl bg-zinc-900 border border-white/5" />
         </div>
       </div>
     );
@@ -152,7 +202,9 @@ export default function SalesDashboard() {
         <button
           onClick={() => {
             setLoading(true);
+
             setError(false);
+
             getDashboard(false);
           }}
           className="
@@ -196,6 +248,7 @@ export default function SalesDashboard() {
 
       <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-2">
         <TodayFollowUps />
+
         <RecentActivity />
       </div>
     </div>
