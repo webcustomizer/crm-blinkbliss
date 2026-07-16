@@ -62,42 +62,65 @@ export default function LeadsTable({ salespersons }: Props) {
     total: 0,
   });
 
-  const getLeads = useCallback(async () => {
-    try {
-      if (!hasLoaded) {
-        setInitialLoading(true);
-      } else {
-        setRefreshing(true);
+  // Row IDs that are currently being synced via realtime — used to show
+  // a subtle per-row indicator instead of blurring/reloading the whole table.
+  const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
+
+  const markUpdating = useCallback((id: string) => {
+    setUpdatingIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
+
+  const unmarkUpdating = useCallback((id: string) => {
+    setUpdatingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const getLeads = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      try {
+        if (!hasLoaded) {
+          setInitialLoading(true);
+        } else if (!opts?.silent) {
+          setRefreshing(true);
+        }
+
+        const res = await fetch(
+          `/api/admin/leads?page=${page}&limit=${limit}&search=${search}&filter=${filter}&salespersonId=${salespersonId}`,
+          {
+            cache: "no-store",
+          },
+        );
+
+        const result = await res.json();
+
+        setData(result.data || []);
+
+        setPagination(
+          result.pagination || {
+            page: 1,
+            totalPages: 1,
+            total: 0,
+          },
+        );
+      } catch {
+        toast.error("Failed to load leads.");
+      } finally {
+        setInitialLoading(false);
+
+        setRefreshing(false);
+
+        setHasLoaded(true);
       }
-
-      const res = await fetch(
-        `/api/admin/leads?page=${page}&limit=${limit}&search=${search}&filter=${filter}&salespersonId=${salespersonId}`,
-        {
-          cache: "no-store",
-        },
-      );
-
-      const result = await res.json();
-
-      setData(result.data || []);
-
-      setPagination(
-        result.pagination || {
-          page: 1,
-          totalPages: 1,
-          total: 0,
-        },
-      );
-    } catch {
-      toast.error("Failed to load leads.");
-    } finally {
-      setInitialLoading(false);
-
-      setRefreshing(false);
-
-      setHasLoaded(true);
-    }
-  }, [hasLoaded, page, limit, search, filter, salespersonId]);
+    },
+    [hasLoaded, page, limit, search, filter, salespersonId],
+  );
 
   useEffect(() => {
     if (!dashboardFilter) {
@@ -118,6 +141,8 @@ export default function LeadsTable({ salespersons }: Props) {
     getLeadsRef.current = getLeads;
   });
 
+  // Realtime: patch the specific row instead of refetching/blurring
+  // the entire table on every change.
   useEffect(() => {
     const channel = supabase
       .channel("lead-changes")
@@ -128,8 +153,76 @@ export default function LeadsTable({ salespersons }: Props) {
           schema: "public",
           table: "Lead",
         },
-        () => {
-          getLeadsRef.current();
+        (payload) => {
+          const eventType = payload.eventType;
+          const newRow = payload.new as Record<string, any> | null;
+          const oldRow = payload.old as Record<string, any> | null;
+
+          if (eventType === "DELETE") {
+            const id = oldRow?.id;
+            if (!id) return;
+
+            markUpdating(id);
+
+            // small delay so the row can visually fade before it disappears
+            setTimeout(() => {
+              setData((prev) => prev.filter((l) => l.id !== id));
+              unmarkUpdating(id);
+            }, 250);
+
+            return;
+          }
+
+          if (eventType === "INSERT") {
+            // We can't know client-side whether this new lead matches the
+            // current filter/page, so just quietly resync in the background
+            // (no overlay, no blur).
+            getLeadsRef.current?.({ silent: true });
+            return;
+          }
+
+          if (eventType === "UPDATE") {
+            const id = newRow?.id;
+            if (!id) return;
+
+            setData((prev) => {
+              const exists = prev.some((l) => l.id === id);
+              if (!exists) return prev; // not on this page/filter, ignore
+
+              return prev.map((l) => {
+                if (l.id !== id) return l;
+
+                const assignedToChanged =
+                  newRow.assignedToId !== (l.assignedTo?.id ?? null);
+
+                const resolvedAssignedTo = assignedToChanged
+                  ? salespersons.find((p) => p.id === newRow.assignedToId) ||
+                    null
+                  : l.assignedTo;
+
+                return {
+                  ...l,
+                  name: newRow.name ?? l.name,
+                  phone: newRow.phone ?? l.phone,
+                  city: newRow.city ?? l.city,
+                  currentStatus: newRow.currentStatus ?? l.currentStatus,
+                  purpose: newRow.purpose ?? l.purpose,
+                  status: newRow.status ?? l.status,
+                  assignedTo: newRow.assignedToId
+                    ? resolvedAssignedTo
+                      ? {
+                          id: resolvedAssignedTo.id,
+                          name: resolvedAssignedTo.name,
+                        }
+                      : l.assignedTo
+                    : null,
+                };
+              });
+            });
+
+            markUpdating(id);
+            setTimeout(() => unmarkUpdating(id), 700);
+          }
         },
       )
       .subscribe();
@@ -137,19 +230,19 @@ export default function LeadsTable({ salespersons }: Props) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [salespersons, markUpdating, unmarkUpdating]);
 
   const isFirstRender = useRef(true);
 
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
-      void Promise.resolve().then(getLeads);
+      void Promise.resolve().then(() => getLeads());
       return;
     }
 
     const timer = setTimeout(() => {
-      void Promise.resolve().then(getLeads);
+      void Promise.resolve().then(() => getLeads());
     }, 400);
 
     return () => clearTimeout(timer);
@@ -179,7 +272,8 @@ export default function LeadsTable({ salespersons }: Props) {
           : "Lead unassigned successfully.",
       );
 
-      getLeads();
+      // No manual getLeads() call needed here — the realtime UPDATE
+      // handler above will patch this row directly.
     } catch {
       toast.error("Failed to assign lead.");
     }
@@ -475,7 +569,7 @@ export default function LeadsTable({ salespersons }: Props) {
         )}
 
         <div className="flex justify-end px-6 py-5 sm:px-7">
-          <LeadDialog onLeadCreated={getLeads} />
+          <LeadDialog onLeadCreated={() => getLeads()} />
         </div>
 
         {data.length === 0 ? (
@@ -563,86 +657,111 @@ export default function LeadsTable({ salespersons }: Props) {
   ${refreshing ? "opacity-40" : "opacity-100"}
   `}
             >
-              {data.map((lead) => (
-                <tr
-                  key={lead.id}
-                  className="
-              border-b
-              border-white/5
-              text-white/70
-              transition-colors
-              hover:bg-[#D4AF37]/[0.04]
-              "
-                >
-                  <td className="p-4 font-medium text-white">
-                    {lead.name || "—"}
-                  </td>
+              {data.map((lead) => {
+                const isUpdating = updatingIds.has(lead.id);
 
-                  <td className="p-4">{lead.phone}</td>
+                return (
+                  <tr
+                    key={lead.id}
+                    className={`
+                border-b
+                border-white/5
+                text-white/70
+                transition-colors
+                duration-500
+                hover:bg-[#D4AF37]/[0.04]
+                ${isUpdating ? "bg-[#D4AF37]/[0.07]" : ""}
+                `}
+                  >
+                    <td className="p-4 font-medium text-white">
+                      <span className="inline-flex items-center gap-2">
+                        {lead.name || "—"}
 
-                  <td className="p-4">{lead.city || "—"}</td>
+                        {isUpdating && (
+                          <span
+                            className="
+                            h-2
+                            w-2
+                            shrink-0
+                            animate-pulse
+                            rounded-full
+                            bg-[#D4AF37]
+                            "
+                            title="Updating…"
+                          />
+                        )}
+                      </span>
+                    </td>
 
-                  <td className="p-4">{lead.currentStatus || "—"}</td>
+                    <td className="p-4">{lead.phone}</td>
 
-                  <td className="p-4">{lead.purpose || "—"}</td>
+                    <td className="p-4">{lead.city || "—"}</td>
 
-                  <td className="p-4">
-                    <span
-                      className={`
-                  inline-flex
-                  rounded-full
-                  border
-                  px-3
-                  py-1
-                  text-xs
-                  font-medium
-                  ${statusStyle(lead.status)}
-                  `}
-                    >
-                      {lead.status.replaceAll("_", " ")}
-                    </span>
-                  </td>
+                    <td className="p-4">{lead.currentStatus || "—"}</td>
 
-                  <td className="p-4">
-                    <select
-                      value={lead.assignedTo?.id || ""}
-                      onChange={(e) => assignLead(lead.id, e.target.value)}
-                      className="
-                  cursor-pointer
-                  rounded-lg
-                  border
-                  border-white/10
-                  bg-black/30
-                  px-3
-                  py-2
-                  text-white
-                  outline-none
-                  transition-colors
-                  hover:border-[#D4AF37]/40
-                  focus:border-[#D4AF37]/60
-                  "
-                    >
-                      <option value="">Select</option>
+                    <td className="p-4">{lead.purpose || "—"}</td>
 
-                      {salespersons.map((person) => (
-                        <option
-                          key={person.id}
-                          value={person.id}
-                          className="
-                      bg-[#111111]
-                      "
-                        >
-                          {person.name}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
+                    <td className="p-4">
+                      <span
+                        className={`
+                    inline-flex
+                    rounded-full
+                    border
+                    px-3
+                    py-1
+                    text-xs
+                    font-medium
+                    ${statusStyle(lead.status)}
+                    `}
+                      >
+                        {lead.status.replaceAll("_", " ")}
+                      </span>
+                    </td>
 
-                  <td className="p-4">
-                    <LeadDetailsDialog leadId={lead.id} onUpdate={getLeads} />
-                  </td>
-                </tr>
-              ))}
+                    <td className="p-4">
+                      <select
+                        value={lead.assignedTo?.id || ""}
+                        onChange={(e) => assignLead(lead.id, e.target.value)}
+                        className="
+                    cursor-pointer
+                    rounded-lg
+                    border
+                    border-white/10
+                    bg-black/30
+                    px-3
+                    py-2
+                    text-white
+                    outline-none
+                    transition-colors
+                    hover:border-[#D4AF37]/40
+                    focus:border-[#D4AF37]/60
+                    "
+                      >
+                        <option value="">Select</option>
+
+                        {salespersons.map((person) => (
+                          <option
+                            key={person.id}
+                            value={person.id}
+                            className="
+                        bg-[#111111]
+                        "
+                          >
+                            {person.name}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+
+                    <td className="p-4">
+                      <LeadDetailsDialog
+                        leadId={lead.id}
+                        onUpdate={() => getLeads()}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}

@@ -215,7 +215,7 @@ export default function ExportLeadsSection() {
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-white/10 bg-black/20 px-4 py-3 text-xs text-gray-500">
-            Abhi tak koi export nahi hua.
+            No export done yet
           </div>
         )}
       </div>

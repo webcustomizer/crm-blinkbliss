@@ -1,12 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 
 import ReportStats from "./ReportStats";
-import StatusChart from "./StatusChart";
 import SalesReportTable from "./SalesReportTable";
 
 import { supabase } from "@/lib/supabase";
+
+// recharts is a large dependency — load it only when this dashboard is
+// actually rendered, instead of shipping it in every admin bundle.
+const StatusChart = dynamic(() => import("./StatusChart"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-64 w-full animate-pulse rounded-2xl bg-zinc-900 border border-white/5" />
+  ),
+});
 
 type LeadStatus =
   | "CALLED"

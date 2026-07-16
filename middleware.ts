@@ -25,8 +25,23 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  const isApiRoute = pathname.startsWith("/api");
+
+  // Public exception: the /form landing page (unauthenticated visitors)
+  // submits new leads via POST here. Everything else under
+  // /api/admin/leads (GET, PATCH, etc.) still requires an admin token.
+  const isPublicLeadSubmission =
+    pathname === "/api/admin/leads" && request.method === "POST";
+
+  if (isPublicLeadSubmission) {
+    return NextResponse.next();
+  }
+
   // Protected Routes
   if (!token) {
+    if (isApiRoute) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
@@ -34,17 +49,39 @@ export async function middleware(request: NextRequest) {
     const user = await verifyToken(token);
 
     // Admin Routes
-    if (pathname.startsWith("/admin") && user.role !== "ADMIN") {
+    if (
+      (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) &&
+      user.role !== "ADMIN"
+    ) {
+      if (isApiRoute) {
+        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+      }
       return NextResponse.redirect(new URL("/sales/dashboard", request.url));
     }
 
     // Sales Routes
-    if (pathname.startsWith("/sales") && user.role !== "SALESPERSON") {
+    if (
+      (pathname.startsWith("/sales") ||
+        pathname.startsWith("/api/salesperson")) &&
+      user.role !== "SALESPERSON"
+    ) {
+      if (isApiRoute) {
+        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+      }
       return NextResponse.redirect(new URL("/admin/dashboard", request.url));
     }
 
     return NextResponse.next();
   } catch {
+    if (isApiRoute) {
+      const response = NextResponse.json(
+        { message: "Unauthorized" },
+        { status: 401 },
+      );
+      response.cookies.delete("token");
+      return response;
+    }
+
     const response = NextResponse.redirect(new URL("/login", request.url));
 
     response.cookies.delete("token");
@@ -54,5 +91,11 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/login", "/admin/:path*", "/sales/:path*"],
+  matcher: [
+    "/login",
+    "/admin/:path*",
+    "/sales/:path*",
+    "/api/admin/:path*",
+    "/api/salesperson/:path*",
+  ],
 };

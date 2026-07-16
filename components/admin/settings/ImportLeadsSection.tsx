@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import Papa from "papaparse";
-import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import {
   Upload,
@@ -126,6 +125,11 @@ export default function ImportLeadsSection() {
 
   const parseExcelFile = async (file: File) => {
     try {
+      // Loaded on demand — xlsx is a large library, no need to ship it
+      // to every visitor of this settings page, only to those who
+      // actually upload an .xlsx/.xls file.
+      const XLSX = await import("xlsx");
+
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: "array" });
 

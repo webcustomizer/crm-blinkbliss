@@ -1,8 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/require-auth";
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
+  const auth = await requireAuth(req, ["ADMIN"]);
+  if ("error" in auth) return auth.error;
+
   try {
     const { searchParams } = new URL(req.url);
 

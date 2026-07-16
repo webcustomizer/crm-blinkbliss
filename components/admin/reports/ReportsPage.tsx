@@ -1,13 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import dynamic from "next/dynamic";
 
 import { supabase } from "@/lib/supabase";
 
 import ReportStats from "./ReportStats";
-import StatusChart from "./StatusChart";
 import SalesReportTable from "./SalesReportTable";
 import DateFilter from "./DateFilter";
+
+const StatusChart = dynamic(() => import("./StatusChart"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-64 w-full animate-pulse rounded-2xl bg-zinc-900 border border-white/5" />
+  ),
+});
 
 type Lead = {
   id: string;

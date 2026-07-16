@@ -1,13 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { notifyLeadAssigned } from "@/lib/notify-lead-assigned";
+import { requireAuth } from "@/lib/require-auth";
 
 export async function PATCH(
-  req: Request,
+  req: NextRequest,
   context: {
     params: Promise<{ id: string }>;
   },
 ) {
+  const auth = await requireAuth(req, ["ADMIN"]);
+  if ("error" in auth) return auth.error;
+
   try {
     const { id } = await context.params;
 

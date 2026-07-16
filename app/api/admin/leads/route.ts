@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getNextAutoAssignee } from "@/lib/auto-assign";
 import { notifyLeadAssigned } from "@/lib/notify-lead-assigned";
+import { requireAuth } from "@/lib/require-auth";
 
 const GOOGLE_SHEET_WEBHOOK = process.env.GOOGLE_SHEET_WEBHOOK;
 
@@ -54,7 +55,10 @@ function getPKTDayBoundary(daysOffset: number, endOfDay: boolean) {
   return new Date(boundaryInPKT.getTime() - PKT_OFFSET_MS);
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
+  const auth = await requireAuth(req, ["ADMIN"]);
+  if ("error" in auth) return auth.error;
+
   try {
     const { searchParams } = new URL(req.url);
 
@@ -193,7 +197,10 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  // NOTE: this endpoint is intentionally public — it's the submission
+  // target for the public lead-capture form at /form. Do not add an
+  // auth check here or that form will break for real visitors.
   try {
     const body = await req.json();
 
@@ -355,8 +362,21 @@ export async function POST(req: Request) {
 
       data: lead,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.log("CREATE LEAD ERROR:", error);
+
+    // Race-condition safety net: the DB-level unique(phone) constraint
+    // can reject an insert even after the findFirst check above passed
+    // (two near-simultaneous submissions for the same phone number).
+    if (error?.code === "P2002") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "A lead with this phone number already exists.",
+        },
+        { status: 409 },
+      );
+    }
 
     return NextResponse.json(
       {

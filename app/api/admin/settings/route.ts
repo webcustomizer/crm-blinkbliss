@@ -1,9 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/require-auth";
 
 // GET SETTINGS
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = await requireAuth(req, ["ADMIN"]);
+  if ("error" in auth) return auth.error;
+
   try {
     let setting = await prisma.cRMSetting.findFirst();
 
@@ -46,7 +50,10 @@ export async function GET() {
 
 // UPDATE SETTINGS
 
-export async function PATCH(req: Request) {
+export async function PATCH(req: NextRequest) {
+  const auth = await requireAuth(req, ["ADMIN"]);
+  if ("error" in auth) return auth.error;
+
   try {
     const body = await req.json();
 

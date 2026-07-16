@@ -1,46 +1,46 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/require-auth";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = await requireAuth(req, ["ADMIN"]);
+  if ("error" in auth) return auth.error;
+
   try {
-    const users = await prisma.user.findMany({
-      where: {
-        role: "SALESPERSON",
-      },
+    // Fetch salespeople and per-status lead counts separately so the
+    // database does the counting (GROUP BY) instead of pulling every
+    // lead row into Node and filtering in JS. Scales far better as the
+    // leads table grows.
+    const [salespeople, counts] = await Promise.all([
+      prisma.user.findMany({
+        where: { role: "SALESPERSON" },
+        select: { id: true, name: true },
+      }),
+      prisma.lead.groupBy({
+        by: ["assignedToId", "status"],
+        _count: { _all: true },
+      }),
+    ]);
 
-      include: {
-        leads: true,
-      },
-    });
-
-    const data = users
+    const data = salespeople
       .map((user) => {
-        const total = user.leads.length;
+        const rows = counts.filter((c) => c.assignedToId === user.id);
+        const get = (status: string) =>
+          rows.find((r) => r.status === status)?._count._all ?? 0;
 
-        const joined = user.leads.filter((l) => l.status === "JOINED").length;
+        const total = rows.reduce((sum, r) => sum + r._count._all, 0);
+        const joined = get("JOINED");
 
         return {
           id: user.id,
           name: user.name,
-
           total,
-
-          called: user.leads.filter((l) => l.status === "CALLED").length,
-
-          followups: user.leads.filter(
-            (l) => l.status === "NEED_MORE_FOLLOW_UP",
-          ).length,
-
-          training: user.leads.filter((l) => l.status === "TRAINING_ATTENDED")
-            .length,
-
-          reserved: user.leads.filter((l) => l.status === "SEAT_RESERVED")
-            .length,
-
+          called: get("CALLED"),
+          followups: get("NEED_MORE_FOLLOW_UP"),
+          training: get("TRAINING_ATTENDED"),
+          reserved: get("SEAT_RESERVED"),
           joined,
-
-          dead: user.leads.filter((l) => l.status === "DEAD").length,
-
+          dead: get("DEAD"),
           conversion:
             total === 0 ? 0 : Number(((joined / total) * 100).toFixed(1)),
         };

@@ -148,6 +148,17 @@ model Lead {
   @@index([assignedToId])
   // Supports filtering/sorting the leads table by status per salesperson.
   @@index([assignedToId, status])
+  // Enforces "one lead per phone number" at the DB level (closes a race
+  // condition where two simultaneous submissions could both pass the
+  // app-level duplicate check) and makes the duplicate-phone lookup in
+  // POST /api/admin/leads + the CSV import an index scan instead of a
+  // full table scan.
+  @@unique([phone])
+  // Speeds up the duplicate-email lookup on lead creation/import.
+  @@index([email])
+  // Speeds up the TODAY_FOLLOW_UP / OVERDUE_FOLLOW_UP admin filters,
+  // which query on nextFollowUp range + status together.
+  @@index([nextFollowUp, status])
 }
 
 // =====================

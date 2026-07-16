@@ -1,8 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/hash"; // NOTE: apna actual path check kar lein
+import { requireAuth } from "@/lib/require-auth";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const auth = await requireAuth(req, ["ADMIN"]);
+  if ("error" in auth) return auth.error;
+
   try {
     const { name, email, password, phone } = await req.json();
 
