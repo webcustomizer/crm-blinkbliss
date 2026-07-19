@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import type { GroupChatMessage, MentionLead } from "@/types/lead";
 import { subscribeToGroupMessages, subscribeToTyping } from "@/lib/realtime";
+import ChatImage, { isImageFile } from "@/components/chat/ChatImage";
+import ImagePreview from "@/components/chat/ImagePreview";
 
 function formatDateLabel(dateStr: string) {
   const d = new Date(dateStr);
@@ -55,6 +57,8 @@ export default function GroupChatPanel({
   const [mentionResults, setMentionResults] = useState<MentionLead[]>([]);
   const [showMentionSearch, setShowMentionSearch] = useState(false);
   const [fileUploading, setFileUploading] = useState(false);
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // Pagination state
   const [hasMore, setHasMore] = useState(true);
@@ -340,6 +344,16 @@ export default function GroupChatPanel({
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.type.startsWith("image/")) {
+      setPreviewFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    } else {
+      await doUploadAndSend(file, "");
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function doUploadAndSend(file: File, caption: string) {
     setFileUploading(true);
     try {
       const fd = new FormData();
@@ -347,11 +361,12 @@ export default function GroupChatPanel({
       const u = await fetch("/api/upload", { method: "POST", body: fd });
       const uj = await u.json();
       if (uj.success) {
+        const content = caption || `📎 ${uj.data.fileName}`;
         const m = await fetch("/api/admin/group-chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            content: `📎 ${uj.data.fileName}`,
+            content,
             leadId: mentionedLead?.id || null,
             fileUrl: uj.data.fileUrl,
             fileName: uj.data.fileName,
@@ -371,7 +386,22 @@ export default function GroupChatPanel({
       toast.error("Upload failed.");
     }
     setFileUploading(false);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) {
+          e.preventDefault();
+          setPreviewFile(file);
+          setPreviewUrl(URL.createObjectURL(file));
+        }
+        return;
+      }
+    }
   }
 
   if (disabled) {
@@ -393,6 +423,24 @@ export default function GroupChatPanel({
 
   return (
     <div className="flex flex-col h-full min-h-0 rounded-xl sm:rounded-[28px] border border-[#D4AF37]/20 bg-[#0b0b0b] shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)] overflow-hidden">
+      {previewFile && previewUrl && (
+        <ImagePreview
+          file={previewFile}
+          previewUrl={previewUrl}
+          sending={fileUploading}
+          onSend={(caption) => {
+            if (previewFile) doUploadAndSend(previewFile, caption);
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+            setPreviewFile(null);
+            setPreviewUrl(null);
+          }}
+          onCancel={() => {
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+            setPreviewFile(null);
+            setPreviewUrl(null);
+          }}
+        />
+      )}
       {/* Header */}
       <div className="p-3 sm:p-4 border-b border-white/10 flex items-center gap-2 sm:gap-3 shrink-0 bg-gradient-to-r from-[#171717] to-[#111111] z-10">
         <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
@@ -419,6 +467,7 @@ export default function GroupChatPanel({
       <div
         ref={scrollContainerRef}
         onScroll={onMessagesScroll}
+        onPaste={handlePaste}
         className="flex-1 min-h-0 overflow-y-auto px-2 sm:px-4 py-3 sm:py-4 space-y-1"
         style={{
           backgroundImage:
@@ -513,7 +562,9 @@ export default function GroupChatPanel({
                           {msg.content}
                         </p>
 
-                        {msg.fileUrl && (
+                        {msg.fileUrl && isImageFile(msg.fileName) ? (
+                          <ChatImage src={msg.fileUrl} alt={msg.fileName || "Image"} fileName={msg.fileName} />
+                        ) : msg.fileUrl ? (
                           <a
                             href={msg.fileUrl}
                             download={msg.fileName}
@@ -526,7 +577,7 @@ export default function GroupChatPanel({
                               {msg.fileName || "Download"}
                             </span>
                           </a>
-                        )}
+                        ) : null}
 
                         {msg.lead && (
                           <a

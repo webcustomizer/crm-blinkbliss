@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import type { ChatMessage, MentionLead } from "@/types/lead";
 import { subscribeToMessages, subscribeToTyping } from "@/lib/realtime";
+import ChatImage, { isImageFile } from "@/components/chat/ChatImage";
+import ImagePreview from "@/components/chat/ImagePreview";
 
 type SalesPerson = { id: string; name: string; phone: string | null; isActive: boolean; lastMessageAt: string | null };
 
@@ -34,6 +36,8 @@ export default function MessagesPanel() {
   const [fileUploading, setFileUploading] = useState(false);
   const [currentUserId, setCurrentUserId] = useState("");
   const [unreadPerUser, setUnreadPerUser] = useState<Record<string, number>>({});
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // Pagination state
   const [hasMore, setHasMore] = useState(true);
@@ -331,6 +335,17 @@ export default function MessagesPanel() {
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !selectedUser) return;
+    if (file.type.startsWith("image/")) {
+      setPreviewFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    } else {
+      await doUploadAndSend(file, "");
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function doUploadAndSend(file: File, caption: string) {
+    if (!selectedUser) return;
     setFileUploading(true);
     try {
       const fd = new FormData();
@@ -338,12 +353,13 @@ export default function MessagesPanel() {
       const u = await fetch("/api/upload", { method: "POST", body: fd });
       const uj = await u.json();
       if (uj.success) {
+        const content = caption || `📎 ${uj.data.fileName}`;
         const m = await fetch("/api/admin/messages", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             receiverId: selectedUser.id,
-            content: `📎 ${uj.data.fileName}`,
+            content,
             leadId: mentionedLead?.id || null,
             fileUrl: uj.data.fileUrl,
             fileName: uj.data.fileName,
@@ -363,11 +379,44 @@ export default function MessagesPanel() {
       toast.error("Upload failed.");
     }
     setFileUploading(false);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file && selectedUser) {
+          e.preventDefault();
+          setPreviewFile(file);
+          setPreviewUrl(URL.createObjectURL(file));
+        }
+        return;
+      }
+    }
   }
 
   return (
     <div className="flex h-full rounded-xl sm:rounded-[28px] border border-[#D4AF37]/20 bg-gradient-to-br from-[#171717] to-[#0d0d0d] shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)] overflow-hidden">
+      {previewFile && previewUrl && (
+        <ImagePreview
+          file={previewFile}
+          previewUrl={previewUrl}
+          sending={fileUploading}
+          onSend={(caption) => {
+            if (previewFile) doUploadAndSend(previewFile, caption);
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+            setPreviewFile(null);
+            setPreviewUrl(null);
+          }}
+          onCancel={() => {
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+            setPreviewFile(null);
+            setPreviewUrl(null);
+          }}
+        />
+      )}
       {/* Sidebar */}
       <div
         className={`${
@@ -476,6 +525,7 @@ export default function MessagesPanel() {
             <div
               ref={scrollContainerRef}
               onScroll={onMessagesScroll}
+              onPaste={handlePaste}
               className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3"
             >
               {loading ? (
@@ -527,7 +577,9 @@ export default function MessagesPanel() {
                             </p>
                           )}
                           <p className="break-words">{msg.content}</p>
-                          {msg.fileUrl && (
+                          {msg.fileUrl && isImageFile(msg.fileName) ? (
+                            <ChatImage src={msg.fileUrl} alt={msg.fileName || "Image"} fileName={msg.fileName} />
+                          ) : msg.fileUrl ? (
                             <a
                               href={msg.fileUrl}
                               download={msg.fileName}
@@ -537,7 +589,7 @@ export default function MessagesPanel() {
                             >
                               📎 {msg.fileName || "Download"}
                             </a>
-                          )}
+                          ) : null}
                           {msg.lead && (
                             <a
                               href={`/admin/leads?leadId=${msg.lead.id}`}

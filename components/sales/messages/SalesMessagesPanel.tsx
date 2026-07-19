@@ -20,6 +20,8 @@ import {
   subscribeToTyping,
   subscribeToSettingsChanges,
 } from "@/lib/realtime";
+import ChatImage, { isImageFile } from "@/components/chat/ChatImage";
+import ImagePreview from "@/components/chat/ImagePreview";
 
 type Admin = { id: string; name: string; phone: string | null; role?: string; lastMessageAt?: string | null };
 
@@ -41,6 +43,8 @@ export default function SalesMessagesPanel({
   const [showMentionSearch, setShowMentionSearch] = useState(false);
   const [fileUploading, setFileUploading] = useState(false);
   const [disabled, setDisabled] = useState(false);
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // Pagination state
   const [hasMore, setHasMore] = useState(true);
@@ -316,23 +320,35 @@ export default function SalesMessagesPanel({
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !selectedAdmin) return;
+    if (file.type.startsWith("image/")) {
+      setPreviewFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    } else {
+      await doUploadAndSend(file, "");
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function doUploadAndSend(file: File, caption: string) {
+    if (!selectedAdmin) return;
     setFileUploading(true);
     try {
       const fd = new FormData();
       fd.append("file", file);
       const u = await fetch("/api/upload", { method: "POST", body: fd });
-      const uj = await u.json();
-      if (uj.success) {
+      const uploadJson = await u.json();
+      if (uploadJson.success) {
+        const content = caption || `📎 ${uploadJson.data.fileName}`;
         const m = await fetch("/api/salesperson/messages", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             receiverId: selectedAdmin.id,
-            content: `📎 ${uj.data.fileName}`,
+            content,
             leadId: mentionedLead?.id || null,
-            fileUrl: uj.data.fileUrl,
-            fileName: uj.data.fileName,
-            fileSize: uj.data.fileSize,
+            fileUrl: uploadJson.data.fileUrl,
+            fileName: uploadJson.data.fileName,
+            fileSize: uploadJson.data.fileSize,
           }),
         });
         const mj = await m.json();
@@ -348,7 +364,22 @@ export default function SalesMessagesPanel({
       toast.error("Upload failed.");
     }
     setFileUploading(false);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file && selectedAdmin) {
+          e.preventDefault();
+          setPreviewFile(file);
+          setPreviewUrl(URL.createObjectURL(file));
+        }
+        return;
+      }
+    }
   }
 
   if (disabled) {
@@ -369,6 +400,24 @@ export default function SalesMessagesPanel({
 
   return (
     <div className="flex h-full rounded-xl sm:rounded-[28px] border border-[#D4AF37]/20 bg-gradient-to-br from-[#171717] to-[#0d0d0d] shadow-lg overflow-hidden">
+      {previewFile && previewUrl && (
+        <ImagePreview
+          file={previewFile}
+          previewUrl={previewUrl}
+          sending={fileUploading}
+          onSend={(caption) => {
+            if (previewFile) doUploadAndSend(previewFile, caption);
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+            setPreviewFile(null);
+            setPreviewUrl(null);
+          }}
+          onCancel={() => {
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+            setPreviewFile(null);
+            setPreviewUrl(null);
+          }}
+        />
+      )}
       <div
         className={`${
           showChat ? "hidden" : "flex"
@@ -454,6 +503,7 @@ export default function SalesMessagesPanel({
             <div
               ref={scrollContainerRef}
               onScroll={onMessagesScroll}
+              onPaste={handlePaste}
               className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3"
             >
               {loading ? (
@@ -503,7 +553,9 @@ export default function SalesMessagesPanel({
                           }`}
                         >
                           <p className="break-words">{msg.content}</p>
-                          {msg.fileUrl && (
+                          {msg.fileUrl && isImageFile(msg.fileName) ? (
+                            <ChatImage src={msg.fileUrl} alt={msg.fileName || "Image"} fileName={msg.fileName} />
+                          ) : msg.fileUrl ? (
                             <a
                               href={msg.fileUrl}
                               download={msg.fileName}
@@ -513,7 +565,7 @@ export default function SalesMessagesPanel({
                             >
                               📎 {msg.fileName || "Download"}
                             </a>
-                          )}
+                          ) : null}
                           {msg.lead && (
                             <a
                               href={`/sales/my-leads?leadId=${msg.lead.id}`}
