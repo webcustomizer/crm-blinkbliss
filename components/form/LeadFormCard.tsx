@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -8,9 +8,41 @@ import { toast } from "sonner";
 import LeadForm from "./LeadForm";
 import { LeadFormData } from "@/types/lead";
 
+function detectSource(): string | null {
+  if (typeof window === "undefined") return null;
+  const p = new URLSearchParams(window.location.search);
+
+  // 1. Explicit ?source=X
+  const explicit = p.get("source");
+  if (explicit) return explicit.toLowerCase().trim();
+
+  // 2. ?utm_source=X
+  const utm = p.get("utm_source");
+  if (utm) return utm.toLowerCase().trim();
+
+  // 3. Referrer — WhatsApp gets priority label
+  try {
+    if (document.referrer) {
+      const ref = document.referrer.toLowerCase();
+      if (ref.includes("whatsapp") || ref.includes("wa.me") || ref.includes("api.whatsapp")) {
+        return "whatsapp";
+      }
+      const host = new URL(document.referrer).hostname.replace(/^www\./, "");
+      if (host) return host;
+    }
+  } catch {}
+
+  return null;
+}
+
 export default function LeadFormCard() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [source, setSource] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSource(detectSource());
+  }, []);
 
   async function handleSubmit(data: LeadFormData) {
     try {
@@ -23,7 +55,7 @@ export default function LeadFormCard() {
           "Content-Type": "application/json",
         },
 
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, source }),
       });
 
       const json = await res.json();

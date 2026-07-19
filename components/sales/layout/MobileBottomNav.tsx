@@ -8,7 +8,8 @@ import { useSalesSettings } from "@/hooks/useSalesSettings";
 export default function MobileBottomNav() {
   const pathname = usePathname();
   const unread = useUnreadCounts();
-  const { navItems } = useSalesSettings();
+  const allItems = useSalesSettings().navItems;
+  const navItems = allItems.filter((item) => item.href !== "/sales/profile");
 
   const gridCols = navItems.length <= 3 ? "grid-cols-3" : navItems.length <= 4 ? "grid-cols-4" : "grid-cols-5";
 

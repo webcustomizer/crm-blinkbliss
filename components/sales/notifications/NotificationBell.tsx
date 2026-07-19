@@ -553,10 +553,11 @@ export default function NotificationBell({ userId }: Props) {
                                 border
                                 border-[#D4AF37]/20
                                 text-[#D4AF37]/70
-                                opacity-0
+                                opacity-100
+                                sm:opacity-0
                                 transition
                                 duration-150
-                                group-hover:opacity-100
+                                sm:group-hover:opacity-100
                                 hover:border-[#D4AF37]
                                 hover:bg-[#D4AF37]
                                 hover:text-black
@@ -582,10 +583,11 @@ export default function NotificationBell({ userId }: Props) {
                               border
                               border-red-500/20
                               text-red-400/60
-                              opacity-0
+                              opacity-100
+                              sm:opacity-0
                               transition
                               duration-150
-                              group-hover:opacity-100
+                              sm:group-hover:opacity-100
                               hover:border-red-400
                               hover:bg-red-500/20
                               hover:text-red-400
