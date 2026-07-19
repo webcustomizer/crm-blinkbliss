@@ -7,10 +7,6 @@ datasource db {
   provider = "postgresql"
 }
 
-// =====================
-// ENUMS
-// =====================
-
 enum Role {
   ADMIN
   SALESPERSON
@@ -34,350 +30,362 @@ enum LeadCompletion {
 enum ActivityAction {
   LOGIN
   LOGOUT
-
   LEAD_UPDATED
-
   STATUS_CHANGED
-
   FOLLOWUP_COMPLETED
-
   REMARK_UPDATED
-
   ANNOUNCEMENT_CREATED
-
   PASSWORD_CHANGED
+  LEAD_BULK_ACTION
+  MESSAGE_SENT
+  FORCE_LOGOUT
+  LEAD_MERGED
+  LEAD_SOFT_DELETED
+  LEAD_RESTORED
+  PASSWORD_FAILED
+  SESSION_EXPIRED
+  TWO_FACTOR_ENABLED
+  TWO_FACTOR_DISABLED
+  TWO_FACTOR_CODE_SENT
+  GROUP_CHAT_ENABLED
+  GROUP_CHAT_DISABLED
+  USER_STATUS_CHANGED
+  BACKUP_CREATED
 }
-
-// =====================
-// USER MODEL
-// =====================
 
 model User {
   id String @id @default(cuid())
-
   name String
-
   email String @unique
-
   password String
-
   phone String?
-
   role Role @default(SALESPERSON)
-
   isActive Boolean @default(true)
-
+  monthlyTarget Int @default(50)
+  responseTimeAvg Int @default(0)
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret String?
+  failedLoginAttempts Int @default(0)
+  lockedUntil DateTime?
+  sessionTimeoutMinutes Int @default(10080)
   createdAt DateTime @default(now())
-
   updatedAt DateTime @updatedAt
 
-  // Relations
-
   leads Lead[]
-
   followups FollowUp[]
-
   statusLogs StatusHistory[]
-
   notifications Notification[]
-  activityLogs  ActivityLog[]
+  activityLogs ActivityLog[]
   announcements Announcement[]
-  exportLogs    ExportLog[]
-  pushTokens    PushToken[]
+  exportLogs ExportLog[]
+  pushTokens PushToken[]
+  sentMessages Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+  loginSessions LoginSession[]
+  salesTargets SalesTarget[]
+  deletedLeads Lead[] @relation("DeletedLeads")
+  groupMessages GroupMessage[]
+  uploadedFiles UploadedFile[]
+  readReceipts ReadReceipt[]
+  groupReadReceipts GroupReadReceipt[]
+  announcementReads AnnouncementRead[]
 }
-
-// =====================
-// LEAD MODEL
-// =====================
 
 model Lead {
   id String @id @default(cuid())
-
   name String?
-
   phone String
-
   email String?
-
   city String?
-
   age Int?
-
   purpose String?
-
   currentStatus String?
-
   bestTimeToReach String?
-
   willingToAttendTraining Boolean?
-
+  source String?
   status LeadStatus @default(NEW)
-
   completion LeadCompletion @default(INCOMPLETE)
-
   remarks String?
-
-  // =====================
-  // FOLLOW UP TRACKING
-  // =====================
-
   followUpCount Int @default(0)
-
   lastFollowUp DateTime?
-
   nextFollowUp DateTime?
-
   assignedToId String?
-
+  firstResponseAt DateTime?
+  isDeleted Boolean @default(false)
+  deletedAt DateTime?
+  deletedById String?
+  mergedIntoId String?
   createdAt DateTime @default(now())
-
   updatedAt DateTime @updatedAt
 
-  // Relations
-
   assignedTo User? @relation(fields: [assignedToId], references: [id])
-
   followups FollowUp[]
-
   statusHistory StatusHistory[]
-
   activityLogs ActivityLog[]
+  messages Message[]
+  groupMessages GroupMessage[]
+  deletedBy User? @relation("DeletedLeads", fields: [deletedById], references: [id])
+  mergedInto Lead? @relation("MergeTarget", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  mergedLeads Lead[] @relation("MergeTarget")
 
-  // Speeds up the leads-table listing query (findMany by assignedToId)
-  // and the detail-page lookup (findFirst by id + assignedToId).
   @@index([assignedToId])
-  // Supports filtering/sorting the leads table by status per salesperson.
   @@index([assignedToId, status])
-  // Enforces "one lead per phone number" at the DB level (closes a race
-  // condition where two simultaneous submissions could both pass the
-  // app-level duplicate check) and makes the duplicate-phone lookup in
-  // POST /api/admin/leads + the CSV import an index scan instead of a
-  // full table scan.
-  @@unique([phone])
-  // Speeds up the duplicate-email lookup on lead creation/import.
-  @@index([email])
-  // Speeds up the TODAY_FOLLOW_UP / OVERDUE_FOLLOW_UP admin filters,
-  // which query on nextFollowUp range + status together.
+  @@unique([phone, isDeleted])
+  @@index([email, isDeleted])
   @@index([nextFollowUp, status])
+  @@index([source])
+  @@index([isDeleted])
+  @@index([mergedIntoId])
 }
-
-// =====================
-// FOLLOW UP MODEL
-// =====================
 
 model FollowUp {
   id String @id @default(cuid())
-
   remarks String
-
-  // 1 = First Follow Up
-  // 2 = Second Follow Up
-  // 3 = Third Follow Up
-
   followUpNumber Int @default(1)
-
   nextFollowUp DateTime?
-
   createdAt DateTime @default(now())
-
-  // Relations
-
   leadId String
-
   userId String
-
   lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
-
   user User @relation(fields: [userId], references: [id])
-
-  // Matches the lead-detail query: WHERE leadId = ? ORDER BY createdAt DESC
   @@index([leadId, createdAt])
 }
 
-// =====================
-// STATUS HISTORY MODEL
-// =====================
-
 model StatusHistory {
   id String @id @default(cuid())
-
   oldStatus LeadStatus
-
   newStatus LeadStatus
-
   changedAt DateTime @default(now())
-
-  // Relations
-
   leadId String
-
   changedById String
-
   lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
-
   changedBy User @relation(fields: [changedById], references: [id])
-
-  // Matches the lead-detail query: WHERE leadId = ? ORDER BY changedAt DESC
   @@index([leadId, changedAt])
 }
 
-// =====================
-// NOTIFICATION MODEL
-// =====================
-
 model Notification {
   id String @id @default(cuid())
-
   title String
-
   message String
-
   link String?
-
   leadId String?
-
   isRead Boolean @default(false)
-
   userId String
-
   announcementId String?
-
   createdAt DateTime @default(now())
-
-  // Relations
-
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   announcement Announcement? @relation(fields: [announcementId], references: [id], onDelete: Cascade)
-
-  // Speeds up "unread notifications for this user" queries
   @@index([userId, isRead])
 }
 
-// =====================
-// CRM SETTINGS MODEL
-// =====================
-
 model CRMSetting {
   id String @id @default(cuid())
-
   firstFollowUpDays Int @default(0)
-
   secondFollowUpDays Int @default(7)
-
   thirdFollowUpDays Int @default(20)
-
   maxFollowUps Int @default(3)
-
   autoDeadEnabled Boolean @default(true)
-
   deadAfterDays Int @default(30)
-
   autoAssignEnabled Boolean @default(false)
-
   lastAssignedSalespersonId String?
-
+  groupChatEnabled Boolean @default(false)
+  messageEnabled Boolean @default(true)
+  twoFactorRequired Boolean @default(false)
+  passwordMinLength Int @default(8)
+  passwordRequireSpecial Boolean @default(false)
+  autoBackupEnabled Boolean @default(false)
+  backupFrequencyDays Int @default(7)
+  sessionMaxHours Int @default(168)
+  forgotPasswordEnabled Boolean @default(true)
   createdAt DateTime @default(now())
-
   updatedAt DateTime @updatedAt
 }
-
-// =====================
-// ANNOUNCEMENT MODEL   
 
 model Announcement {
   id String @id @default(cuid())
-
   title String
-
   message String
-
   isPinned Boolean @default(false)
-
   createdAt DateTime @default(now())
-
   updatedAt DateTime @updatedAt
-
   createdById String
-
   createdBy User @relation(fields: [createdById], references: [id])
-
   notifications Notification[]
+  reads AnnouncementRead[]
 }
 
-// =====================
-// ACTIVITY LOG MODEL
-// =====================
+model AnnouncementRead {
+  id String @id @default(cuid())
+  announcementId String
+  userId String
+  readAt DateTime @default(now())
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([announcementId, userId])
+  @@index([announcementId])
+  @@index([userId])
+}
 
 model ActivityLog {
   id String @id @default(cuid())
-
   action ActivityAction
-
   description String
-
   metadata Json?
-
   createdAt DateTime @default(now())
-
-  // Relations
-
   userId String
-
   leadId String?
-
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   lead Lead? @relation(fields: [leadId], references: [id], onDelete: Cascade)
-
-  // Supports the admin activity feed (ORDER BY createdAt DESC) and any
-  // per-lead or per-user activity lookups.
   @@index([createdAt])
   @@index([leadId])
   @@index([userId])
 }
 
-// =====================
-// EXPORT LOG MODEL
-// =====================
-
 model ExportLog {
   id String @id @default(cuid())
-
-  type String // e.g. "all", "today", "status", "salesperson"
-
-  label String // e.g. "Export by Salesperson" — UI mein dikhane ke liye
-
-  filters Json? // jo filters use hue (status/city/salespersonId/dateRange)
-
-  recordCount Int @default(0) // kitne leads export hue
-
+  type String
+  label String
+  filters Json?
+  recordCount Int @default(0)
   createdAt DateTime @default(now())
-
-  // Relations
-
   exportedById String
-
   exportedBy User @relation(fields: [exportedById], references: [id])
 }
 
-// =====================
-// PUSH TOKEN MODEL
-// =====================
-
 model PushToken {
   id String @id @default(cuid())
-
   token String @unique
-
   userId String
-
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
 
+model Message {
+  id String @id @default(cuid())
+  content String
+  senderId String
+  receiverId String
+  leadId String?
+  fileUrl String?
+  fileName String?
+  fileSize Int?
+  isRead Boolean @default(false)
+  readAt DateTime?
+  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
+  sender User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  lead Lead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  readReceipts ReadReceipt[]
+
+  @@index([senderId, receiverId])
+  @@index([receiverId, isRead])
+  @@index([createdAt])
+  @@index([leadId])
+}
+
+model GroupMessage {
+  id String @id @default(cuid())
+  content String
+  senderId String
+  leadId String?
+  fileUrl String?
+  fileName String?
+  fileSize Int?
+  deleted Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  lead Lead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  groupReads GroupReadReceipt[]
+
+  @@index([createdAt])
+}
+
+model GroupReadReceipt {
+  id String @id @default(cuid())
+  messageId String
+  userId String
+  readAt DateTime @default(now())
+
+  message GroupMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Speeds up "get all tokens for this user" when sending a push
+  @@unique([messageId, userId])
+  @@index([messageId])
+}
+
+model ReadReceipt {
+  id String @id @default(cuid())
+  messageId String
+  userId String
+  readAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+}
+
+model LoginSession {
+  id String @id @default(cuid())
+  userId String
+  token String @unique
+  deviceName String?
+  deviceType String?
+  browser String?
+  os String?
+  ipAddress String?
+  isExpired Boolean @default(false)
+  lastActiveAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  expiresAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId])
+  @@index([token])
+}
+
+model SalesTarget {
+  id String @id @default(cuid())
+  userId String
+  month Int
+  year Int
+  target Int @default(50)
+  achieved Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, month, year])
+  @@index([userId])
+}
+
+model UploadedFile {
+  id String @id @default(cuid())
+  userId String
+  fileName String
+  fileUrl String
+  fileSize Int
+  mimeType String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+
+model BackupLog {
+  id String @id @default(cuid())
+  fileName String
+  fileUrl String
+  recordCount Int @default(0)
+  sizeBytes Int @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }

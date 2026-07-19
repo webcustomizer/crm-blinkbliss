@@ -6,6 +6,8 @@ import { verifyToken } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ActivityAction } from "@/app/generated/prisma/client";
 
+export const dynamic = "force-dynamic";
+
 export async function PATCH(
   req: Request,
   context: {
@@ -139,7 +141,7 @@ export async function PATCH(
       message: "Status updated",
     });
   } catch (error) {
-    console.log(error);
+
 
     return NextResponse.json(
       {

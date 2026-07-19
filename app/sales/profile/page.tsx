@@ -41,7 +41,18 @@ export default async function SalespersonProfilePage() {
   const formattedProfile = {
     ...profile,
 
-    createdAt: profile.createdAt.toISOString(),
+    // Formatted here on the server, with an explicit locale/timeZone, so
+    // the string is identical no matter what timezone or ICU locale data
+    // the server process happens to be running with vs. the visitor's
+    // browser — avoids a hydration mismatch on this line (previously
+    // formatted client-side via `.toLocaleDateString()` with no args,
+    // which is affected by the *rendering* environment's local time).
+    createdAt: profile.createdAt.toLocaleDateString("en-US", {
+      timeZone: "Asia/Karachi",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }),
   };
 
   return (

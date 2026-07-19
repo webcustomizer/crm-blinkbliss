@@ -1,26 +1,32 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 
 interface UseSalesNotificationsProps {
   userId?: string;
   onNewNotification?: () => void;
+  debounceMs?: number;
 }
 
 export default function useSalesNotifications({
   userId,
   onNewNotification,
+  debounceMs = 2000,
 }: UseSalesNotificationsProps) {
+  const cbRef = useRef(onNewNotification);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Keep callback ref fresh without resetting the effect
+  useEffect(() => {
+    cbRef.current = onNewNotification;
+  }, [onNewNotification]);
+
   useEffect(() => {
     if (!userId) return;
 
-    // Unique topic so this never collides with NotificationBell's own channel
-    // for the same user (Supabase reuses channel instances by topic name).
     const channelName = `sales-notifications-hook-${userId}`;
 
-    // Clean up any stale channel with the same topic (e.g. from React
-    // Strict Mode double-invoking this effect in development).
     supabase.getChannels().forEach((ch) => {
       if (ch.topic === `realtime:${channelName}`) {
         supabase.removeChannel(ch);
@@ -37,17 +43,26 @@ export default function useSalesNotifications({
           table: "Notification",
           filter: `userId=eq.${userId}`,
         },
-        (payload) => {
-          console.log("NEW SALES NOTIFICATION:", payload);
-          onNewNotification?.();
+        () => {
+          // Debounce: collapse bursts of notifications into ONE callback
+          if (debounceRef.current) clearTimeout(debounceRef.current);
+          debounceRef.current = setTimeout(() => {
+            cbRef.current?.();
+          }, debounceMs);
         },
       )
-      .subscribe((status) => {
-        console.log("Notification channel:", status);
-      });
+      .subscribe();
 
     return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
       supabase.removeChannel(channel);
     };
-  }, [userId, onNewNotification]);
+  }, [userId, debounceMs]);
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 }

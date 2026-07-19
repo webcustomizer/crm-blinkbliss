@@ -56,7 +56,7 @@ export async function POST(req: Request) {
       message: "Push token saved successfully",
     });
   } catch (error) {
-    console.log("Save Push Token Error:", error);
+
 
     return NextResponse.json(
       { message: "Something went wrong" },

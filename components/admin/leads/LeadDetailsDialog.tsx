@@ -80,13 +80,13 @@ export default function LeadDetailsDialog({
       const json = await res.json();
 
       if (!json.success) {
-        console.log(json.message);
+
         return;
       }
 
       setLead(json.data);
     } catch (err) {
-      console.log(err);
+
     } finally {
       setLoading(false);
     }
@@ -122,7 +122,7 @@ export default function LeadDetailsDialog({
         toast.error(json.message || "Follow up failed");
       }
     } catch (error) {
-      console.log(error);
+
 
       toast.error("Something went wrong");
     } finally {
@@ -224,6 +224,27 @@ export default function LeadDetailsDialog({
               </span>
             </p>
           </div>
+
+          {/* SLA Response Time */}
+          {lead?.firstResponseAt && (
+            <div className="rounded-2xl border border-blue-500/20 bg-blue-500/[0.06] px-5 py-3">
+              <p className="text-[11px] uppercase tracking-wide text-white/40">First Response Time</p>
+              <p className="mt-0.5 text-lg font-semibold text-blue-400">
+                {(() => {
+                  const created = new Date(lead.createdAt);
+                  const responded = new Date(lead.firstResponseAt);
+                  const diffMs = responded.getTime() - created.getTime();
+                  const diffHrs = Math.round(diffMs / (1000 * 60 * 60));
+                  if (diffHrs < 1) return "< 1 hour";
+                  if (diffHrs < 24) return `${diffHrs} hours`;
+                  return `${Math.floor(diffHrs / 24)}d ${diffHrs % 24}h`;
+                })()}
+              </p>
+              <p className="text-[10px] text-white/30 mt-0.5">
+                {new Date(lead.firstResponseAt).toLocaleString()}
+              </p>
+            </div>
+          )}
 
           <div className="flex gap-3">
             <Button

@@ -64,35 +64,10 @@ export default function StatusChart({ leads }: Props) {
     .filter((item) => item.value > 0);
 
   return (
-    <div
-      className="
-    rounded-2xl
-    border
-    border-[#D4AF37]/20
-    bg-[#111111]
-    p-6
-    "
-    >
+    <div>
       <div className="mb-5">
-        <h2
-          className="
-        text-xl
-        font-bold
-        text-[#D4AF37]
-        "
-        >
-          Lead Status Distribution
-        </h2>
-
-        <p
-          className="
-        mt-1
-        text-sm
-        text-gray-400
-        "
-        >
-          Current lead status overview
-        </p>
+        <h2 className="text-xl font-bold text-[#D4AF37]">Status Distribution</h2>
+        <p className="mt-1 text-sm text-gray-400">Lead status overview</p>
       </div>
 
       {data.length === 0 ? (

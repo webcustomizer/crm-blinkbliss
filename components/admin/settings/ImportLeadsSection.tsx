@@ -26,6 +26,7 @@ const TEMPLATE_HEADERS = [
   "Current Status",
   "Best Time To Reach",
   "Willing To Attend Training",
+  "Source",
 ];
 
 const PREVIEW_LIMIT = 10;

@@ -1,39 +1,18 @@
-export const dynamic = "force-dynamic";
-import { prisma } from "@/lib/prisma";
-
-import PageHeader from "@/components/admin/PageHeader";
+import { Suspense } from "react";
 import SalespersonTable from "@/components/admin/SalespersonTable";
-import AddSalespersonDialog from "@/components/admin/AddSalespersonDialog";
 
-export default async function SalespersonsPage() {
-  const salespersons = await prisma.user.findMany({
-    where: {
-      role: "SALESPERSON",
-    },
+export const dynamic = "force-dynamic";
 
-    orderBy: {
-      createdAt: "desc",
-    },
-
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      phone: true,
-      isActive: true,
-      createdAt: true,
-    },
-  });
-
+export default function SalespersonsPage() {
   return (
-    <>
-      <PageHeader
-        title="Salespersons"
-        description="Manage your sales team."
-        action={<AddSalespersonDialog />}
-      />
-
-      <SalespersonTable salespersons={salespersons} />
-    </>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold text-[#D4AF37]">Sales Team</h1>
+        <p className="text-gray-400">Manage sales team, targets, and performance</p>
+      </div>
+      <Suspense fallback={<div className="text-gray-400">Loading team…</div>}>
+        <SalespersonTable />
+      </Suspense>
+    </div>
   );
 }

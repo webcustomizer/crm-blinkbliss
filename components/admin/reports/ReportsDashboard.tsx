@@ -52,7 +52,7 @@ export default function ReportsDashboard() {
 
       setLeads(json.data || []);
     } catch (error) {
-      console.log(error);
+
     } finally {
       setLoading(false);
     }

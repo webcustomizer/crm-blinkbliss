@@ -5,10 +5,14 @@ import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 
 import { comparePassword, hashPassword } from "@/lib/hash";
+import { validatePasswordStrength } from "@/lib/password-validator";
 
 import { ActivityAction } from "@/app/generated/prisma/client";
 
 import { logActivity } from "@/lib/activity";
+
+export const dynamic = "force-dynamic";
+
 
 export async function POST(req: Request) {
   try {
@@ -57,14 +61,15 @@ export async function POST(req: Request) {
       );
     }
 
-    if (newPassword.length < 6) {
+    const settings = await prisma.cRMSetting.findFirst();
+    const minLen = settings?.passwordMinLength || 8;
+    const requireSpecial = settings?.passwordRequireSpecial || false;
+
+    const validation = validatePasswordStrength(newPassword, minLen, requireSpecial);
+    if (!validation.valid) {
       return NextResponse.json(
-        {
-          message: "Password must be at least 6 characters",
-        },
-        {
-          status: 400,
-        },
+        { message: validation.errors[0] },
+        { status: 400 },
       );
     }
 
@@ -136,7 +141,7 @@ export async function POST(req: Request) {
       },
     );
   } catch (error) {
-    console.log("Password Change Error:", error);
+
 
     return NextResponse.json(
       {

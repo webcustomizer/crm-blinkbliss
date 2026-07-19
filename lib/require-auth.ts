@@ -2,15 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyToken, TokenPayload } from "@/lib/auth";
 
 /**
+ * Tiny in-memory cache for session validation.
+ * Avoids a DB round-trip on every authenticated API call while still
+ * detecting force-terminated sessions within the TTL window.
+ */
+const sessionCache = new Map<string, { valid: boolean; ts: number }>();
+const SESSION_CACHE_TTL = 15_000; // 15 seconds
+
+/**
  * Verifies the caller is authenticated and has one of the allowed roles.
  * Checks both the httpOnly cookie (web) and the Authorization: Bearer
  * header (Capacitor app), matching how /api/login issues the token.
  *
- * Usage inside a route handler:
- *
- *   const auth = await requireAuth(req, ["ADMIN"]);
- *   if ("error" in auth) return auth.error;
- *   // auth.user.id / auth.user.role available here
+ * Also confirms the session hasn't been force-terminated (deleted from
+ * LoginSession) — without this check, a valid JWT keeps working for its
+ * full 7-day expiry regardless of a "force logout" action.
  */
 export async function requireAuth(
   req: NextRequest,
@@ -40,10 +46,61 @@ export async function requireAuth(
       };
     }
 
+    // Check cache first — skip DB round-trip if we validated recently
+    const cached = sessionCache.get(token);
+    if (cached && Date.now() - cached.ts < SESSION_CACHE_TTL) {
+      if (!cached.valid) {
+        return {
+          error: NextResponse.json(
+            { message: "Session expired" },
+            { status: 401 },
+          ),
+        };
+      }
+      return { user };
+    }
+
+    // Cache miss or expired — hit DB
+    const { prisma } = await import("@/lib/prisma");
+    const session = await prisma.loginSession.findFirst({
+      where: { token, isExpired: false },
+      select: { id: true },
+    });
+
+    sessionCache.set(token, { valid: !!session, ts: Date.now() });
+
+    // Evict stale entries periodically (every ~100 sessions)
+    if (sessionCache.size > 100) {
+      const now = Date.now();
+      for (const [key, val] of sessionCache) {
+        if (now - val.ts > SESSION_CACHE_TTL * 2) sessionCache.delete(key);
+      }
+    }
+
+    if (!session) {
+      return {
+        error: NextResponse.json(
+          { message: "Session expired" },
+          { status: 401 },
+        ),
+      };
+    }
+
     return { user };
   } catch {
     return {
       error: NextResponse.json({ message: "Unauthorized" }, { status: 401 }),
     };
+  }
+}
+
+/**
+ * Invalidate cache entry (call after force-logout or session termination).
+ */
+export function invalidateSessionCache(token?: string) {
+  if (token) {
+    sessionCache.delete(token);
+  } else {
+    sessionCache.clear();
   }
 }

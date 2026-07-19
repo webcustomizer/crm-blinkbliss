@@ -34,7 +34,7 @@ export default function ActivitySettings() {
         setMessage(data.message || "Something went wrong");
       }
     } catch (error) {
-      console.log(error);
+
 
       setMessage("Something went wrong");
     } finally {

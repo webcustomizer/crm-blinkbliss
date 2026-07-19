@@ -4,6 +4,9 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
+
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -59,7 +62,7 @@ export async function GET() {
       unreadCount,
     });
   } catch (error) {
-    console.log("Notifications Error:", error);
+
 
     return NextResponse.json(
       {
@@ -110,7 +113,7 @@ export async function PATCH() {
       message: "All notifications marked as read",
     });
   } catch (error) {
-    console.log("Mark all read error:", error);
+
 
     return NextResponse.json(
       {

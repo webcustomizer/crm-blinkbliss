@@ -71,7 +71,10 @@ export default function ExportLeadsSection() {
   useEffect(() => {
     fetch("/api/admin/salespeople")
       .then((res) => res.json())
-      .then((data) => setSalespeople(Array.isArray(data) ? data : []))
+      .then((result) => {
+        const list = result.data || result;
+        setSalespeople(Array.isArray(list) ? list : []);
+      })
       .catch((err) => console.error("Failed to load salespeople:", err));
 
     fetchLastExport();
@@ -103,7 +106,7 @@ export default function ExportLeadsSection() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `leads-export-${Date.now()}.csv`;
+      a.download = `leads-export-${Date.now()}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -113,7 +116,7 @@ export default function ExportLeadsSection() {
         EXPORT_TYPES.find((t) => t.value === type)?.label ?? "Leads";
 
       toast.success("Export successful", {
-        description: `${selectedLabel} CSV download successfully`,
+        description: `${selectedLabel} exported successfully`,
         icon: <CheckCircle2 className="h-4 w-4 text-[#D4AF37]" />,
       });
 
@@ -215,7 +218,7 @@ export default function ExportLeadsSection() {
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-white/10 bg-black/20 px-4 py-3 text-xs text-gray-500">
-            No export done yet
+            Abhi tak koi export nahi hua.
           </div>
         )}
       </div>

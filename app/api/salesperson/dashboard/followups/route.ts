@@ -4,6 +4,9 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
+
 // Pakistan Standard Time = UTC+5 (no daylight saving)
 const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Menu } from "lucide-react";
 import Link from "next/link";
 
@@ -17,17 +18,19 @@ export default function Header({
   user,
   onMenuClick,
 }: HeaderProps) {
-  const hour = new Date().getHours();
+  const [greeting, setGreeting] = useState("");
+  const [today, setToday] = useState("");
 
-  const greeting =
-    hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
-
-  const today = new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date());
+  useEffect(() => {
+    const hour = new Date().getHours();
+    setGreeting(hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening");
+    setToday(new Intl.DateTimeFormat("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }).format(new Date()));
+  }, []);
 
   const userName = user?.name || "Salesperson";
 

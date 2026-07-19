@@ -4,6 +4,9 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
+
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -72,7 +75,7 @@ export async function GET() {
       profile,
     });
   } catch (error) {
-    console.log("Profile Error:", error);
+
 
     return NextResponse.json(
       {

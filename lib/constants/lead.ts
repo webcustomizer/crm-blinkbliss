@@ -1,24 +1,13 @@
-export const CUSTOMER_STATUS = [
-  "Student",
-  "Job Holder",
-  "Business Owner",
-  "Freelancer",
-  "Housewife",
-  "Other",
-];
+export const LEAD_SOURCES = [
+  { value: "WEBSITE", label: "Website" },
+  { value: "FACEBOOK", label: "Facebook" },
+  { value: "INSTAGRAM", label: "Instagram" },
+  { value: "WHATSAPP", label: "WhatsApp" },
+  { value: "REFERRAL", label: "Referral" },
+  { value: "WALK_IN", label: "Walk-in" },
+  { value: "PHONE_CALL", label: "Phone Call" },
+  { value: "OTHER", label: "Other" },
+] as const;
 
-export const PURPOSE_OPTIONS = [
-  "Skill Learning",
-  "Career Growth",
-  "Business",
-  "Personal Development",
-  "Other",
-];
-
-export const BEST_TIME_OPTIONS = [
-  "Morning",
-  "Afternoon",
-  "Evening",
-  "Night",
-  "Any Time",
-];
+export const RESPONSE_TIME_WARNING_HOURS = 4;
+export const RESPONSE_TIME_DANGER_HOURS = 24;

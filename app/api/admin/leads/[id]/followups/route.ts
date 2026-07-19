@@ -76,7 +76,7 @@ export async function POST(
       message: "Follow up added successfully.",
     });
   } catch (error) {
-    console.log(error);
+
 
     return NextResponse.json(
       {

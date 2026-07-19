@@ -77,7 +77,7 @@ export default function TodayFollowUps() {
           setFollowUps(data.followUps);
         }
       } catch (error) {
-        console.log(error);
+
       } finally {
         setLoading(false);
       }

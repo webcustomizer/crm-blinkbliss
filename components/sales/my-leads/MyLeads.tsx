@@ -33,7 +33,7 @@ interface Lead {
 
 const PAGE_SIZE = 10;
 
-export default function MyLeads() {
+export default function MyLeads({ userId }: { userId?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -89,7 +89,7 @@ export default function MyLeads() {
         setTotalPages(data.totalPages || 1);
       }
     } catch (error) {
-      console.log("My Leads Error:", error);
+
     } finally {
       if (showLoader) {
         setLoading(false);
@@ -113,14 +113,15 @@ export default function MyLeads() {
             event: "*",
             schema: "public",
             table: "Lead",
+            ...(userId ? { filter: `assignedToId=eq.${userId}` } : {}),
           },
           () => {
-            console.log("My Leads Updated");
+
             void getLeads(false, currentPage);
           },
         )
         .subscribe((status) => {
-          console.log("My Leads Realtime:", status);
+
         });
     }, 1500);
 
@@ -130,7 +131,7 @@ export default function MyLeads() {
       if (channel) supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [userId]);
 
   // Search/status change hone par page 1 par reset karke fetch karein
   useEffect(() => {

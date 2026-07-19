@@ -18,7 +18,7 @@ export async function createLead(data: LeadFormData) {
   try {
     result = JSON.parse(text);
   } catch {
-    console.log("API RESPONSE:", text);
+
 
     throw new Error("Server returned invalid response.");
   }

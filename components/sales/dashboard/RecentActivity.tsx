@@ -30,7 +30,7 @@ export default function RecentActivity() {
         setActivities(data.activities || []);
       }
     } catch (error) {
-      console.log("Activity fetch error", error);
+
     } finally {
       setLoading(false);
     }

@@ -21,13 +21,13 @@ export default function PushNotificationSetup() {
         }
 
         if (permStatus.receive !== "granted") {
-          console.log("Push notification permission denied");
+
           return;
         }
 
         await PushNotifications.register();
       } catch (error) {
-        console.log("Push registration error:", error);
+
       }
     };
 
@@ -40,12 +40,12 @@ export default function PushNotificationSetup() {
           body: JSON.stringify({ token: token.value }),
         });
       } catch (error) {
-        console.log("Failed to save push token:", error);
+
       }
     });
 
     PushNotifications.addListener("registrationError", (err) => {
-      console.log("Push registration error:", err);
+
     });
 
     // Optional: handle taps on notifications while app is open

@@ -18,12 +18,12 @@ export default function SessionGuard({ userId }: SessionGuardProps) {
       if (hasLoggedOutRef.current) return;
       hasLoggedOutRef.current = true;
 
-      console.log("Session terminated:", reason);
+
 
       try {
         await fetch("/api/logout", { method: "POST" });
       } catch (error) {
-        console.log("Force logout error:", error);
+
       }
 
       router.replace("/login");
@@ -61,7 +61,7 @@ export default function SessionGuard({ userId }: SessionGuardProps) {
         },
       )
       .subscribe((status) => {
-        console.log("Session Guard:", status);
+
       });
 
     return () => {

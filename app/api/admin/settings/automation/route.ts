@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 async function getAdminId(req: NextRequest): Promise<string | null> {
   const token = req.cookies.get("token")?.value;
   if (!token) return null;

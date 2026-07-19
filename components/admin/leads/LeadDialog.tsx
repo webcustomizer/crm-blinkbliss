@@ -44,7 +44,7 @@ export default function LeadDialog({ onLeadCreated }: Props) {
 
       router.refresh();
     } catch (error) {
-      console.log(error);
+
 
       toast.error(
         error instanceof Error ? error.message : "Something went wrong.",

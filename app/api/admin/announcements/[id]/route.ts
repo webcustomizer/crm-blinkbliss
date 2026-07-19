@@ -67,7 +67,7 @@ export async function PATCH(
       announcement,
     });
   } catch (error) {
-    console.log("Pin Announcement Error:", error);
+
 
     return NextResponse.json(
       {
@@ -135,7 +135,7 @@ export async function DELETE(
       message: "Announcement deleted successfully",
     });
   } catch (error) {
-    console.log("Delete Announcement Error:", error);
+
 
     return NextResponse.json(
       {

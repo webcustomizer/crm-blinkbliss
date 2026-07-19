@@ -7,6 +7,10 @@ interface ProfileHeaderProps {
     name: string;
     role: string;
     isActive: boolean;
+    // Pre-formatted on the server (see app/sales/profile/page.tsx) with an
+    // explicit locale/timeZone, e.g. "July 20, 2026" — do NOT re-parse this
+    // with `new Date(...)` here, since re-formatting client-side is what
+    // caused the hydration mismatch this replaced.
     createdAt: string;
   };
 }
@@ -151,7 +155,7 @@ export default function ProfileHeader({ profile }: ProfileHeaderProps) {
             "
           >
             <CalendarDays size={14} />
-            Joined {new Date(profile.createdAt).toLocaleDateString()}
+            Joined {profile.createdAt}
           </div>
         </div>
       </div>

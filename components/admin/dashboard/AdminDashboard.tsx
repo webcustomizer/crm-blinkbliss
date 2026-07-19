@@ -8,6 +8,7 @@ import StatsCards from "./StatsCards";
 import TodayStats from "./TodayStats";
 import FollowUpCards from "./FollowUpCards";
 import LeadAnalytics from "./LeadAnalytics";
+import FunnelChart from "./FunnelChart";
 
 import type { LeadDetails } from "@/types/lead";
 
@@ -29,7 +30,6 @@ export default function AdminDashboard() {
 
       setLeads((json.data as LeadDetails[]) || []);
     } catch (error) {
-      console.log(error);
     } finally {
       setLoading(false);
     }
@@ -53,9 +53,7 @@ export default function AdminDashboard() {
           getLeads();
         },
       )
-      .subscribe((status) => {
-        console.log("Realtime:", status);
-      });
+      .subscribe((status) => {});
 
     return () => {
       supabase.removeChannel(channel);
@@ -114,6 +112,8 @@ export default function AdminDashboard() {
       <TodayStats leads={leads} />
 
       <FollowUpCards leads={leads} />
+
+      <FunnelChart />
 
       <LeadAnalytics leads={leads} />
     </div>

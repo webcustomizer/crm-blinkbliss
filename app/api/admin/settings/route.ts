@@ -1,54 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/require-auth";
+import { broadcastSettingsChange } from "@/lib/realtime";
+// Settings changes are automatically pushed via Supabase Postgres Changes (CRMSetting table)
 
-// GET SETTINGS
+export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
-  const auth = await requireAuth(req, ["ADMIN"]);
-  if ("error" in auth) return auth.error;
-
+export async function GET() {
   try {
-    let setting = await prisma.cRMSetting.findFirst();
-
-    // agar setting nahi hai to default create
-
-    if (!setting) {
-      setting = await prisma.cRMSetting.create({
-        data: {
-          firstFollowUpDays: 0,
-          secondFollowUpDays: 7,
-          thirdFollowUpDays: 20,
-          maxFollowUps: 3,
-          autoDeadEnabled: true,
-          deadAfterDays: 30,
-        },
-      });
+    let settings = await prisma.cRMSetting.findFirst();
+    if (!settings) {
+      settings = await prisma.cRMSetting.create({ data: {} });
     }
-
-    return NextResponse.json({
-      success: true,
-
-      data: setting,
-    });
-  } catch (error) {
-    console.log("GET SETTINGS ERROR:", error);
-
+    return NextResponse.json({ success: true, data: settings });
+  } catch {
     return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to get settings",
-      },
-      {
-        status: 500,
-      },
+      { success: false, message: "Failed to load settings." },
+      { status: 500 },
     );
   }
 }
-
-// UPDATE SETTINGS
-
-// UPDATE SETTINGS
 
 export async function PATCH(req: NextRequest) {
   const auth = await requireAuth(req, ["ADMIN"]);
@@ -56,77 +27,49 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json();
-
-    const setting = await prisma.cRMSetting.findFirst();
-
-    if (!setting) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Settings not found",
-        },
-        {
-          status: 404,
-        },
-      );
+    let settings = await prisma.cRMSetting.findFirst();
+    if (!settings) {
+      settings = await prisma.cRMSetting.create({ data: {} });
     }
 
     const updated = await prisma.cRMSetting.update({
-      where: {
-        id: setting.id,
-      },
-
+      where: { id: settings.id },
       data: {
-        firstFollowUpDays:
-          body.firstFollowUpDays !== undefined
-            ? Number(body.firstFollowUpDays)
-            : setting.firstFollowUpDays,
-
-        secondFollowUpDays:
-          body.secondFollowUpDays !== undefined
-            ? Number(body.secondFollowUpDays)
-            : setting.secondFollowUpDays,
-
-        thirdFollowUpDays:
-          body.thirdFollowUpDays !== undefined
-            ? Number(body.thirdFollowUpDays)
-            : setting.thirdFollowUpDays,
-
-        deadAfterDays:
-          body.deadAfterDays !== undefined
-            ? Number(body.deadAfterDays)
-            : setting.deadAfterDays,
-
-        maxFollowUps:
-          body.maxFollowUps !== undefined
-            ? Number(body.maxFollowUps)
-            : setting.maxFollowUps,
-
-        autoDeadEnabled:
-          body.autoDeadEnabled !== undefined
-            ? Boolean(body.autoDeadEnabled)
-            : setting.autoDeadEnabled,
+        ...(body.firstFollowUpDays !== undefined && { firstFollowUpDays: body.firstFollowUpDays }),
+        ...(body.secondFollowUpDays !== undefined && { secondFollowUpDays: body.secondFollowUpDays }),
+        ...(body.thirdFollowUpDays !== undefined && { thirdFollowUpDays: body.thirdFollowUpDays }),
+        ...(body.maxFollowUps !== undefined && { maxFollowUps: body.maxFollowUps }),
+        ...(body.autoDeadEnabled !== undefined && { autoDeadEnabled: body.autoDeadEnabled }),
+        ...(body.deadAfterDays !== undefined && { deadAfterDays: body.deadAfterDays }),
+        ...(body.autoAssignEnabled !== undefined && { autoAssignEnabled: body.autoAssignEnabled }),
+        // Group chat
+        ...(body.groupChatEnabled !== undefined && { groupChatEnabled: body.groupChatEnabled }),
+        ...(body.messageEnabled !== undefined && { messageEnabled: body.messageEnabled }),
+        // Security
+        ...(body.twoFactorRequired !== undefined && { twoFactorRequired: body.twoFactorRequired }),
+        ...(body.passwordMinLength !== undefined && { passwordMinLength: body.passwordMinLength }),
+        ...(body.passwordRequireSpecial !== undefined && { passwordRequireSpecial: body.passwordRequireSpecial }),
+        ...(body.sessionMaxHours !== undefined && { sessionMaxHours: body.sessionMaxHours }),
+        ...(body.forgotPasswordEnabled !== undefined && { forgotPasswordEnabled: body.forgotPasswordEnabled }),
+        // Backup
+        ...(body.autoBackupEnabled !== undefined && { autoBackupEnabled: body.autoBackupEnabled }),
+        ...(body.backupFrequencyDays !== undefined && { backupFrequencyDays: body.backupFrequencyDays }),
       },
     });
 
-    return NextResponse.json({
-      success: true,
+    // Broadcast settings change to all connected clients via Supabase Realtime
+    const broadcastPayload: Record<string, boolean> = {};
+    if (body.groupChatEnabled !== undefined) broadcastPayload.groupChatEnabled = body.groupChatEnabled;
+    if (body.messageEnabled !== undefined) broadcastPayload.messageEnabled = body.messageEnabled;
+    if (Object.keys(broadcastPayload).length > 0) {
+      broadcastSettingsChange(broadcastPayload);
+    }
 
-      message: "Settings updated",
-
-      data: updated,
-    });
-  } catch (error) {
-    console.log("UPDATE SETTINGS ERROR:", error);
-
+    return NextResponse.json({ success: true, data: updated, message: "Settings updated." });
+  } catch {
     return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to update settings",
-      },
-      {
-        status: 500,
-      },
+      { success: false, message: "Failed to update settings." },
+      { status: 500 },
     );
   }
 }

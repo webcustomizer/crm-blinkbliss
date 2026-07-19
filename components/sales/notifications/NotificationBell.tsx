@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Check, BellOff } from "lucide-react";
+import { Bell, Check, BellOff, Trash2 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
 
@@ -80,7 +80,7 @@ export default function NotificationBell({ userId }: Props) {
         );
       }
     } catch (error) {
-      console.log("Notification fetch error", error);
+
     } finally {
       isFetchingRef.current = false;
     }
@@ -104,7 +104,7 @@ export default function NotificationBell({ userId }: Props) {
 
         await fetchNotifications();
       } catch (error) {
-        console.log("Mark read error", error);
+
       }
     },
     [fetchNotifications],
@@ -120,7 +120,7 @@ export default function NotificationBell({ userId }: Props) {
           method: "PATCH",
         })
           .then(() => fetchNotifications())
-          .catch((error) => console.log("Mark read error", error));
+          .catch(() => {});
       }
 
       setOpen(false);
@@ -142,9 +142,21 @@ export default function NotificationBell({ userId }: Props) {
 
       setOpen(false);
     } catch (error) {
-      console.log("Mark all read error", error);
+
     }
   }, [fetchNotifications]);
+
+  const deleteNotification = useCallback(
+    async (id: string) => {
+      try {
+        await fetch(`/api/salesperson/notifications/${id}`, {
+          method: "DELETE",
+        });
+        await fetchNotifications();
+      } catch {}
+    },
+    [fetchNotifications],
+  );
 
   // Initial load
   useEffect(() => {
@@ -186,7 +198,7 @@ export default function NotificationBell({ userId }: Props) {
         },
       )
       .subscribe((status) => {
-        console.log("Notification UI:", status);
+
       });
 
     return () => {
@@ -441,7 +453,7 @@ export default function NotificationBell({ userId }: Props) {
           </div>
 
           {/* List */}
-          <div className="notif-scroll relative max-h-[440px] overflow-y-auto">
+          <div className="notif-scroll relative max-h-[440px] overflow-y-auto" style={{ overscrollBehavior: "contain" }}>
             {notifications.length === 0 ? (
               <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
                 <div
@@ -522,13 +534,43 @@ export default function NotificationBell({ userId }: Props) {
                             {item.title}
                           </p>
 
-                          {!item.isRead && (
+                          <div className="flex items-center gap-1 shrink-0">
+                            {!item.isRead && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  markAsRead(item.id);
+                                }}
+                                title="Mark as read"
+                                className="
+                                flex
+                                h-6
+                                w-6
+                                shrink-0
+                                items-center
+                                justify-center
+                                rounded-full
+                                border
+                                border-[#D4AF37]/20
+                                text-[#D4AF37]/70
+                                opacity-0
+                                transition
+                                duration-150
+                                group-hover:opacity-100
+                                hover:border-[#D4AF37]
+                                hover:bg-[#D4AF37]
+                                hover:text-black
+                                "
+                              >
+                                <Check size={11} strokeWidth={2.5} />
+                              </button>
+                            )}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                markAsRead(item.id);
+                                deleteNotification(item.id);
                               }}
-                              title="Mark as read"
+                              title="Delete"
                               className="
                               flex
                               h-6
@@ -538,20 +580,20 @@ export default function NotificationBell({ userId }: Props) {
                               justify-center
                               rounded-full
                               border
-                              border-[#D4AF37]/20
-                              text-[#D4AF37]/70
+                              border-red-500/20
+                              text-red-400/60
                               opacity-0
                               transition
                               duration-150
                               group-hover:opacity-100
-                              hover:border-[#D4AF37]
-                              hover:bg-[#D4AF37]
-                              hover:text-black
+                              hover:border-red-400
+                              hover:bg-red-500/20
+                              hover:text-red-400
                               "
                             >
-                              <Check size={11} strokeWidth={2.5} />
+                              <Trash2 size={10} strokeWidth={2.5} />
                             </button>
-                          )}
+                          </div>
                         </div>
 
                         <p className="mt-0.5 break-words text-[12px] leading-snug text-white/35">

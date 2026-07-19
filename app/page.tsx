@@ -18,7 +18,7 @@ export default async function Home() {
       redirect("/sales/dashboard");
     } catch (error) {
       // Invalid/expired token — fall through and send to login
-      console.log("Session check error:", error);
+
     }
   }
 

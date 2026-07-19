@@ -128,7 +128,7 @@ export async function POST(req: Request) {
       message: "Announcement published successfully.",
     });
   } catch (error) {
-    console.log("Announcement Error:", error);
+
 
     return NextResponse.json(
       {
@@ -193,7 +193,7 @@ export async function GET() {
       data: announcements,
     });
   } catch (error) {
-    console.log("Get Announcements Error:", error);
+
 
     return NextResponse.json(
       {

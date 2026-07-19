@@ -10,7 +10,7 @@ export default function AutomationSettings() {
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
-    fetch("/api/admin/settings/automation")
+    fetch("/api/admin/settings/automation", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => setEnabled(Boolean(data?.autoAssignEnabled)))
       .catch((err) => console.error("Failed to load automation setting:", err))

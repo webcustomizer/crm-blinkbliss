@@ -11,6 +11,7 @@ type Announcement = {
   title: string;
   message: string;
   isPinned: boolean;
+  isRead: boolean;
   createdAt: string;
   createdBy: {
     id: string;
@@ -75,6 +76,31 @@ export default function AnnouncementList() {
   );
 
   const pinnedAnnouncement = sortedAnnouncements.find((item) => item.isPinned);
+
+  async function markAsRead(ids: string[]) {
+    const unread = ids.filter((id) => {
+      const a = announcements.find((x) => x.id === id);
+      return a && !a.isRead;
+    });
+    if (unread.length === 0) return;
+    setAnnouncements((prev) => prev.map((a) => (unread.includes(a.id) ? { ...a, isRead: true } : a)));
+    try {
+      await fetch("/api/salesperson/announcements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ announcementIds: unread }),
+        cache: "no-store",
+      });
+    } catch {
+      // silently fail
+    }
+  }
+
+  useEffect(() => {
+    if (announcements.length > 0) {
+      markAsRead(announcements.map((a) => a.id));
+    }
+  }, [announcements.length]);
 
   if (loading) {
     return (
@@ -209,6 +235,7 @@ active:scale-[0.98]
                 `}
             >
               <div className="flex gap-4">
+                <div className="flex flex-col items-center gap-1">
                 <div
                   className={`
                     flex
@@ -232,6 +259,10 @@ active:scale-[0.98]
                   ) : (
                     <Megaphone size={22} />
                   )}
+                </div>
+                {!announcement.isRead && (
+                  <span className="mx-auto h-2 w-2 rounded-full bg-blue-500" />
+                )}
                 </div>
 
                 <div className="flex-1">

@@ -357,7 +357,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
         setForm((prev) => buildFormFromLead(leadData, prev.remarks));
       }
     } catch (error) {
-      console.log("Lead Details Error:", error);
+
     } finally {
       setLoading(false);
     }
@@ -390,7 +390,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
 
       toast.success("Status updated successfully");
     } catch (error) {
-      console.log(error);
+
       toast.error("Something went wrong");
     } finally {
       setSaving(false);
@@ -442,7 +442,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
 
       toast.success("Note saved successfully");
     } catch (error) {
-      console.log(error);
+
       toast.error("Something went wrong");
     } finally {
       setNoteSaving(false);
@@ -484,7 +484,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
 
       toast.success("Follow up completed successfully");
     } catch (error) {
-      console.log(error);
+
       toast.error("Something went wrong");
     } finally {
       setSaving(false);
@@ -519,7 +519,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
 
       toast.success("Lead information updated successfully.");
     } catch (error) {
-      console.log(error);
+
       toast.error("Something went wrong.");
     } finally {
       setSaving(false);

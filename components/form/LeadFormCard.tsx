@@ -39,7 +39,7 @@ export default function LeadFormCard() {
       setSubmitted(true);
       return { success: true };
     } catch (error) {
-      console.log(error);
+
 
       toast.error("Something went wrong.");
       return {

@@ -1,84 +1,59 @@
 "use client";
 
-import { useEffect } from "react";
-import { X } from "lucide-react";
-import { usePathname } from "next/navigation";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { X, LogOut } from "lucide-react";
+import { useUnreadCounts } from "@/hooks/useUnreadCounts";
+import { useSalesSettings } from "@/hooks/useSalesSettings";
 
-import Sidebar from "./Sidebar";
-import type { TokenPayload } from "@/lib/auth";
-
-interface MobileDrawerProps {
-  open: boolean;
-  onClose: () => void;
-  user: TokenPayload | null;
-}
-
-export default function MobileDrawer({
-  open,
-  onClose,
-  user,
-}: MobileDrawerProps) {
+export default function MobileDrawer({ open, onClose, user }: { open: boolean; onClose: () => void; user?: any }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const unread = useUnreadCounts();
+  const { navItems } = useSalesSettings();
 
-  // Close drawer after route change
-  useEffect(() => {
-    onClose();
-  }, [pathname]);
+  const items = [
+    ...navItems,
+    ...(navItems.some(i => i.href === "/sales/profile") ? [] : [
+      { title: "Profile", href: "/sales/profile", icon: require("lucide-react").User },
+    ]),
+  ];
 
-  if (!open) return null;
+  async function logout() {
+    await fetch("/api/logout", { method: "POST" });
+    router.replace("/login");
+    router.refresh();
+  }
 
   return (
     <>
-      {/* Overlay */}
-      <div
-        onClick={onClose}
-        className="
-        fixed
-        inset-0
-        z-40
-        bg-black/70
-        lg:hidden
-        "
-      />
-
-      {/* Drawer */}
-      <div
-        className="
-        fixed
-        left-0
-        top-0
-        z-50
-        h-full
-        w-72
-        lg:hidden
-        "
-      >
-        <div className="relative h-full">
-          {/* Close Button */}
-          <button
-            onClick={onClose}
-            className="
-            absolute
-            right-3
-            top-3
-            z-10
-            flex
-            h-10
-            w-10
-            items-center
-            justify-center
-            rounded-lg
-            border
-            border-[#D4AF37]/20
-            bg-[#161616]
-            text-[#D4AF37]
-            "
-          >
-            <X size={20} />
-          </button>
-
-          <Sidebar user={user} />
+      <div className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity ${open ? "opacity-100" : "opacity-0 pointer-events-none"}`} onClick={onClose} />
+      <div className={`fixed top-0 left-0 z-50 h-full w-64 bg-[#161616] border-r border-[#D4AF37]/20 transform transition-transform ${open ? "translate-x-0" : "-translate-x-full"}`}>
+        <div className="flex items-center justify-between p-4 border-b border-white/10">
+          <span className="text-lg font-bold text-[#D4AF37]">Menu</span>
+          <button onClick={onClose} className="p-2 rounded-lg text-white/60 hover:text-white"><X size={20} /></button>
         </div>
+        <nav className="p-4 space-y-1.5">
+          {items.map(item => {
+            const Icon = item.icon;
+            const active = pathname === item.href;
+            const badge = item.badgeKey ? unread[item.badgeKey] : 0;
+            return (
+              <Link key={item.href} href={item.href} onClick={onClose}
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${active ? "bg-[#D4AF37] text-black font-medium" : "text-zinc-300 hover:bg-[#D4AF37]/10 hover:text-[#D4AF37]"}`}>
+                <Icon size={18} />{item.title}
+                {badge > 0 && (
+                  <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                    {badge > 99 ? "99+" : badge}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+          <button onClick={logout} className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-red-400 hover:bg-red-500/10 mt-4">
+            <LogOut size={18} /><span>Logout</span>
+          </button>
+        </nav>
       </div>
     </>
   );

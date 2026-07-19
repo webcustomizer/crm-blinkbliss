@@ -47,12 +47,12 @@ export default function SalesDashboard() {
       const data = await res.json();
 
       if (data.success) {
-        console.log("CURRENT USER:", data.user.id);
+
 
         setUserId(data.user.id);
       }
     } catch (error) {
-      console.log("User fetch error:", error);
+
     }
   }, []);
 
@@ -79,7 +79,7 @@ export default function SalesDashboard() {
         setStats(data.stats);
         setError(false);
       } else {
-        console.log("Dashboard Fetch Failed:", res.status, data);
+
 
         if (!isBackground) {
           setError(true);
@@ -90,7 +90,7 @@ export default function SalesDashboard() {
         return;
       }
 
-      console.log("Dashboard Error:", err);
+
 
       if (!isBackground) {
         setError(true);
@@ -141,7 +141,7 @@ export default function SalesDashboard() {
   useEffect(() => {
     if (!userId) return;
 
-    console.log("Realtime started for user:", userId);
+
 
     const channel = supabase
       .channel(`sales-dashboard-${userId}`)
@@ -155,13 +155,13 @@ export default function SalesDashboard() {
         },
 
         (payload) => {
-          console.log("MY LEAD UPDATED:", payload);
+
 
           scheduleRefresh();
         },
       )
       .subscribe((status) => {
-        console.log("Realtime Status:", status);
+
       });
 
     return () => {

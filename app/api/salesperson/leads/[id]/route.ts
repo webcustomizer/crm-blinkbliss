@@ -6,6 +6,8 @@ import { verifyToken } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ActivityAction } from "@/app/generated/prisma/client";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   req: Request,
   context: {
@@ -57,6 +59,7 @@ export async function GET(
           orderBy: {
             createdAt: "desc",
           },
+          take: 50,
 
           include: {
             user: {
@@ -73,6 +76,7 @@ export async function GET(
           orderBy: {
             changedAt: "desc",
           },
+          take: 50,
 
           include: {
             changedBy: {

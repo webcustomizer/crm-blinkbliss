@@ -47,7 +47,7 @@ export default function NetworkStatus({
         // If the plugin fails for any reason, don't block the app —
         // assume online rather than trapping the user on a blank/white
         // screen with no way out.
-        console.log("NetworkStatus init error:", error);
+
         setIsOnline(true);
       } finally {
         setChecked(true);
@@ -72,7 +72,7 @@ export default function NetworkStatus({
         setIsOnline(navigator.onLine);
       }
     } catch (error) {
-      console.log("NetworkStatus retry error:", error);
+
     }
   };
 

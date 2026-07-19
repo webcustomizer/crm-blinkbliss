@@ -18,6 +18,7 @@ type EditLeadForm = {
   phone: string;
   email: string;
   city: string;
+  source: string;
   purpose: string;
   status: string;
   remarks: string;
@@ -43,6 +44,7 @@ export default function EditLeadDialog({
       phone: lead?.phone ?? "",
       email: lead?.email ?? "",
       city: lead?.city ?? "",
+      source: lead?.source ?? "",
       purpose: lead?.purpose ?? "",
       status: lead?.status ?? "NEW",
       remarks: lead?.remarks ?? "",
@@ -87,19 +89,13 @@ export default function EditLeadDialog({
 
         body: JSON.stringify({
           name: form.name,
-
           phone: form.phone,
-
           email: form.email,
-
           city: form.city,
-
           purpose: form.purpose,
-
           status: form.status,
-
           remarks: form.remarks,
-
+          source: form.source || null,
           assignedToId: lead.assignedTo?.id ?? null,
         }),
       });
@@ -115,7 +111,7 @@ export default function EditLeadDialog({
         toast.error(json.message || "Update failed");
       }
     } catch (error) {
-      console.log("UPDATE ERROR:", error);
+
 
       toast.error("Something went wrong");
     } finally {
@@ -188,6 +184,38 @@ export default function EditLeadDialog({
             value={form.email}
             onChange={change}
             placeholder="Email"
+            className="
+            w-full
+            rounded-xl
+            border
+            border-[#D4AF37]/20
+            bg-black/30
+            p-3
+            text-white
+            "
+          />
+
+          <input
+            name="city"
+            value={form.city}
+            onChange={change}
+            placeholder="City"
+            className="
+            w-full
+            rounded-xl
+            border
+            border-[#D4AF37]/20
+            bg-black/30
+            p-3
+            text-white
+            "
+          />
+
+          <input
+            name="source"
+            value={form.source}
+            onChange={change}
+            placeholder="Source"
             className="
             w-full
             rounded-xl

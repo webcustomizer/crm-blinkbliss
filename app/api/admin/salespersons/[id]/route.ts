@@ -55,7 +55,7 @@ export async function PATCH(
       user: updatedUser,
     });
   } catch (error: any) {
-    console.log(error);
+
 
     if (error.code === "P2002") {
       return NextResponse.json(

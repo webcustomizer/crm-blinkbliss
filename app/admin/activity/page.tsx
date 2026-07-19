@@ -44,7 +44,7 @@ export default function AdminActivityPage() {
         setActivities(data.activities || []);
       }
     } catch (error) {
-      console.log("Activity Fetch Error", error);
+
     } finally {
       setLoading(false);
     }

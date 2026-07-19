@@ -35,7 +35,7 @@ export default function FollowUpSettings() {
         });
       }
     } catch (error) {
-      console.log("GET SETTINGS ERROR:", error);
+
 
       toast.error("Failed to load settings");
     }
@@ -75,7 +75,7 @@ export default function FollowUpSettings() {
         toast.error(json.message || "Update failed");
       }
     } catch (error) {
-      console.log("SAVE SETTINGS ERROR:", error);
+
 
       toast.error("Failed to save settings");
     } finally {

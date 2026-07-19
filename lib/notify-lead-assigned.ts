@@ -10,11 +10,7 @@ export async function notifyLeadAssigned({
   leadId: string;
   leadName: string | null;
 }) {
-  console.log("🔔 notifyLeadAssigned START", {
-    userId,
-    leadId,
-    leadName,
-  });
+
 
   try {
     await prisma.notification.deleteMany({
@@ -23,7 +19,7 @@ export async function notifyLeadAssigned({
       },
     });
 
-    console.log("✅ Old notifications deleted");
+
 
     const message = `${
       leadName || "New lead"
@@ -39,7 +35,7 @@ export async function notifyLeadAssigned({
       },
     });
 
-    console.log("✅ DB notification created", notification.id);
+
 
     await sendPushNotification({
       userId,
@@ -48,9 +44,9 @@ export async function notifyLeadAssigned({
       link: `/sales/my-leads?leadId=${leadId}`,
     });
 
-    console.log("✅ Push sent successfully");
+
   } catch (error) {
-    console.error("❌ Notification failed:", error);
-    throw error;
+    console.error("❌ Notification failed:", error instanceof Error ? error.message : error);
+    // Don't throw — notification failure shouldn't block lead assignment
   }
 }

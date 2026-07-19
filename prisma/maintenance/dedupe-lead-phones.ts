@@ -31,11 +31,11 @@ async function main() {
   });
 
   if (duplicates.length === 0) {
-    console.log("No duplicate phone numbers found. Safe to run the migration directly.");
+
     return;
   }
 
-  console.log(`Found ${duplicates.length} phone number(s) with duplicates.`);
+
 
   for (const dup of duplicates) {
     const leads = await prisma.lead.findMany({
@@ -45,10 +45,7 @@ async function main() {
 
     const [keep, ...remove] = leads;
 
-    console.log(
-      `\nPhone ${dup.phone}: keeping lead ${keep.id} (created ${keep.createdAt.toISOString()}), ` +
-        `removing ${remove.length} duplicate(s): ${remove.map((l) => l.id).join(", ")}`,
-    );
+    // [removed console.log]
 
     if (DRY_RUN) continue;
 
@@ -69,11 +66,7 @@ async function main() {
     }
   }
 
-  console.log(
-    DRY_RUN
-      ? "\nDRY RUN complete — no changes made. Re-run with DRY_RUN=false to apply."
-      : "\nDone. Duplicates merged. You can now run the migration.",
-  );
+// [removed]
 }
 
 main()

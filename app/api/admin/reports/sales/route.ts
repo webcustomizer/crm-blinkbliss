@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(data);
   } catch (e) {
-    console.log(e);
+
 
     return NextResponse.json([], {
       status: 500,
