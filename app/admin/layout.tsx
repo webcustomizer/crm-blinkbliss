@@ -26,7 +26,9 @@ export default async function AdminLayout({
       <div className="flex h-screen overflow-hidden bg-[#0a0a0a]">
         <Sidebar />
         <div className="flex flex-1 flex-col min-w-0 h-screen overflow-hidden">
-          <Topbar />
+          <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="bg-[#0a0a0a]">
+            <Topbar />
+          </div>
           {/* min-h-0 is required alongside flex-1 — without it, a flex child
               refuses to shrink below its content size, which is what was
               letting content stretch past the viewport and scroll the page.

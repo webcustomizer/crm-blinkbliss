@@ -14,7 +14,7 @@ export default function MobileBottomNav() {
   const gridCols = navItems.length <= 3 ? "grid-cols-3" : navItems.length <= 4 ? "grid-cols-4" : "grid-cols-5";
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[#D4AF37]/20 bg-[#161616]/95 backdrop-blur lg:hidden">
+    <nav style={{ paddingBottom: "env(safe-area-inset-bottom)" }} className="fixed inset-x-0 bottom-0 z-50 border-t border-[#D4AF37]/20 bg-[#161616]/95 backdrop-blur lg:hidden">
       <div className={`grid h-16 gap-1 ${gridCols}`}>
         {navItems.map((item) => {
           const Icon = item.icon;
