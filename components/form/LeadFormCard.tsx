@@ -10,6 +10,12 @@ import { LeadFormData } from "@/types/lead";
 
 function detectSource(): string | null {
   if (typeof window === "undefined") return null;
+
+  // Production Vercel URL is always shared via WhatsApp
+  if (window.location.hostname.includes("crm-blinkbliss.vercel.app")) {
+    return "whatsapp";
+  }
+
   const p = new URLSearchParams(window.location.search);
 
   // 1. Explicit ?source=X

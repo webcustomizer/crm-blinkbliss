@@ -23,7 +23,7 @@ export default function ImagePreview({ file, previewUrl, onSend, onCancel, sendi
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col bg-black/95 backdrop-blur-sm">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+      <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="flex items-center justify-between px-4 py-3 border-b border-white/10">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-[#D4AF37]/20 flex items-center justify-center">
             <ImageIcon size={16} className="text-[#D4AF37]" />
@@ -52,7 +52,7 @@ export default function ImagePreview({ file, previewUrl, onSend, onCancel, sendi
       </div>
 
       {/* Caption + Send */}
-      <form onSubmit={handleSubmit} className="px-4 pb-6 pt-2 border-t border-white/10">
+      <form onSubmit={handleSubmit} style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" }} className="px-4 pt-2 border-t border-white/10">
         <div className="flex items-center gap-3 max-w-2xl mx-auto">
           <input
             ref={captionRef}
