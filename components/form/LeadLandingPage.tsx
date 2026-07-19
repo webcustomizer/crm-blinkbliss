@@ -11,13 +11,15 @@ export default function LeadLandingPage() {
         w-full
         max-w-4xl
         bg-[#111111]/90
-        p-4
+        px-[1px]
+        py-4
         shadow-2xl
 
         md:rounded-[30px]
         md:border
         md:border-[#D4AF37]/20
-        md:p-8
+        md:px-8
+        md:py-8
         md:backdrop-blur-xl
         "
       >

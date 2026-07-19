@@ -2,12 +2,16 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import SalesGroupChatPanel from "@/components/sales/groupchat/SalesGroupChatPanel";
+import { useSalesSettings } from "@/hooks/useSalesSettings";
+import { ShieldAlert } from "lucide-react";
 
 export default function SalesGroupChatWrapper({
   currentUserId,
 }: {
   currentUserId: string;
 }) {
+  const { navItems } = useSalesSettings();
+  const hasGroupChat = navItems.some((i) => i.href === "/sales/group-chat");
   const anchorRef = useRef<HTMLDivElement>(null);
   const [rect, setRect] = useState<{
     top: number;
@@ -42,6 +46,18 @@ export default function SalesGroupChatWrapper({
       clearTimeout(t);
     };
   }, []);
+
+  if (navItems.length > 0 && !hasGroupChat) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="rounded-2xl border border-[#D4AF37]/20 bg-gradient-to-br from-[#171717] to-[#0d0d0d] p-8 sm:p-12 max-w-md">
+          <ShieldAlert size={40} className="mx-auto text-red-400/60 mb-4" />
+          <h2 className="text-xl font-semibold text-white mb-2">Group Chat Disabled</h2>
+          <p className="text-gray-400 text-sm">Group chat has been disabled by admin.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

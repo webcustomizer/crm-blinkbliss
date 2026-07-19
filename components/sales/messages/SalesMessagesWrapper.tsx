@@ -2,12 +2,16 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import SalesMessagesPanel from "@/components/sales/messages/SalesMessagesPanel";
+import { useSalesSettings } from "@/hooks/useSalesSettings";
+import { ShieldAlert } from "lucide-react";
 
 export default function SalesMessagesWrapper({
   currentUserId,
 }: {
   currentUserId: string;
 }) {
+  const { navItems } = useSalesSettings();
+  const hasMessages = navItems.some((i) => i.href === "/sales/messages");
   const anchorRef = useRef<HTMLDivElement>(null);
   const [rect, setRect] = useState<{
     top: number;
@@ -31,6 +35,18 @@ export default function SalesMessagesWrapper({
       clearTimeout(t);
     };
   }, []);
+
+  if (navItems.length > 0 && !hasMessages) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="rounded-2xl border border-[#D4AF37]/20 bg-gradient-to-br from-[#171717] to-[#0d0d0d] p-8 sm:p-12 max-w-md">
+          <ShieldAlert size={40} className="mx-auto text-red-400/60 mb-4" />
+          <h2 className="text-xl font-semibold text-white mb-2">Messages Disabled</h2>
+          <p className="text-gray-400 text-sm">1-on-1 messaging has been disabled by admin.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

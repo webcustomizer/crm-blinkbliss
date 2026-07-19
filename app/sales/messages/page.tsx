@@ -1,9 +1,8 @@
+import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifyToken } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import SalesMessagesWrapper from "@/components/sales/messages/SalesMessagesWrapper";
-import { ShieldAlert } from "lucide-react";
 
 export default async function SalesMessagesPage() {
   const cookieStore = await cookies();
@@ -16,21 +15,9 @@ export default async function SalesMessagesPage() {
     redirect("/login");
   }
 
-  const settings = await prisma.cRMSetting.findFirst();
-  if (settings?.messageEnabled === false) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-        <div className="rounded-2xl border border-[#D4AF37]/20 bg-gradient-to-br from-[#171717] to-[#0d0d0d] p-8 sm:p-12 max-w-md">
-          <ShieldAlert size={40} className="mx-auto text-red-400/60 mb-4" />
-          <h2 className="text-xl font-semibold text-white mb-2">
-            Messages Disabled
-          </h2>
-          <p className="text-gray-400 text-sm">
-            1-on-1 messaging has been disabled by admin.
-          </p>
-        </div>
-      </div>
-    );
-  }
-  return <SalesMessagesWrapper currentUserId={user.id} />;
+  return (
+    <Suspense>
+      <SalesMessagesWrapper currentUserId={user.id} />
+    </Suspense>
+  );
 }
