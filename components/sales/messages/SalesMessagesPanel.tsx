@@ -294,6 +294,25 @@ export default function SalesMessagesPanel({
     const leadId = mentionedLead?.id || null;
     setNewMsg("");
     setMentionedLead(null);
+
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const tempMsg: ChatMessage = {
+      id: tempId,
+      content,
+      senderId: currentUserId,
+      receiverId: selectedAdmin.id,
+      leadId,
+      fileUrl: null,
+      fileName: null,
+      fileSize: null,
+      isRead: false,
+      readAt: null,
+      createdAt: new Date().toISOString(),
+      lead: mentionedLead ? { id: mentionedLead.id, name: mentionedLead.name, phone: mentionedLead.phone } : undefined,
+    };
+    shouldAutoScrollRef.current = true;
+    setMessages((prev) => [...prev, { ...tempMsg, _sending: true } as ChatMessage & { _sending?: boolean }]);
+
     try {
       const r = await fetch("/api/salesperson/messages", {
         method: "POST",
@@ -302,16 +321,14 @@ export default function SalesMessagesPanel({
       });
       const j = await r.json();
       if (j.success) {
-        shouldAutoScrollRef.current = true;
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === j.data.id)) return prev;
-          return [...prev, j.data];
-        });
+        setMessages((prev) => prev.map((m) => m.id === tempId ? { ...j.data } : m));
       } else {
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
         toast.error(j.message);
         setNewMsg(content);
       }
     } catch {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
       toast.error("Failed.");
       setNewMsg(content);
     }
@@ -332,6 +349,26 @@ export default function SalesMessagesPanel({
   async function doUploadAndSend(file: File, caption: string) {
     if (!selectedAdmin) return;
     setFileUploading(true);
+
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const blobUrl = URL.createObjectURL(file);
+    const tempMsg: ChatMessage & { _sending?: boolean } = {
+      id: tempId,
+      content: caption || file.name,
+      senderId: currentUserId,
+      receiverId: selectedAdmin.id,
+      leadId: mentionedLead?.id || null,
+      fileUrl: blobUrl,
+      fileName: file.name,
+      fileSize: file.size,
+      isRead: false,
+      readAt: null,
+      createdAt: new Date().toISOString(),
+      _sending: true,
+    };
+    shouldAutoScrollRef.current = true;
+    setMessages((prev) => [...prev, tempMsg]);
+
     try {
       const fd = new FormData();
       fd.append("file", file);
@@ -353,14 +390,21 @@ export default function SalesMessagesPanel({
         });
         const mj = await m.json();
         if (mj.success) {
-          shouldAutoScrollRef.current = true;
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === mj.data.id)) return prev;
-            return [...prev, mj.data];
-          });
+          URL.revokeObjectURL(blobUrl);
+          setMessages((prev) => prev.map((msg) => msg.id === tempId ? { ...mj.data } : msg));
+        } else {
+          URL.revokeObjectURL(blobUrl);
+          setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+          toast.error("Send failed.");
         }
+      } else {
+        URL.revokeObjectURL(blobUrl);
+        setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+        toast.error("Upload failed.");
       }
     } catch {
+      URL.revokeObjectURL(blobUrl);
+      setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
       toast.error("Upload failed.");
     }
     setFileUploading(false);
@@ -538,6 +582,7 @@ export default function SalesMessagesPanel({
                   )}
                   {messages.map((msg) => {
                     const isMine = msg.senderId === currentUserId;
+                    const isSending = (msg as any)._sending;
                     return (
                       <div
                         key={msg.id}
@@ -577,17 +622,21 @@ export default function SalesMessagesPanel({
                               </span>
                             </a>
                           )}
-                          {msg.isRead && (
-                            <p className="text-[9px] text-green-400/60 mt-0.5">
-                              ✓ Read
+                          <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                            {isSending ? (
+                              <span className="h-2.5 w-2.5 block animate-spin rounded-full border border-white/40 border-t-white/80" />
+                            ) : msg.isRead ? (
+                              <p className="text-[9px] text-green-400/60">✓ Read</p>
+                            ) : isMine ? (
+                              <p className="text-[9px] text-white/30">✓ Sent</p>
+                            ) : null}
+                            <p className="text-[9px] opacity-40">
+                              {new Date(msg.createdAt).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
                             </p>
-                          )}
-                          <p className="text-[9px] mt-0.5 opacity-40">
-                            {new Date(msg.createdAt).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </p>
+                          </div>
                         </div>
                       </div>
                     );

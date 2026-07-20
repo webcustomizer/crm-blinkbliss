@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Megaphone, Pin } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,6 +30,10 @@ export default function AnnouncementList() {
       const res = await fetch("/api/salesperson/announcements", {
         cache: "no-store",
       });
+
+      if (!res.ok) {
+        throw new Error(`Failed to fetch announcements: ${res.status}`);
+      }
 
       const result = await res.json();
 
@@ -96,10 +100,36 @@ export default function AnnouncementList() {
     }
   }
 
+  const readSetRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
-    if (announcements.length > 0) {
-      markAsRead(announcements.map((a) => a.id));
-    }
+    if (announcements.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visibleIds: string[] = [];
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const id = entry.target.getAttribute("data-announcement-id");
+            if (id && !readSetRef.current.has(id)) {
+              readSetRef.current.add(id);
+              visibleIds.push(id);
+            }
+          }
+        });
+        if (visibleIds.length > 0) markAsRead(visibleIds);
+      },
+      { threshold: 0.6 },
+    );
+
+    const timer = setTimeout(() => {
+      document.querySelectorAll("[data-announcement-id]").forEach((el) => observer.observe(el));
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
   }, [announcements.length]);
 
   if (loading) {
@@ -215,6 +245,7 @@ active:scale-[0.98]
           {sortedAnnouncements.map((announcement) => (
             <div
               key={announcement.id}
+              data-announcement-id={announcement.id}
               ref={(el) => {
                 if (announcement.isPinned) {
                   pinnedRef.current = el;

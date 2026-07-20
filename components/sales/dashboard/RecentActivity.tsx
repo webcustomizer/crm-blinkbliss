@@ -14,7 +14,7 @@ interface Activity {
   };
 }
 
-export default function RecentActivity() {
+export default function RecentActivity({ refreshKey }: { refreshKey?: number }) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,7 +38,7 @@ export default function RecentActivity() {
 
   useEffect(() => {
     fetchActivities();
-  }, []);
+  }, [refreshKey]);
 
   return (
     <div

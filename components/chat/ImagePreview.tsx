@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { createPortal } from "react-dom";
 import { X, Send, Image as ImageIcon } from "lucide-react";
 
 interface ImagePreviewProps {
@@ -20,8 +21,8 @@ export default function ImagePreview({ file, previewUrl, onSend, onCancel, sendi
     onSend(caption);
   }
 
-  return (
-    <div className="fixed inset-0 z-[9999] flex flex-col bg-black/95 backdrop-blur-sm">
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex flex-col bg-black/95 backdrop-blur-sm">
       {/* Top bar */}
       <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="flex items-center justify-between px-4 py-3 border-b border-white/10">
         <div className="flex items-center gap-3">
@@ -76,6 +77,7 @@ export default function ImagePreview({ file, previewUrl, onSend, onCancel, sendi
           </button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }

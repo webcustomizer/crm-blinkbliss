@@ -71,7 +71,7 @@ export async function GET() {
       data,
     });
   } catch (error) {
-
+    console.error("Failed to fetch salesperson announcements:", error);
 
     return NextResponse.json(
       {

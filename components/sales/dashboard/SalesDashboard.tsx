@@ -30,7 +30,7 @@ export default function SalesDashboard() {
   const [loading, setLoading] = useState(true);
 
   const [refreshing, setRefreshing] = useState(false);
-
+  const [refreshKey, setRefreshKey] = useState(0);
   const [error, setError] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
@@ -109,6 +109,7 @@ export default function SalesDashboard() {
 
     debounceRef.current = setTimeout(() => {
       getDashboard(true);
+      setRefreshKey((k) => k + 1);
     }, 600);
   }, [getDashboard]);
 
@@ -153,16 +154,22 @@ export default function SalesDashboard() {
           table: "Lead",
           filter: `assignedToId=eq.${userId}`,
         },
-
-        (payload) => {
-
-
+        () => {
           scheduleRefresh();
         },
       )
-      .subscribe((status) => {
-
-      });
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "LeadStatusHistory",
+        },
+        () => {
+          scheduleRefresh();
+        },
+      )
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
@@ -247,9 +254,9 @@ export default function SalesDashboard() {
       {stats && <StatsCards stats={stats} />}
 
       <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-2">
-        <TodayFollowUps />
+        <TodayFollowUps refreshKey={refreshKey} />
 
-        <RecentActivity />
+        <RecentActivity refreshKey={refreshKey} />
       </div>
     </div>
   );

@@ -41,7 +41,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL
+      || `https://${req.headers.get("x-forwarded-host") || req.headers.get("host") || "crm-blinkbliss.vercel.app"}`;
     const resetLink = `${appUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
     const html = getResetPasswordTemplate(resetLink, user.name);
 

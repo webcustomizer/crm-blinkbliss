@@ -36,6 +36,10 @@ interface LeadFieldProps {
   updateField: (field: string, value: string) => void;
   disabled: boolean;
   type?: string;
+  // When provided, the field renders as a <select> with these choices
+  // instead of a free-text <input> while in the "Add" (editing) state.
+  options?: string[];
+  placeholder?: string;
 }
 
 // Simple inline WhatsApp glyph (lucide-react has no official WhatsApp icon)
@@ -127,6 +131,8 @@ const LeadField = memo(function LeadField({
   updateField,
   disabled,
   type = "text",
+  options,
+  placeholder,
 }: LeadFieldProps) {
   const editing = editingFields.includes(field);
 
@@ -152,6 +158,9 @@ const LeadField = memo(function LeadField({
           {label}
         </p>
 
+        {/* Only shown while the field is empty — once a value is saved,
+            this button (and therefore any way to edit it) disappears
+            for good, making the field a one-time entry. */}
         {!disabled && !value && (
           <button
             onClick={() => toggleEdit(field)}
@@ -178,11 +187,40 @@ const LeadField = memo(function LeadField({
       </div>
 
       {editing ? (
-        <input
-          type={type}
-          value={formValue}
-          onChange={(e) => updateField(field, e.target.value)}
-          className="
+        options ? (
+          <select
+            value={formValue}
+            onChange={(e) => updateField(field, e.target.value)}
+            className="
+            mt-3
+            w-full
+            rounded-xl
+            border
+            border-[#D4AF37]/25
+            bg-black/40
+            px-4
+            py-3
+            text-sm
+            text-white
+            outline-none
+            transition
+            duration-150
+            focus:border-[#D4AF37]
+            "
+          >
+            <option value="">{placeholder || "Select an option"}</option>
+            {options.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            type={type}
+            value={formValue}
+            onChange={(e) => updateField(field, e.target.value)}
+            className="
           mt-3
           w-full
           rounded-xl
@@ -198,7 +236,8 @@ const LeadField = memo(function LeadField({
           duration-150
           focus:border-[#D4AF37]
           "
-        />
+          />
+        )
       ) : (
         <p className="mt-2 text-sm font-medium text-white">
           {value || <span className="text-white/25">Not added</span>}
@@ -216,6 +255,34 @@ interface FollowupItem {
   user?: { id: string; name: string };
 }
 
+// Same option lists as the public LeadForm.tsx, so a salesperson filling
+// these in later sees identical choices to what a lead would have seen.
+const PURPOSE_OPTIONS = [
+  "To earn extra income",
+  "To learn new skills",
+  "To start an online business",
+  "Looking for better career opportunities",
+];
+
+const CURRENT_STATUS_OPTIONS = [
+  "Student",
+  "Job Holder",
+  "Business Owner",
+  "Housewife",
+  "Freelancer",
+  "Unemployed",
+];
+
+const BEST_TIME_OPTIONS = [
+  "9:00 AM - 12:00 PM",
+  "12:00 PM - 3:00 PM",
+  "3:00 PM - 6:00 PM",
+  "6:00 PM - 9:00 PM",
+  "9:00 PM - 11:00 PM",
+];
+
+const TRAINING_OPTIONS = ["YES", "NO"];
+
 // Builds the edit-form shape from a raw lead record. Pulled out so both
 // the initial (possibly cache-warm) mount and every subsequent refetch
 // populate the form identically.
@@ -229,7 +296,15 @@ function buildFormFromLead(leadData: any, prevRemarks: string) {
     purpose: leadData.purpose || "",
     currentStatus: leadData.currentStatus || "",
     bestTimeToReach: leadData.bestTimeToReach || "",
-    willingToAttendTraining: leadData.willingToAttendTraining ? "YES" : "NO",
+    // Distinguish "not yet answered" (null/undefined) from an explicit
+    // true/false, so the field can still show the one-time "Add" prompt
+    // until a salesperson actually picks one.
+    willingToAttendTraining:
+      leadData.willingToAttendTraining === true
+        ? "YES"
+        : leadData.willingToAttendTraining === false
+        ? "NO"
+        : "",
     remarks: prevRemarks,
     status: leadData.status,
   };
@@ -357,7 +432,6 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
         setForm((prev) => buildFormFromLead(leadData, prev.remarks));
       }
     } catch (error) {
-
     } finally {
       setLoading(false);
     }
@@ -390,7 +464,6 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
 
       toast.success("Status updated successfully");
     } catch (error) {
-
       toast.error("Something went wrong");
     } finally {
       setSaving(false);
@@ -442,7 +515,6 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
 
       toast.success("Note saved successfully");
     } catch (error) {
-
       toast.error("Something went wrong");
     } finally {
       setNoteSaving(false);
@@ -484,7 +556,6 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
 
       toast.success("Follow up completed successfully");
     } catch (error) {
-
       toast.error("Something went wrong");
     } finally {
       setSaving(false);
@@ -519,7 +590,6 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
 
       toast.success("Lead information updated successfully.");
     } catch (error) {
-
       toast.error("Something went wrong.");
     } finally {
       setSaving(false);
@@ -560,6 +630,16 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
     : remarksMissing
     ? "Add Remarks To Continue"
     : "Complete Follow Up";
+
+  // willingToAttendTraining is only "answered" once it's explicitly
+  // true or false in the DB — null/undefined means "not added yet",
+  // which is what makes LeadField show its one-time "Add" prompt.
+  const trainingDisplayValue =
+    lead?.willingToAttendTraining === true
+      ? "YES"
+      : lead?.willingToAttendTraining === false
+      ? "NO"
+      : undefined;
   // One sliding panel, mounted once on open. Loading / not-found / loaded
   // states only swap what renders *inside* it, so the slide-from-right
   // motion always happens exactly once, immediately on open — never a
@@ -962,6 +1042,8 @@ hover:bg-[#25D366]/20
                       toggleEdit={toggleEdit}
                       updateField={updateField}
                       disabled={isClosed}
+                      options={PURPOSE_OPTIONS}
+                      placeholder="Select Purpose"
                     />
 
                     <LeadField
@@ -973,6 +1055,8 @@ hover:bg-[#25D366]/20
                       toggleEdit={toggleEdit}
                       updateField={updateField}
                       disabled={isClosed}
+                      options={CURRENT_STATUS_OPTIONS}
+                      placeholder="Select Status"
                     />
 
                     <LeadField
@@ -984,17 +1068,21 @@ hover:bg-[#25D366]/20
                       toggleEdit={toggleEdit}
                       updateField={updateField}
                       disabled={isClosed}
+                      options={BEST_TIME_OPTIONS}
+                      placeholder="Select Time"
                     />
 
                     <LeadField
                       label="Willing To Attend Training"
-                      value={lead.willingToAttendTraining ? "YES" : "NO"}
+                      value={trainingDisplayValue}
                       field="willingToAttendTraining"
                       formValue={form.willingToAttendTraining}
                       editingFields={editingFields}
                       toggleEdit={toggleEdit}
                       updateField={updateField}
                       disabled={isClosed}
+                      options={TRAINING_OPTIONS}
+                      placeholder="Select an option"
                     />
 
                     {/* Desktop / inline save — hidden on mobile, sticky bar

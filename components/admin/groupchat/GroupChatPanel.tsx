@@ -317,27 +317,46 @@ export default function GroupChatPanel({
 
   async function sendMessage() {
     if (!newMsg.trim()) return;
+    const content = newMsg.trim();
+    const leadId = mentionedLead?.id || null;
+
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const tempMsg: GroupChatMessage & { _sending?: boolean } = {
+      id: tempId,
+      content,
+      senderId: currentUserId,
+      leadId,
+      fileUrl: null,
+      fileName: null,
+      fileSize: null,
+      createdAt: new Date().toISOString(),
+      _sending: true,
+      sender: users.find((u) => u.id === currentUserId),
+      lead: mentionedLead ? { id: mentionedLead.id, name: mentionedLead.name, phone: mentionedLead.phone } : undefined,
+    };
+    setNewMsg("");
+    setMentionedLead(null);
+    shouldAutoScrollRef.current = true;
+    setMessages((prev) => [...prev, tempMsg]);
+
     try {
       const res = await fetch("/api/admin/group-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: newMsg.trim(),
-          leadId: mentionedLead?.id || null,
-        }),
+        body: JSON.stringify({ content, leadId }),
       });
       const json = await res.json();
       if (json.success) {
-        shouldAutoScrollRef.current = true;
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === json.data.id)) return prev;
-          return [...prev, json.data];
-        });
-        setNewMsg("");
-        setMentionedLead(null);
-      } else toast.error(json.message);
+        setMessages((prev) => prev.map((m) => m.id === tempId ? { ...json.data } : m));
+      } else {
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+        toast.error(json.message);
+        setNewMsg(content);
+      }
     } catch {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
       toast.error("Failed.");
+      setNewMsg(content);
     }
   }
 
@@ -355,6 +374,24 @@ export default function GroupChatPanel({
 
   async function doUploadAndSend(file: File, caption: string) {
     setFileUploading(true);
+
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const blobUrl = URL.createObjectURL(file);
+    const tempMsg: GroupChatMessage & { _sending?: boolean } = {
+      id: tempId,
+      content: caption || file.name,
+      senderId: currentUserId,
+      leadId: mentionedLead?.id || null,
+      fileUrl: blobUrl,
+      fileName: file.name,
+      fileSize: file.size,
+      createdAt: new Date().toISOString(),
+      _sending: true,
+      sender: users.find((u) => u.id === currentUserId),
+    };
+    shouldAutoScrollRef.current = true;
+    setMessages((prev) => [...prev, tempMsg]);
+
     try {
       const fd = new FormData();
       fd.append("file", file);
@@ -375,14 +412,21 @@ export default function GroupChatPanel({
         });
         const mj = await m.json();
         if (mj.success) {
-          shouldAutoScrollRef.current = true;
-          setMessages((prev) => {
-            if (prev.some((m2) => m2.id === mj.data.id)) return prev;
-            return [...prev, mj.data];
-          });
+          URL.revokeObjectURL(blobUrl);
+          setMessages((prev) => prev.map((msg) => msg.id === tempId ? { ...mj.data } : msg));
+        } else {
+          URL.revokeObjectURL(blobUrl);
+          setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+          toast.error("Send failed.");
         }
+      } else {
+        URL.revokeObjectURL(blobUrl);
+        setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+        toast.error("Upload failed.");
       }
     } catch {
+      URL.revokeObjectURL(blobUrl);
+      setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
       toast.error("Upload failed.");
     }
     setFileUploading(false);
@@ -594,6 +638,9 @@ export default function GroupChatPanel({
                         )}
 
                         <div className="flex items-center justify-end gap-0.5 mt-1 -mb-0.5">
+                          {(msg as any)._sending && (
+                            <span className="h-2.5 w-2.5 block animate-spin rounded-full border border-white/40 border-t-white/80" />
+                          )}
                           <span className="text-[9px] text-white/40 leading-none">
                             {new Date(msg.createdAt).toLocaleTimeString([], {
                               hour: "2-digit",

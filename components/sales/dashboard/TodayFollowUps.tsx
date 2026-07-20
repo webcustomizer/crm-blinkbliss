@@ -60,7 +60,7 @@ function smartCall(phone: string) {
   }, 1200);
 }
 
-export default function TodayFollowUps() {
+export default function TodayFollowUps({ refreshKey }: { refreshKey?: number }) {
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -84,7 +84,7 @@ export default function TodayFollowUps() {
     }
 
     loadFollowUps();
-  }, []);
+  }, [refreshKey]);
 
   return (
     <div
