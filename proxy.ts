@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 import { isSessionActive } from "@/lib/require-auth";
 
-// Requires the Node.js middleware runtime (stable in Next.js 15.2+/16) since
-// isSessionActive() hits Prisma — the default Edge runtime can't run it.
-export const runtime = "nodejs";
+// Proxy always runs on Node.js runtime in Next.js 16+.
 
 const LOGIN_PATH = "/login";
 

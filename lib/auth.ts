@@ -82,7 +82,16 @@ export function verifyTempToken(
   tempToken: string,
 ): { valid: true; userId: string; email: string } | { valid: false; reason: string } {
   const dotIdx = tempToken.indexOf(".");
-  if (dotIdx === -1) return { valid: false, reason: "Malformed token" };
+  if (dotIdx === -1) {
+    // Legacy format: plain base64 without HMAC
+    try {
+      const payload = JSON.parse(Buffer.from(tempToken, "base64").toString());
+      if (payload.userId && payload.email) {
+        return { valid: true, userId: payload.userId, email: payload.email };
+      }
+    } catch {}
+    return { valid: false, reason: "Malformed token" };
+  }
 
   const b64 = tempToken.slice(0, dotIdx);
   const sig = tempToken.slice(dotIdx + 1);

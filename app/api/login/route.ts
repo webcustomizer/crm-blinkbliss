@@ -120,6 +120,7 @@ export async function POST(req: NextRequest) {
 
       const masked = user.email.replace(/(.{3}).*(@.*)/, "$1***$2");
       const tempToken = createTempToken(user.id, user.email);
+      console.log("2FA: tempToken created for user", user.id, "token length:", tempToken.length);
 
       return NextResponse.json({
         success: true,

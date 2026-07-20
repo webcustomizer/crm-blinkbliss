@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
 
     const tok = verifyTempToken(tempToken);
     if (!tok.valid) {
+      console.error("2FA tempToken verification failed:", tok.reason);
       return NextResponse.json({ success: false, message: "Invalid or expired session." }, { status: 401 });
     }
 
