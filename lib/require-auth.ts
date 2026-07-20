@@ -10,6 +10,38 @@ const sessionCache = new Map<string, { valid: boolean; ts: number }>();
 const SESSION_CACHE_TTL = 15_000; // 15 seconds
 
 /**
+ * Confirms a token's LoginSession row still exists and isn't expired
+ * (i.e. hasn't been force-terminated). Backed by the same short-lived
+ * cache used by requireAuth, so proxy.ts and API routes always agree
+ * on whether a session is still active — this is what keeps a valid-but
+ * -force-expired JWT from bouncing between /login and a protected route.
+ */
+export async function isSessionActive(token: string): Promise<boolean> {
+  const cached = sessionCache.get(token);
+  if (cached && Date.now() - cached.ts < SESSION_CACHE_TTL) {
+    return cached.valid;
+  }
+
+  const { prisma } = await import("@/lib/prisma");
+  const session = await prisma.loginSession.findFirst({
+    where: { token, isExpired: false },
+    select: { id: true },
+  });
+
+  sessionCache.set(token, { valid: !!session, ts: Date.now() });
+
+  // Evict stale entries periodically (every ~100 sessions)
+  if (sessionCache.size > 100) {
+    const now = Date.now();
+    for (const [key, val] of sessionCache) {
+      if (now - val.ts > SESSION_CACHE_TTL * 2) sessionCache.delete(key);
+    }
+  }
+
+  return !!session;
+}
+
+/**
  * Verifies the caller is authenticated and has one of the allowed roles.
  * Checks both the httpOnly cookie (web) and the Authorization: Bearer
  * header (Capacitor app), matching how /api/login issues the token.
@@ -46,38 +78,8 @@ export async function requireAuth(
       };
     }
 
-    // Check cache first — skip DB round-trip if we validated recently
-    const cached = sessionCache.get(token);
-    if (cached && Date.now() - cached.ts < SESSION_CACHE_TTL) {
-      if (!cached.valid) {
-        return {
-          error: NextResponse.json(
-            { message: "Session expired" },
-            { status: 401 },
-          ),
-        };
-      }
-      return { user };
-    }
-
-    // Cache miss or expired — hit DB
-    const { prisma } = await import("@/lib/prisma");
-    const session = await prisma.loginSession.findFirst({
-      where: { token, isExpired: false },
-      select: { id: true },
-    });
-
-    sessionCache.set(token, { valid: !!session, ts: Date.now() });
-
-    // Evict stale entries periodically (every ~100 sessions)
-    if (sessionCache.size > 100) {
-      const now = Date.now();
-      for (const [key, val] of sessionCache) {
-        if (now - val.ts > SESSION_CACHE_TTL * 2) sessionCache.delete(key);
-      }
-    }
-
-    if (!session) {
+    const active = await isSessionActive(token);
+    if (!active) {
       return {
         error: NextResponse.json(
           { message: "Session expired" },

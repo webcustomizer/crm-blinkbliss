@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { comparePassword } from "@/lib/hash";
-import { createToken } from "@/lib/auth";
+import { createToken, createTempToken } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ActivityAction } from "@/app/generated/prisma/client";
 import { rateLimit } from "@/lib/rate-limit";
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
       await sendEmailDirect({ to: user.email, subject: `🔐 Your Login Code: ${otp}`, html });
 
       const masked = user.email.replace(/(.{3}).*(@.*)/, "$1***$2");
-      const tempToken = Buffer.from(JSON.stringify({ userId: user.id, email: user.email })).toString("base64");
+      const tempToken = createTempToken(user.id, user.email);
 
       return NextResponse.json({
         success: true,
