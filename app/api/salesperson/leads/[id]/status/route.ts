@@ -61,6 +61,7 @@ export async function PATCH(
         status: true,
         name: true,
         phone: true,
+        firstResponseAt: true,
       },
     });
 
@@ -100,6 +101,7 @@ export async function PATCH(
 
         data: {
           status,
+          ...(!lead.firstResponseAt && { firstResponseAt: new Date() }),
         },
       });
 

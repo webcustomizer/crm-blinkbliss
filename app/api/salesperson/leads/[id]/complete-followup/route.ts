@@ -134,6 +134,7 @@ export async function POST(
           nextFollowUp: true,
           name: true,
           phone: true,
+          firstResponseAt: true,
         },
       }),
       getCachedCRMSettings(),
@@ -278,6 +279,8 @@ export async function POST(
           lastFollowUp: new Date(),
 
           nextFollowUp: formattedNextFollowUp,
+
+          ...(!lead.firstResponseAt && { firstResponseAt: new Date() }),
         },
       });
 

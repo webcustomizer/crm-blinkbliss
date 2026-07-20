@@ -237,6 +237,14 @@ export async function PATCH(
         },
       });
 
+      // Track first response (SLA)
+      if (!lead.firstResponseAt) {
+        await prisma.lead.update({
+          where: { id },
+          data: { firstResponseAt: new Date() },
+        });
+      }
+
       await logActivity({
         userId: user.id,
         leadId: id,
@@ -329,7 +337,10 @@ export async function PATCH(
         id,
       },
 
-      data: dataToUpdate,
+      data: {
+        ...dataToUpdate,
+        ...(!lead.firstResponseAt && Object.keys(changes).length > 0 && { firstResponseAt: new Date() }),
+      },
     });
 
     // Create Activity Log only when something changed
