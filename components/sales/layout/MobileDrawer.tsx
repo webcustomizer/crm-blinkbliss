@@ -52,7 +52,7 @@ export default function MobileDrawer({ open, onClose, user }: { open: boolean; o
               );
             })}
           </div>
-          <div className="border-t border-white/10 p-4" style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)" }}>
+          <div className="border-t border-white/10 p-4 pb-[calc(env(safe-area-inset-bottom,0px)+68px)] sm:pb-4">
             <button onClick={logout} className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-red-400 hover:bg-red-500/10">
               <LogOut size={18} /><span>Logout</span>
             </button>

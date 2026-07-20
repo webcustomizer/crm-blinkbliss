@@ -719,6 +719,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
 
         {/* Sticky header */}
         <div
+          style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 8px)" }}
           className="
           sticky
           top-0
@@ -731,9 +732,10 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
           border-white/10
           bg-[#080808]
           px-6
-          py-4
+          pb-4
           sm:bg-[#080808]/90
           sm:px-8
+          sm:pt-4
           sm:backdrop-blur-md
           "
         >
