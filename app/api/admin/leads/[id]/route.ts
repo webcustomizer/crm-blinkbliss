@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/require-auth";
+import { checkLeadCompletion } from "@/lib/lead-completion";
 
 export const dynamic = "force-dynamic";
 
@@ -126,10 +127,22 @@ export async function PATCH(
       }
     }
 
+    const completion = checkLeadCompletion({
+      name: body.name ?? oldLead.name,
+      phone: body.phone ?? oldLead.phone,
+      email: body.email ?? oldLead.email,
+      city: body.city ?? oldLead.city,
+      age: body.age ?? oldLead.age,
+      purpose: body.purpose ?? oldLead.purpose,
+      currentStatus: body.currentStatus ?? oldLead.currentStatus,
+      bestTimeToReach: body.bestTimeToReach ?? oldLead.bestTimeToReach,
+      willingToAttendTraining: body.willingToAttendTraining ?? oldLead.willingToAttendTraining,
+    });
+
     const updatedLead = await prisma.lead.update({
       where: { id },
       data: isDeadToNewReset
-        ? { status: body.status, ...resetUpdate }
+        ? { status: body.status, ...resetUpdate, completion }
         : {
             ...(body.name !== undefined && { name: body.name }),
             ...(body.phone !== undefined && { phone: body.phone }),
@@ -147,6 +160,7 @@ export async function PATCH(
             ...(body.nextFollowUp !== undefined && { nextFollowUp: body.nextFollowUp ? new Date(body.nextFollowUp) : null }),
             ...followUpUpdate,
             ...slaUpdate,
+            completion,
           },
     });
 

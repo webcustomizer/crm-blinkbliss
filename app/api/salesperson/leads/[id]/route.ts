@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ActivityAction } from "@/app/generated/prisma/client";
+import { checkLeadCompletion } from "@/lib/lead-completion";
 
 export const dynamic = "force-dynamic";
 
@@ -332,6 +333,18 @@ export async function PATCH(
       );
     }
 
+    const mergedForCompletion = {
+      name: dataToUpdate.name ?? lead.name,
+      phone: lead.phone,
+      email: dataToUpdate.email ?? lead.email,
+      city: dataToUpdate.city ?? lead.city,
+      age: dataToUpdate.age ?? lead.age,
+      purpose: dataToUpdate.purpose ?? lead.purpose,
+      currentStatus: dataToUpdate.currentStatus ?? lead.currentStatus,
+      bestTimeToReach: dataToUpdate.bestTimeToReach ?? lead.bestTimeToReach,
+      willingToAttendTraining: dataToUpdate.willingToAttendTraining ?? lead.willingToAttendTraining,
+    };
+
     const updatedLead = await prisma.lead.update({
       where: {
         id,
@@ -339,6 +352,7 @@ export async function PATCH(
 
       data: {
         ...dataToUpdate,
+        completion: checkLeadCompletion(mergedForCompletion),
         ...(!lead.firstResponseAt && Object.keys(changes).length > 0 && { firstResponseAt: new Date() }),
       },
     });

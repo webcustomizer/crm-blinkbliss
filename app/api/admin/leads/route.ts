@@ -5,27 +5,9 @@ import { notifyLeadAssigned } from "@/lib/notify-lead-assigned";
 import { requireAuth } from "@/lib/require-auth";
 import { logActivity } from "@/lib/activity";
 import { ActivityAction } from "@/app/generated/prisma/client";
+import { checkLeadCompletion } from "@/lib/lead-completion";
 
 const GOOGLE_SHEET_WEBHOOK = process.env.GOOGLE_SHEET_WEBHOOK;
-
-function checkLeadCompletion(data: {
-  name?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  city?: string | null;
-  age?: number | null;
-  purpose?: string | null;
-  currentStatus?: string | null;
-  bestTimeToReach?: string | null;
-  willingToAttendTraining?: boolean | null;
-}) {
-  const fields = [
-    data.phone, data.name, data.email, data.city, data.age,
-    data.purpose, data.currentStatus, data.bestTimeToReach, data.willingToAttendTraining,
-  ];
-  const allFilled = fields.every((f) => f !== null && f !== undefined && f !== "");
-  return allFilled ? "COMPLETE" : "INCOMPLETE";
-}
 
 const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
 
