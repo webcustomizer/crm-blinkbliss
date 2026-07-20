@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
+import { checkLeadCompletion } from "@/lib/lead-completion";
 
 async function getAdminId(req: NextRequest): Promise<string | null> {
   const token = req.cookies.get("token")?.value;
@@ -182,19 +183,34 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 5: Bulk insert
-    const dataToInsert = newRows.map((row, i) => ({
-      name: row.Name?.trim() || null,
-      phone: row.Phone!.trim(),
-      email: row.Email?.trim() || null,
-      city: row.City?.trim() || null,
-      age: parseAge(row.Age),
-      purpose: row.Purpose?.trim() || null,
-      currentStatus: row["Current Status"]?.trim() || null,
-      bestTimeToReach: row["Best Time To Reach"]?.trim() || null,
-      willingToAttendTraining: parseBoolean(row["Willing To Attend Training"]),
-      source: row.Source?.trim().toLowerCase() || null,
-      assignedToId: assignedToIds[i],
-    }));
+    const dataToInsert = newRows.map((row, i) => {
+      const age = parseAge(row.Age);
+      const willingToAttendTraining = parseBoolean(row["Willing To Attend Training"]);
+      return {
+        name: row.Name?.trim() || null,
+        phone: row.Phone!.trim(),
+        email: row.Email?.trim() || null,
+        city: row.City?.trim() || null,
+        age,
+        purpose: row.Purpose?.trim() || null,
+        currentStatus: row["Current Status"]?.trim() || null,
+        bestTimeToReach: row["Best Time To Reach"]?.trim() || null,
+        willingToAttendTraining,
+        source: row.Source?.trim().toLowerCase() || null,
+        completion: checkLeadCompletion({
+          name: row.Name?.trim() || null,
+          phone: row.Phone!.trim(),
+          email: row.Email?.trim() || null,
+          city: row.City?.trim() || null,
+          age,
+          purpose: row.Purpose?.trim() || null,
+          currentStatus: row["Current Status"]?.trim() || null,
+          bestTimeToReach: row["Best Time To Reach"]?.trim() || null,
+          willingToAttendTraining,
+        }),
+        assignedToId: assignedToIds[i],
+      };
+    });
 
     const result = await prisma.lead.createMany({
       data: dataToInsert,
