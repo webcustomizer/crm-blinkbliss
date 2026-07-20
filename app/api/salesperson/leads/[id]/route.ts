@@ -333,18 +333,6 @@ export async function PATCH(
       );
     }
 
-    const mergedForCompletion = {
-      name: dataToUpdate.name ?? lead.name,
-      phone: lead.phone,
-      email: dataToUpdate.email ?? lead.email,
-      city: dataToUpdate.city ?? lead.city,
-      age: dataToUpdate.age ?? lead.age,
-      purpose: dataToUpdate.purpose ?? lead.purpose,
-      currentStatus: dataToUpdate.currentStatus ?? lead.currentStatus,
-      bestTimeToReach: dataToUpdate.bestTimeToReach ?? lead.bestTimeToReach,
-      willingToAttendTraining: dataToUpdate.willingToAttendTraining ?? lead.willingToAttendTraining,
-    };
-
     const updatedLead = await prisma.lead.update({
       where: {
         id,
@@ -352,7 +340,19 @@ export async function PATCH(
 
       data: {
         ...dataToUpdate,
-        completion: checkLeadCompletion(mergedForCompletion),
+        completion: checkLeadCompletion({
+          name: body.name ?? lead.name,
+          phone: lead.phone,
+          email: body.email ?? lead.email,
+          city: body.city ?? lead.city,
+          age: body.age ? Number(body.age) : lead.age,
+          purpose: body.purpose ?? lead.purpose,
+          currentStatus: body.currentStatus ?? lead.currentStatus,
+          bestTimeToReach: body.bestTimeToReach ?? lead.bestTimeToReach,
+          willingToAttendTraining: body.willingToAttendTraining !== undefined
+            ? body.willingToAttendTraining === "YES"
+            : lead.willingToAttendTraining,
+        }),
         ...(!lead.firstResponseAt && Object.keys(changes).length > 0 && { firstResponseAt: new Date() }),
       },
     });
