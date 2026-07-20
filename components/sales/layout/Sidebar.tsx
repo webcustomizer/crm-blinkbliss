@@ -2,14 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { useSalesSettings } from "@/hooks/useSalesSettings";
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const unread = useUnreadCounts();
   const { navItems, navLoaded } = useSalesSettings();
 
@@ -21,9 +20,7 @@ export default function Sidebar() {
   ];
 
   async function logout() {
-    await fetch("/api/logout", { method: "POST" });
-    router.replace("/login");
-    router.refresh();
+    window.location.href = "/api/force-logout";
   }
 
 return (

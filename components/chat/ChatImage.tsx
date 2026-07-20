@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Download } from "lucide-react";
 
 interface ChatImageProps {
@@ -17,6 +18,9 @@ function isImageFile(fileName?: string | null): boolean {
 export default function ChatImage({ src, alt = "Image", fileName }: ChatImageProps) {
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   return (
     <>
@@ -44,14 +48,15 @@ export default function ChatImage({ src, alt = "Image", fileName }: ChatImagePro
         )}
       </div>
 
-      {open && (
+      {open && mounted && createPortal(
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/90 backdrop-blur-sm"
           onClick={() => setOpen(false)}
         >
           <button
             onClick={() => setOpen(false)}
-            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition z-10"
+            style={{ top: "max(env(safe-area-inset-top, 0px), 12px)" }}
+            className="absolute right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition z-10"
           >
             <X size={24} />
           </button>
@@ -62,11 +67,12 @@ export default function ChatImage({ src, alt = "Image", fileName }: ChatImagePro
             onClick={(e) => e.stopPropagation()}
           />
           {fileName && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white/70 text-xs px-3 py-1.5 rounded-full">
+            <div style={{ bottom: "max(env(safe-area-inset-bottom, 0px), 12px)" }} className="absolute left-1/2 -translate-x-1/2 bg-black/70 text-white/70 text-xs px-3 py-1.5 rounded-full">
               {fileName}
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, UserCog, UserRoundCheck,
   ChartColumn, Settings, LogOut, Activity, Megaphone,
@@ -27,7 +27,6 @@ const menuItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { isOpen, setIsOpen } = useSidebar();
   const [unreadCounts, setUnreadCounts] = useState<{ messages: number; groupChat: number }>({ messages: 0, groupChat: 0 });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -52,9 +51,7 @@ export default function Sidebar() {
   }, [fetchUnread]);
 
   async function logout() {
-    await fetch("/api/logout", { method: "POST" });
-    router.replace("/login");
-    router.refresh();
+    window.location.href = "/api/force-logout";
   }
 
   return (

@@ -361,9 +361,9 @@ export default function ImportLeadsSection() {
               CSV or Excel (.xlsx) file clicked to select
             </p>
             <p className="text-xs text-gray-500">
-              Columns: Name, Phone, Email, City, Age, Purpose, Current Status,
-              Best Time To Reach, Willing To Attend Training
-            </p>
+                Columns: Name, Phone, Email, City, Age, Purpose, Current Status,
+                Best Time To Reach, Willing To Attend Training, Source
+              </p>
           </label>
         ) : (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#D4AF37]/20 bg-black/30 px-4 py-3.5">
@@ -444,6 +444,7 @@ export default function ImportLeadsSection() {
                 <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-500">
                   <span>{row.Email?.trim() || "—"}</span>
                   <span>{row.City?.trim() || "—"}</span>
+                  <span>Src: {row.Source?.trim() || "—"}</span>
                 </div>
               </div>
             ))}
@@ -472,6 +473,9 @@ export default function ImportLeadsSection() {
                   <th className="whitespace-nowrap px-4 py-2 font-medium">
                     Purpose
                   </th>
+                  <th className="whitespace-nowrap px-4 py-2 font-medium">
+                    Source
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -496,6 +500,9 @@ export default function ImportLeadsSection() {
                     </td>
                     <td className="whitespace-nowrap px-4 py-2">
                       {row.Purpose?.trim() || "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2">
+                      {row.Source?.trim() || "—"}
                     </td>
                   </tr>
                 ))}

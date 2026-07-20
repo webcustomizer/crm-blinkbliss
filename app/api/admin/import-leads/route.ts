@@ -25,6 +25,7 @@ type CSVRow = {
   "Current Status"?: string;
   "Best Time To Reach"?: string;
   "Willing To Attend Training"?: string;
+  Source?: string;
 };
 
 function parseBoolean(value?: string): boolean | null {
@@ -191,6 +192,7 @@ export async function POST(req: NextRequest) {
       currentStatus: row["Current Status"]?.trim() || null,
       bestTimeToReach: row["Best Time To Reach"]?.trim() || null,
       willingToAttendTraining: parseBoolean(row["Willing To Attend Training"]),
+      source: row.Source?.trim().toLowerCase() || null,
       assignedToId: assignedToIds[i],
     }));
 

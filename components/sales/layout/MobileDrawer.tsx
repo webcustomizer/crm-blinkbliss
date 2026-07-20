@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { X, LogOut } from "lucide-react";
 import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { useSalesSettings } from "@/hooks/useSalesSettings";
 
 export default function MobileDrawer({ open, onClose, user }: { open: boolean; onClose: () => void; user?: any }) {
   const pathname = usePathname();
-  const router = useRouter();
   const unread = useUnreadCounts();
   const { navItems } = useSalesSettings();
 
@@ -20,9 +19,7 @@ export default function MobileDrawer({ open, onClose, user }: { open: boolean; o
   ];
 
   async function logout() {
-    await fetch("/api/logout", { method: "POST" });
-    router.replace("/login");
-    router.refresh();
+    window.location.href = "/api/force-logout";
   }
 
   return (

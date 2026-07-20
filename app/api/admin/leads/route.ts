@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (salespersonId) where.assignedToId = salespersonId;
-    if (source) where.source = source;
+    if (source) where.source = { equals: source, mode: "insensitive" };
     // Exclude soft-deleted leads by default
     where.isDeleted = false;
 

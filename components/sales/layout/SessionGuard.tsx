@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 
 import { supabase } from "@/lib/supabase";
 
@@ -10,7 +9,6 @@ interface SessionGuardProps {
 }
 
 export default function SessionGuard({ userId }: SessionGuardProps) {
-  const router = useRouter();
   const hasLoggedOutRef = useRef(false);
 
   useEffect(() => {
@@ -18,16 +16,7 @@ export default function SessionGuard({ userId }: SessionGuardProps) {
       if (hasLoggedOutRef.current) return;
       hasLoggedOutRef.current = true;
 
-
-
-      try {
-        await fetch("/api/logout", { method: "POST" });
-      } catch (error) {
-
-      }
-
-      router.replace("/login");
-      router.refresh();
+      window.location.href = "/api/force-logout";
     }
 
     const channel = supabase
@@ -67,7 +56,7 @@ export default function SessionGuard({ userId }: SessionGuardProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, router]);
+  }, [userId]);
 
   return null;
 }
