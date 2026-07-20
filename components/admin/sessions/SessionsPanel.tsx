@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { formatDateTime } from "@/lib/format-date";
 import { Monitor, Smartphone, Tablet, X, Shield, Clock, Users, User } from "lucide-react";
+import { formatDate, formatDateTime, formatTime, formatDateShort } from "@/lib/format-date";
 
 type SessionData = {
   id: string;

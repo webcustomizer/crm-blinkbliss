@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Bell, Check, BellOff, Trash2 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
-import { formatDate } from "@/lib/format-date";
 
 interface Notification {
   id: string;
@@ -37,7 +36,10 @@ function timeAgo(dateStr: string) {
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d ago`;
 
-  return formatDate(dateStr, { month: "short", day: "numeric" });
+  return new Date(dateStr).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 export default function NotificationBell({ userId }: Props) {
@@ -46,8 +48,6 @@ export default function NotificationBell({ userId }: Props) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const [unreadCount, setUnreadCount] = useState(0);
-
-  const [loading, setLoading] = useState(true);
 
   const [open, setOpen] = useState(false);
 
@@ -83,7 +83,6 @@ export default function NotificationBell({ userId }: Props) {
 
     } finally {
       isFetchingRef.current = false;
-      setLoading(false);
     }
   }, []);
 
@@ -455,25 +454,7 @@ export default function NotificationBell({ userId }: Props) {
 
           {/* List */}
           <div className="notif-scroll relative max-h-[440px] overflow-y-auto" style={{ overscrollBehavior: "contain" }}>
-            {loading ? (
-              <div className="space-y-1.5 p-2.5">
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="animate-pulse rounded-2xl border border-transparent px-3.5 py-3"
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-white/10" />
-                      <div className="min-w-0 flex-1 space-y-2">
-                        <div className="h-3 w-2/3 rounded bg-white/[0.06]" />
-                        <div className="h-2.5 w-full rounded bg-white/[0.04]" />
-                        <div className="h-2 w-1/3 rounded bg-white/[0.04]" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : notifications.length === 0 ? (
+            {notifications.length === 0 ? (
               <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
                 <div
                   className="

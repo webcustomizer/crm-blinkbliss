@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Search, Users, ChevronLeft, ChevronRight, Phone } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
-import { formatDate } from "@/lib/format-date";
+import { formatDate, formatDateTime, formatTime, formatDateShort } from "@/lib/format-date";
 
 type Customer = {
   id: string;

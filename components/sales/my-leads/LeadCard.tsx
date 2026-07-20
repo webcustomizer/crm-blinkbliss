@@ -3,7 +3,7 @@
 import { Phone, CalendarClock, MapPin } from "lucide-react";
 
 import LeadStatusBadge from "./LeadStatusBadge";
-import { formatDateTime } from "@/lib/format-date";
+import { formatDate, formatDateTime, formatTime, formatDateShort } from "@/lib/format-date";
 
 interface LeadCardProps {
   lead: {

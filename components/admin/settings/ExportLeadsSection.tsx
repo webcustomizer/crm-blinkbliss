@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { formatDateTime } from "@/lib/format-date";
 import {
   Download,
   Users,
@@ -134,7 +133,8 @@ export default function ExportLeadsSection() {
   };
 
   const formatTimestamp = (iso: string) => {
-    return formatDateTime(iso, {
+    const date = new Date(iso);
+    return date.toLocaleString("en-US", {
       day: "2-digit",
       month: "short",
       year: "numeric",

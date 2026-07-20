@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Megaphone, Pin, Trash2 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
-import { formatDateTime } from "@/lib/format-date";
+import { formatDate, formatDateTime, formatTime, formatDateShort } from "@/lib/format-date";
 
 type Announcement = {
   id: string;

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ArrowRight, Clock, User } from "lucide-react";
-import { formatDateTime } from "@/lib/format-date";
+import { formatDate, formatDateTime, formatTime, formatDateShort } from "@/lib/format-date";
 
 interface Activity {
   id: string;

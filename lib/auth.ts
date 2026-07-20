@@ -82,11 +82,7 @@ export function verifyTempToken(
   tempToken: string,
 ): { valid: true; userId: string; email: string } | { valid: false; reason: string } {
   const dotIdx = tempToken.indexOf(".");
-  if (dotIdx === -1) {
-    // No signature present. tempToken must always be HMAC-signed — this
-    // prevents forging arbitrary userIds to bypass 2FA.
-    return { valid: false, reason: "Malformed token" };
-  }
+  if (dotIdx === -1) return { valid: false, reason: "Malformed token" };
 
   const b64 = tempToken.slice(0, dotIdx);
   const sig = tempToken.slice(dotIdx + 1);

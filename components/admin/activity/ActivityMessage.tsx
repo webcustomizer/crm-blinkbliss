@@ -1,5 +1,5 @@
 import ActivityIcon from "./ActivityIcon";
-import { formatDate, formatTime } from "@/lib/format-date";
+import { formatDate, formatDateTime, formatTime, formatDateShort } from "@/lib/format-date";
 
 export interface ActivityMessageProps {
   activity: {
@@ -211,7 +211,9 @@ export default function ActivityMessage({
               <p className="text-white/40">
                 Next follow up:{" "}
                 <span className="font-medium text-white">
-                  {formatDate(activity.metadata.nextFollowUp)}
+                  {formatDate(
+                    activity.metadata.nextFollowUp,
+                  )}
                 </span>
               </p>
             )}

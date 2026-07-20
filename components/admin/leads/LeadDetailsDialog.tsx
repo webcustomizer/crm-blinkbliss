@@ -27,7 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import EditLeadDialog from "@/components/admin/leads/EditLeadDialog";
-import { formatDateTime } from "@/lib/format-date";
+import { formatDate, formatDateTime, formatTime, formatDateShort } from "@/lib/format-date";
 
 type LeadDetailsDialogProps = {
   leadId: string;

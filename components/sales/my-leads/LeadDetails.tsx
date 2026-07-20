@@ -20,7 +20,7 @@ import {
   invalidateLead,
   getLeadFromCacheSync,
 } from "@/lib/leadCache";
-import { formatDateTime } from "@/lib/format-date";
+import { formatDate, formatDateTime, formatTime, formatDateShort } from "@/lib/format-date";
 
 interface LeadDetailsProps {
   leadId: string;

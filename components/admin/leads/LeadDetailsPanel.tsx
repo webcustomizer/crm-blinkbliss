@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import EditLeadDialog from "@/components/admin/leads/EditLeadDialog";
-import { formatDate, formatDateTime } from "@/lib/format-date";
+import { formatDate, formatDateTime, formatTime, formatDateShort } from "@/lib/format-date";
 
 type Props = { onUpdate?: () => void };
 
@@ -109,7 +109,7 @@ export default function LeadDetailsPanel({ onUpdate }: Props) {
       {/* Panel — half screen */}
       <div
         ref={panelRef}
-        className={`fixed right-0 top-0 z-50 flex h-full w-full flex-col border-l border-[#D4AF37]/20 bg-gradient-to-br from-[#171717] to-[#0d0d0d] shadow-[−20px_0_60px_-20px_rgba(0,0,0,0.7)] transition-transform duration-300 ease-in-out sm:w-1/2 sm:min-w-[480px] ${visible ? "translate-x-0" : "translate-x-full"}`}
+        className={`fixed right-0 top-0 z-50 flex h-full w-full sm:w-1/2 sm:min-w-[480px] flex-col border-l border-[#D4AF37]/20 bg-gradient-to-br from-[#171717] to-[#0d0d0d] shadow-[−20px_0_60px_-20px_rgba(0,0,0,0.7)] transition-transform duration-300 ease-in-out ${visible ? "translate-x-0" : "translate-x-full"}`}
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">

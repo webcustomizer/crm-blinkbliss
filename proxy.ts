@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 import { isSessionActive } from "@/lib/require-auth";
 
-// Proxy always runs on Node.js runtime in Next.js 16+ — this is fixed by
-// the framework and can't be configured here (a `runtime` export in this
-// file is rejected at build time). isSessionActive() below relies on this
-// for its Prisma call.
+// Proxy always runs on Node.js runtime in Next.js 16+.
 
 const LOGIN_PATH = "/login";
 

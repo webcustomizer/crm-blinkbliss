@@ -4,7 +4,7 @@ import { Phone, CalendarClock, ChevronLeft, ChevronRight } from "lucide-react";
 
 import LeadStatusBadge from "./LeadStatusBadge";
 import { prefetchLead } from "@/lib/leadCache";
-import { formatDate } from "@/lib/format-date";
+import { formatDate, formatDateTime, formatTime, formatDateShort } from "@/lib/format-date";
 
 interface Lead {
   id: string;
