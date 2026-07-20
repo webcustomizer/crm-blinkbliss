@@ -153,13 +153,16 @@ export default function SalesGroupChatPanel({
   // Appends the broadcasted message directly instead of refetching the
   // whole list. broadcastNewGroupMessage() already sends the full message
   // payload, so no round-trip is needed here.
+  // NOTE: We skip messages from currentUserId because the sender already
+  // handles them via the API response. Without this check, a race condition
+  // between the broadcast and the API response causes duplicate messages.
   useEffect(() => {
     const unsub = subscribeToGroupMessages((incoming: GroupChatMessage) => {
       if (!incoming?.id) {
-        // Defensive fallback in case a caller ever broadcasts without a payload
         fetchMessages();
         return;
       }
+      if (incoming.senderId === currentUserId) return;
       setMessages((prev) => {
         if (prev.some((m) => m.id === incoming.id)) return prev;
         shouldAutoScrollRef.current = true;
@@ -167,7 +170,7 @@ export default function SalesGroupChatPanel({
       });
     });
     return () => unsub();
-  }, [fetchMessages]);
+  }, [fetchMessages, currentUserId]);
 
   // ---- Supabase Realtime: typing broadcast ----
   useEffect(() => {

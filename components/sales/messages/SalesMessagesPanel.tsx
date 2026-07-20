@@ -100,6 +100,7 @@ export default function SalesMessagesPanel({
     const channelKey = `${ids[0]}:${ids[1]}`;
 
     const unsub = subscribeToMessages(channelKey, (newMsg) => {
+      if (newMsg.senderId === currentUserId) return;
       setMessages((prev) => {
         if (prev.some((m) => m.id === newMsg.id)) return prev;
         shouldAutoScrollRef.current = true;
