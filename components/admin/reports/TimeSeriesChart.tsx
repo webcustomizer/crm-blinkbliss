@@ -3,6 +3,7 @@
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
+import { formatDate } from "@/lib/format-date";
 
 type Lead = { createdAt: string; status: string };
 type Props = { leads: Lead[] };
@@ -21,7 +22,7 @@ function groupByDate(leads: Lead[]) {
   return Array.from(map.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, v]) => ({
-      date: new Date(date).toLocaleDateString("en", { month: "short", day: "numeric" }),
+      date: formatDate(date, { month: "short", day: "numeric" }),
       Leads: v.total,
       Joined: v.joined,
       Dead: v.dead,

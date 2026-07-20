@@ -20,6 +20,7 @@ import {
   invalidateLead,
   getLeadFromCacheSync,
 } from "@/lib/leadCache";
+import { formatDateTime } from "@/lib/format-date";
 
 interface LeadDetailsProps {
   leadId: string;
@@ -905,7 +906,7 @@ break-words
 
                           <span className="break-words">
                             {lead.nextFollowUp
-                              ? new Date(lead.nextFollowUp).toLocaleString()
+                              ? formatDateTime(lead.nextFollowUp)
                               : "No Follow Up"}
                           </span>
                         </p>
@@ -1126,7 +1127,7 @@ hover:bg-[#25D366]/20
                                 {item.user?.name ? ` • ${item.user.name}` : ""}
                               </span>
                               <span>
-                                {new Date(item.createdAt).toLocaleString()}
+                                {formatDateTime(item.createdAt)}
                               </span>
                             </div>
                           </div>
@@ -1406,7 +1407,7 @@ hover:bg-[#25D366]/20
                               </div>
                               <p className="mt-1 text-xs text-white/30">
                                 By {item.changedBy?.name || "Unknown"} •{" "}
-                                {new Date(item.changedAt).toLocaleString()}
+                                {formatDateTime(item.changedAt)}
                               </p>
                             </div>
                           ),

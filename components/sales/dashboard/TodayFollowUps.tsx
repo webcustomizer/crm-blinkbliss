@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Phone, Clock } from "lucide-react";
+import { formatDateTime } from "@/lib/format-date";
 
 interface FollowUp {
   id: string;
@@ -226,7 +227,7 @@ export default function TodayFollowUps({ refreshKey }: { refreshKey?: number }) 
 
                   <span>
                     {lead.nextFollowUp
-                      ? new Date(lead.nextFollowUp).toLocaleString()
+                      ? formatDateTime(lead.nextFollowUp)
                       : "No follow up"}
                   </span>
                 </div>

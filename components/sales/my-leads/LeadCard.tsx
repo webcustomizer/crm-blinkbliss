@@ -3,6 +3,7 @@
 import { Phone, CalendarClock, MapPin } from "lucide-react";
 
 import LeadStatusBadge from "./LeadStatusBadge";
+import { formatDateTime } from "@/lib/format-date";
 
 interface LeadCardProps {
   lead: {
@@ -108,7 +109,7 @@ export default function LeadCard({ lead, onView }: LeadCardProps) {
           >
             <CalendarClock size={15} />
 
-            {new Date(lead.nextFollowUp).toLocaleString()}
+            {formatDateTime(lead.nextFollowUp)}
           </div>
         )}
       </div>

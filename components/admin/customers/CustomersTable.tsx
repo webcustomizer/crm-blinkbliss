@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Search, Users, ChevronLeft, ChevronRight, Phone } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
+import { formatDate } from "@/lib/format-date";
 
 type Customer = {
   id: string;
@@ -520,7 +521,7 @@ export default function CustomersTable() {
                   </td>
 
                   <td className="p-5 text-white/40">
-                    {new Date(customer.updatedAt).toLocaleDateString()}
+                    {formatDate(customer.updatedAt)}
                   </td>
                 </tr>
               ))}

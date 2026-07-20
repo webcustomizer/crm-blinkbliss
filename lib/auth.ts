@@ -83,13 +83,8 @@ export function verifyTempToken(
 ): { valid: true; userId: string; email: string } | { valid: false; reason: string } {
   const dotIdx = tempToken.indexOf(".");
   if (dotIdx === -1) {
-    // Legacy format: plain base64 without HMAC
-    try {
-      const payload = JSON.parse(Buffer.from(tempToken, "base64").toString());
-      if (payload.userId && payload.email) {
-        return { valid: true, userId: payload.userId, email: payload.email };
-      }
-    } catch {}
+    // No signature present. tempToken must always be HMAC-signed — this
+    // prevents forging arbitrary userIds to bypass 2FA.
     return { valid: false, reason: "Malformed token" };
   }
 

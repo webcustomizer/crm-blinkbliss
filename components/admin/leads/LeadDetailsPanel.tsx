@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import EditLeadDialog from "@/components/admin/leads/EditLeadDialog";
+import { formatDate, formatDateTime } from "@/lib/format-date";
 
 type Props = { onUpdate?: () => void };
 
@@ -108,7 +109,7 @@ export default function LeadDetailsPanel({ onUpdate }: Props) {
       {/* Panel — half screen */}
       <div
         ref={panelRef}
-        className={`fixed right-0 top-0 z-50 flex h-full w-1/2 min-w-[480px] flex-col border-l border-[#D4AF37]/20 bg-gradient-to-br from-[#171717] to-[#0d0d0d] shadow-[−20px_0_60px_-20px_rgba(0,0,0,0.7)] transition-transform duration-300 ease-in-out ${visible ? "translate-x-0" : "translate-x-full"}`}
+        className={`fixed right-0 top-0 z-50 flex h-full w-full flex-col border-l border-[#D4AF37]/20 bg-gradient-to-br from-[#171717] to-[#0d0d0d] shadow-[−20px_0_60px_-20px_rgba(0,0,0,0.7)] transition-transform duration-300 ease-in-out sm:w-1/2 sm:min-w-[480px] ${visible ? "translate-x-0" : "translate-x-full"}`}
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
@@ -205,7 +206,7 @@ export default function LeadDetailsPanel({ onUpdate }: Props) {
                   {lead.nextFollowUp && (
                     <span className="ml-auto flex items-center gap-1.5 text-xs text-amber-400/70">
                       <Calendar size={13} />
-                      Next: {new Date(lead.nextFollowUp).toLocaleDateString()}
+                      Next: {formatDate(lead.nextFollowUp)}
                     </span>
                   )}
                 </div>
@@ -237,7 +238,7 @@ export default function LeadDetailsPanel({ onUpdate }: Props) {
                   <Info icon={<User size={16} />} label="Assigned To" value={lead.assignedTo?.name} />
                   <Info icon={<Clock size={16} />} label="Best Time To Reach" value={lead.bestTimeToReach} />
                   <Info icon={<CheckCircle size={16} />} label="Training" value={lead.willingToAttendTraining ? "Yes" : "No"} />
-                  <Info icon={<Calendar size={16} />} label="Next Follow Up" value={lead.nextFollowUp ? new Date(lead.nextFollowUp).toLocaleString() : "-"} />
+                  <Info icon={<Calendar size={16} />} label="Next Follow Up" value={lead.nextFollowUp ? formatDateTime(lead.nextFollowUp) : "-"} />
                   <Info icon={<User size={16} />} label="Age" value={lead.age} />
                 </div>
               </div>
@@ -277,7 +278,7 @@ export default function LeadDetailsPanel({ onUpdate }: Props) {
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-white/35">{new Date(item.createdAt).toLocaleString()}</p>
+                          <p className="text-xs text-white/35">{formatDateTime(item.createdAt)}</p>
                         </div>
                         <div className="mt-3.5 rounded-xl border border-white/5 bg-white/[0.03] p-4">
                           <p className="whitespace-pre-wrap text-sm text-white/70">{item.remarks}</p>
@@ -286,7 +287,7 @@ export default function LeadDetailsPanel({ onUpdate }: Props) {
                           <div className="mt-3.5 flex items-center gap-2 rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.06] px-4 py-2.5">
                             <Calendar size={14} className="text-[#D4AF37]" />
                             <p className="text-sm text-[#D4AF37]">
-                              Next Follow Up: {new Date(item.nextFollowUp).toLocaleString()}
+                              Next Follow Up: {formatDateTime(item.nextFollowUp)}
                             </p>
                           </div>
                         )}
@@ -316,7 +317,7 @@ export default function LeadDetailsPanel({ onUpdate }: Props) {
                           </p>
                         </div>
                         <div className="shrink-0 text-xs text-white/30">
-                          {new Date(item.changedAt).toLocaleString()}
+                          {formatDateTime(item.changedAt)}
                         </div>
                       </div>
                     ))}

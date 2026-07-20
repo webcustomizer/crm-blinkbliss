@@ -27,6 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import EditLeadDialog from "@/components/admin/leads/EditLeadDialog";
+import { formatDateTime } from "@/lib/format-date";
 
 type LeadDetailsDialogProps = {
   leadId: string;
@@ -241,7 +242,7 @@ export default function LeadDetailsDialog({
                 })()}
               </p>
               <p className="text-[10px] text-white/30 mt-0.5">
-                {new Date(lead.firstResponseAt).toLocaleString()}
+                {formatDateTime(lead.firstResponseAt)}
               </p>
             </div>
           )}
@@ -374,7 +375,7 @@ export default function LeadDetailsDialog({
                   label="Next Follow Up"
                   value={
                     lead.nextFollowUp
-                      ? new Date(lead.nextFollowUp).toLocaleString()
+                      ? formatDateTime(lead.nextFollowUp)
                       : "-"
                   }
                 />
@@ -448,7 +449,7 @@ export default function LeadDetailsDialog({
                         </div>
 
                         <p className="text-xs text-white/35">
-                          {new Date(item.createdAt).toLocaleString()}
+                          {formatDateTime(item.createdAt)}
                         </p>
                       </div>
 
@@ -463,7 +464,7 @@ export default function LeadDetailsDialog({
                           <Calendar size={14} className="text-[#D4AF37]" />
                           <p className="text-sm text-[#D4AF37]">
                             Next Follow Up:{" "}
-                            {new Date(item.nextFollowUp).toLocaleString()}
+                            {formatDateTime(item.nextFollowUp)}
                           </p>
                         </div>
                       )}
@@ -521,7 +522,7 @@ export default function LeadDetailsDialog({
                       </div>
 
                       <div className="shrink-0 text-xs text-white/30">
-                        {new Date(item.changedAt).toLocaleString()}
+                        {formatDateTime(item.changedAt)}
                       </div>
                     </div>
                   ))}

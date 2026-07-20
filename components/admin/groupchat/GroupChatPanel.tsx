@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
+import { formatDate, formatTime } from "@/lib/format-date";
 import {
   Send,
   AtSign,
@@ -33,7 +34,7 @@ function formatDateLabel(dateStr: string) {
 
   if (isSameDay(d, today)) return "Today";
   if (isSameDay(d, yesterday)) return "Yesterday";
-  return d.toLocaleDateString([], {
+  return formatDate(d, {
     day: "2-digit",
     month: "short",
     year: d.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
@@ -642,7 +643,7 @@ export default function GroupChatPanel({
                             <span className="h-2.5 w-2.5 block animate-spin rounded-full border border-white/40 border-t-white/80" />
                           )}
                           <span className="text-[9px] text-white/40 leading-none">
-                            {new Date(msg.createdAt).toLocaleTimeString([], {
+                            {formatTime(msg.createdAt, {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}

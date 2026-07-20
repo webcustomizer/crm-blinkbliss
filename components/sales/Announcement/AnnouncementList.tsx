@@ -5,6 +5,7 @@ import { Megaphone, Pin } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/lib/supabase";
+import { formatDate } from "@/lib/format-date";
 
 type Announcement = {
   id: string;
@@ -331,7 +332,7 @@ active:scale-[0.98]
                     <span>By {announcement.createdBy.name}</span>
 
                     <span>
-                      {new Date(announcement.createdAt).toLocaleDateString()}
+                      {formatDate(announcement.createdAt)}
                     </span>
                   </div>
                 </div>

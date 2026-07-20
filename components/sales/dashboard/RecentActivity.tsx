@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ArrowRight, Clock, User } from "lucide-react";
+import { formatDateTime } from "@/lib/format-date";
 
 interface Activity {
   id: string;
@@ -198,7 +199,7 @@ export default function RecentActivity({ refreshKey }: { refreshKey?: number }) 
                     sm:text-[11px]
                     "
                   >
-                    {new Date(activity.changedAt).toLocaleString()}
+                    {formatDateTime(activity.changedAt)}
                   </p>
                 </div>
               </div>

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Megaphone, Pin, Trash2 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
+import { formatDateTime } from "@/lib/format-date";
 
 type Announcement = {
   id: string;
@@ -281,7 +282,7 @@ export default function AnnouncementList() {
                       text-gray-500
                       "
                   >
-                    {new Date(announcement.createdAt).toLocaleString()}
+                    {formatDateTime(announcement.createdAt)}
                   </span>
 
                   <p

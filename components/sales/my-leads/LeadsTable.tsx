@@ -4,6 +4,7 @@ import { Phone, CalendarClock, ChevronLeft, ChevronRight } from "lucide-react";
 
 import LeadStatusBadge from "./LeadStatusBadge";
 import { prefetchLead } from "@/lib/leadCache";
+import { formatDate } from "@/lib/format-date";
 
 interface Lead {
   id: string;
@@ -122,7 +123,7 @@ export default function LeadsTable({
                     {lead.nextFollowUp ? (
                       <div className="flex items-center gap-2 text-sm text-zinc-400">
                         <CalendarClock size={14} />
-                        {new Date(lead.nextFollowUp).toLocaleDateString()}
+                        {formatDate(lead.nextFollowUp)}
                       </div>
                     ) : (
                       <span className="text-sm text-zinc-500">-</span>
@@ -192,7 +193,7 @@ export default function LeadsTable({
                 {lead.nextFollowUp ? (
                   <div className="flex items-center gap-1.5 text-xs text-zinc-400">
                     <CalendarClock size={13} />
-                    {new Date(lead.nextFollowUp).toLocaleDateString()}
+                    {formatDate(lead.nextFollowUp)}
                   </div>
                 ) : (
                   <span className="text-xs text-zinc-500">No follow up</span>

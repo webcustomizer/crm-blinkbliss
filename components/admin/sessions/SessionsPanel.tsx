@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { formatDateTime } from "@/lib/format-date";
 import { Monitor, Smartphone, Tablet, X, Shield, Clock, Users, User } from "lucide-react";
 
 type SessionData = {
@@ -216,7 +217,7 @@ function SessionCard({
           </div>
           <div className="flex items-center gap-1 mt-1 text-xs text-white/30">
             <Clock size={10} />
-            <span>Last active: {new Date(session.lastActiveAt).toLocaleString()}</span>
+            <span>Last active: {formatDateTime(session.lastActiveAt)}</span>
           </div>
         </div>
       </div>

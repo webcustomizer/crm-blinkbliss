@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
+import { formatTime } from "@/lib/format-date";
 import {
   Send,
   AtSign,
@@ -631,7 +632,7 @@ export default function SalesMessagesPanel({
                               <p className="text-[9px] text-white/30">✓ Sent</p>
                             ) : null}
                             <p className="text-[9px] opacity-40">
-                              {new Date(msg.createdAt).toLocaleTimeString([], {
+                              {formatTime(msg.createdAt, {
                                 hour: "2-digit",
                                 minute: "2-digit",
                               })}

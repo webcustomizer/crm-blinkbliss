@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 import { isSessionActive } from "@/lib/require-auth";
 
-// Proxy always runs on Node.js runtime in Next.js 16+.
+// Explicitly pin this to the Node.js runtime — isSessionActive() below
+// calls Prisma, which doesn't run on the Edge runtime. Without this,
+// if the default ever changes (or differs per deployment target), the
+// session-active check silently breaks and the redirect-loop this file
+// guards against can come back.
+export const runtime = "nodejs";
 
 const LOGIN_PATH = "/login";
 
