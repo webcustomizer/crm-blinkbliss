@@ -4,14 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Eye, EyeOff, Lock, Mail, ArrowLeft, Sparkles, ShieldCheck, ArrowRight } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,6 +27,10 @@ export default function LoginForm() {
     const timer = setInterval(() => setCooldown((c) => c - 1), 1000);
     return () => clearInterval(timer);
   }, [cooldown]);
+
+  function redirectAfterLogin(role: string) {
+    window.location.href = role === "ADMIN" ? "/admin/dashboard" : "/sales/dashboard";
+  }
 
   async function handleCredentials(e: React.FormEvent) {
     e.preventDefault();
@@ -61,11 +63,7 @@ export default function LoginForm() {
       }
 
       // No 2FA — direct login
-      if (data.user.role === "ADMIN") {
-        router.push("/admin/dashboard");
-      } else {
-        router.push("/sales/dashboard");
-      }
+      redirectAfterLogin(data.user.role);
     } catch {
       setError("Something went wrong.");
     } finally {
@@ -97,11 +95,7 @@ export default function LoginForm() {
         return;
       }
 
-      if (data.user.role === "ADMIN") {
-        router.push("/admin/dashboard");
-      } else {
-        router.push("/sales/dashboard");
-      }
+      redirectAfterLogin(data.user.role);
     } catch {
       setError("Verification failed.");
     } finally {
