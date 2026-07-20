@@ -4,10 +4,16 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Lock, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Lock, CheckCircle2, Eye, EyeOff, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+function isInApp(): boolean {
+  if (typeof window === "undefined") return false;
+  // @ts-expect-error Capacitor injects this on native platform
+  return !!window.Capacitor?.isNativePlatform?.();
+}
 
 function ResetFormInner() {
   const router = useRouter();
@@ -39,18 +45,36 @@ function ResetFormInner() {
         body: JSON.stringify({ email, token, newPassword: password }),
       });
       const data = await res.json();
-      if (data.success) { setDone(true); setTimeout(() => router.push("/login"), 3000); }
+      if (data.success) {
+        setDone(true);
+        if (isInApp()) {
+          setTimeout(() => router.push("/login"), 3000);
+        }
+      }
       else setError(data.message);
     } catch { setError("Something went wrong."); }
     finally { setLoading(false); }
   }
 
   if (done) {
+    if (isInApp()) {
+      return (
+        <div className="rounded-2xl border border-[#D4AF37]/20 bg-[#141414] p-8 text-center">
+          <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-400 mb-3" />
+          <h2 className="text-lg font-semibold text-white mb-2">Password Reset!</h2>
+          <p className="text-gray-400 text-sm">Redirecting to login...</p>
+        </div>
+      );
+    }
     return (
       <div className="rounded-2xl border border-[#D4AF37]/20 bg-[#141414] p-8 text-center">
         <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-400 mb-3" />
         <h2 className="text-lg font-semibold text-white mb-2">Password Reset!</h2>
-        <p className="text-gray-400 text-sm">Redirecting to login...</p>
+        <p className="text-gray-400 text-sm mb-5">Your password has been updated successfully.</p>
+        <div className="rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.06] p-4 flex items-center gap-3">
+          <Smartphone size={20} className="text-[#D4AF37] shrink-0" />
+          <p className="text-sm text-[#D4AF37]/80 text-left">Open the <span className="font-semibold text-[#D4AF37]">Blink &amp; Bliss</span> app to login with your new password.</p>
+        </div>
       </div>
     );
   }
