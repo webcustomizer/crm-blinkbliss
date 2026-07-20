@@ -555,7 +555,7 @@ export default function SalesGroupChatPanel({
                       </p>
                     )}
                     <div
-                      className={`rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm ${
+                      className={`rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm overflow-hidden ${
                         isMine
                           ? "bg-[#D4AF37]/20 text-white border border-[#D4AF37]/20 rounded-br-md"
                           : "bg-white/5 text-white/80 border border-white/10 rounded-bl-md"

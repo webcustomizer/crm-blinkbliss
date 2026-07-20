@@ -46,7 +46,7 @@ export default function SalesShell({ children, user }: SalesShellProps) {
             </aside>
 
             <div className="flex min-w-0 flex-1 flex-col">
-              <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="bg-[#111111]">
+              <div style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 8px)" }} className="bg-[#111111]">
                 <Header user={user} onMenuClick={() => setMobileMenuOpen(true)} />
               </div>
               <main className="flex-1 overflow-y-auto bg-[#111111]" style={{ overscrollBehavior: "contain" }}>

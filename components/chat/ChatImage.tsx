@@ -20,17 +20,17 @@ export default function ChatImage({ src, alt = "Image", fileName }: ChatImagePro
 
   return (
     <>
-      <div className="mt-1.5 relative group/img cursor-pointer" onClick={() => setOpen(true)}>
+      <div className="mt-1.5 relative group/img cursor-pointer overflow-hidden rounded-xl" onClick={() => setOpen(true)}>
         <img
           src={src}
           alt={alt}
           onLoad={() => setLoaded(true)}
-          className={`max-w-[260px] max-h-[300px] rounded-xl object-cover transition-opacity duration-200 ${
+          className={`max-w-full max-h-[300px] rounded-xl object-cover transition-opacity duration-200 ${
             loaded ? "opacity-100" : "opacity-0"
           }`}
         />
         {!loaded && (
-          <div className="w-[200px] h-[150px] rounded-xl bg-white/5 animate-pulse flex items-center justify-center">
+          <div className="w-full max-w-[260px] h-[150px] rounded-xl bg-white/5 animate-pulse flex items-center justify-center">
             <span className="text-[10px] text-white/30">Loading...</span>
           </div>
         )}

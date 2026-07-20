@@ -596,7 +596,7 @@ export default function GroupChatPanel({
                         </p>
                       )}
                       <div
-                        className={`px-3 py-2 sm:px-3.5 sm:py-2 text-xs sm:text-sm shadow-sm ${
+                        className={`px-3 py-2 sm:px-3.5 sm:py-2 text-xs sm:text-sm shadow-sm overflow-hidden ${
                           isOwn
                             ? "bg-emerald-600/25 text-white border border-emerald-500/25 rounded-2xl rounded-br-sm"
                             : "bg-white/[0.06] text-white/85 border border-white/10 rounded-2xl rounded-bl-sm"

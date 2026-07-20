@@ -23,8 +23,16 @@ export async function GET(req: NextRequest) {
     const cursor = searchParams.get("cursor"); // oldest message id currently loaded
     const PAGE_SIZE = 30;
 
+    const currentUser = await prisma.user.findUnique({
+      where: { id: auth.user.id },
+      select: { createdAt: true },
+    });
+
     const messages = await prisma.groupMessage.findMany({
-      where: { deleted: false },
+      where: {
+        deleted: false,
+        ...(currentUser && { createdAt: { gte: currentUser.createdAt } }),
+      },
       orderBy: { createdAt: "desc" }, // newest first for pagination
       take: PAGE_SIZE,
       ...(cursor && {
