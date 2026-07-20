@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Eye, EyeOff, Lock, Mail, ArrowLeft, Sparkles, ShieldCheck, ArrowRight } from "lucide-react";
@@ -22,6 +22,13 @@ export default function LoginForm() {
   const [step, setStep] = useState<"credentials" | "otp">("credentials");
   const [otp, setOtp] = useState("");
   const [tempToken, setTempToken] = useState("");
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => setCooldown((c) => c - 1), 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   async function handleCredentials(e: React.FormEvent) {
     e.preventDefault();
@@ -48,6 +55,7 @@ export default function LoginForm() {
         setTempToken(data.tempToken);
         setInfo(data.message || "Verification code sent to your email.");
         setStep("otp");
+        setCooldown(60);
         setLoading(false);
         return;
       }
@@ -114,6 +122,7 @@ export default function LoginForm() {
       if (data.success && data.tempToken) {
         setTempToken(data.tempToken);
         setInfo("New code sent!");
+        setCooldown(60);
       } else {
         setError(data.message || "Failed to resend code.");
       }
@@ -252,8 +261,8 @@ export default function LoginForm() {
                   <button type="button" onClick={() => { setStep("credentials"); setOtp(""); setError(""); }} className="text-gray-400 hover:text-white transition-colors flex items-center gap-1">
                     <ArrowLeft className="h-3 w-3" /> Back
                   </button>
-                  <button type="button" onClick={resendOTP} disabled={loading} className="text-[#D4AF37] hover:text-[#e8cf7a] transition-colors disabled:opacity-50">
-                    Resend Code
+                  <button type="button" onClick={resendOTP} disabled={loading || cooldown > 0} className="text-[#D4AF37] hover:text-[#e8cf7a] transition-colors disabled:opacity-50">
+                    {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend Code"}
                   </button>
                 </div>
               </div>

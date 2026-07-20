@@ -6,6 +6,8 @@ import { createToken } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ActivityAction } from "@/app/generated/prisma/client";
 import { rateLimit } from "@/lib/rate-limit";
+import { generateOTP, getOTPEmailTemplate } from "@/lib/email";
+import { sendEmailDirect } from "@/lib/email-sender";
 
 function getClientIP(req: NextRequest): string {
   const forwarded = req.headers.get("x-forwarded-for") || "";
@@ -106,14 +108,24 @@ export async function POST(req: NextRequest) {
     const require2FA = settings?.twoFactorRequired || user.twoFactorEnabled;
 
     if (require2FA) {
-      // Don't create session yet — return temp token for OTP verification
+      // Generate OTP and send email on first attempt
+      const otp = generateOTP();
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { twoFactorSecret: otp, lockedUntil: new Date(Date.now() + 300000) },
+      });
+
+      const html = getOTPEmailTemplate(otp, user.name);
+      await sendEmailDirect({ to: user.email, subject: `🔐 Your Login Code: ${otp}`, html });
+
+      const masked = user.email.replace(/(.{3}).*(@.*)/, "$1***$2");
+      const tempToken = Buffer.from(JSON.stringify({ userId: user.id, email: user.email })).toString("base64");
 
       return NextResponse.json({
         success: true,
         require2FA: true,
-        message: "Verification code sent to your email.",
-        email: user.email,
-        tempToken: Buffer.from(JSON.stringify({ userId: user.id, email: user.email })).toString("base64"),
+        message: `Code sent to ${masked}`,
+        tempToken,
       });
     }
 
