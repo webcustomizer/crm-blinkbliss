@@ -16,7 +16,8 @@ export default function SessionGuard({ userId }: SessionGuardProps) {
       if (hasLoggedOutRef.current) return;
       hasLoggedOutRef.current = true;
 
-      window.location.href = "/api/force-logout";
+      try { await fetch("/api/logout", { method: "POST" }); } catch {}
+      window.location.href = "/login";
     }
 
     const channel = supabase

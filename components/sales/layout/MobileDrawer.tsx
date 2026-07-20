@@ -19,7 +19,8 @@ export default function MobileDrawer({ open, onClose, user }: { open: boolean; o
   ];
 
   async function logout() {
-    window.location.href = "/api/force-logout";
+    await fetch("/api/logout", { method: "POST" });
+    window.location.href = "/login";
   }
 
   return (
