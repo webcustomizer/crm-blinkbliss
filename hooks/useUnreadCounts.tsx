@@ -41,6 +41,16 @@ export function UnreadProvider({ children }: { children: ReactNode }) {
         { event: "INSERT", schema: "public", table: "Announcement" },
         () => { debouncedFetch(); },
       )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "Message" },
+        () => { debouncedFetch(); },
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "GroupMessage" },
+        () => { debouncedFetch(); },
+      )
       .subscribe();
 
     return () => {

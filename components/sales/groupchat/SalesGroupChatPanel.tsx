@@ -14,6 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import type { GroupChatMessage, MentionLead } from "@/types/lead";
+import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import {
   subscribeToGroupMessages,
   subscribeToTyping,
@@ -27,6 +28,7 @@ export default function SalesGroupChatPanel({
 }: {
   currentUserId: string;
 }) {
+  const { refetch } = useUnreadCounts();
   const [messages, setMessages] = useState<GroupChatMessage[]>([]);
   const [users, setUsers] = useState<
     { id: string; name: string; role: string }[]
@@ -219,7 +221,9 @@ export default function SalesGroupChatPanel({
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ markAll: true }),
-    }).catch(() => {});
+    })
+      .then(() => refetch())
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

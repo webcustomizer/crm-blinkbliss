@@ -1289,6 +1289,9 @@ hover:bg-[#25D366]/20
                     </div>
 
                     <div className="relative">
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/35">
+  Lead Status
+</p>
                       <select
                         value={lead.status}
                         disabled={isClosed || saving}

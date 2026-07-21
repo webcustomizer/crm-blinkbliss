@@ -15,6 +15,7 @@ import {
   Trash2,
 } from "lucide-react";
 import type { ChatMessage, MentionLead } from "@/types/lead";
+import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import {
   subscribeToMessages,
   subscribeToTyping,
@@ -30,6 +31,7 @@ export default function SalesMessagesPanel({
 }: {
   currentUserId: string;
 }) {
+  const { refetch } = useUnreadCounts();
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -147,8 +149,10 @@ export default function SalesMessagesPanel({
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ messageIds: unread }),
-    }).catch(() => {});
-  }, [messages, selectedAdmin, currentUserId]);
+    })
+      .then(() => refetch())
+      .catch(() => {});
+  }, [messages, selectedAdmin, currentUserId, refetch]);
 
   // Load messages
   const fetchMessages = useCallback(async (adminId: string) => {

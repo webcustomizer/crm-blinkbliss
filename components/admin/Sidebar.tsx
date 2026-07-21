@@ -10,6 +10,7 @@ import {
   X, MessageSquare, Shield,
 } from "lucide-react";
 import { useSidebar } from "./sidebar-context";
+import { supabase } from "@/lib/supabase";
 
 const menuItems = [
   { title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
@@ -30,6 +31,7 @@ export default function Sidebar() {
   const { isOpen, setIsOpen } = useSidebar();
   const [unreadCounts, setUnreadCounts] = useState<{ messages: number; groupChat: number }>({ messages: 0, groupChat: 0 });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchUnread = useCallback(async () => {
     try {
@@ -39,6 +41,11 @@ export default function Sidebar() {
     } catch {}
   }, []);
 
+  const debouncedFetch = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(fetchUnread, 500);
+  }, [fetchUnread]);
+
   useEffect(() => { setIsOpen(false); }, [pathname, setIsOpen]);
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
@@ -47,8 +54,23 @@ export default function Sidebar() {
   useEffect(() => {
     fetchUnread();
     intervalRef.current = setInterval(fetchUnread, 15000);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [fetchUnread]);
+
+    // Realtime: refresh badge instantly on new messages, read-status
+    // changes, and group chat reads — instead of waiting for the 15s poll.
+    const channel = supabase
+      .channel("admin-unread-count-realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "Message" }, () => debouncedFetch())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "Message" }, () => debouncedFetch())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "GroupMessage" }, () => debouncedFetch())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "GroupReadReceipt" }, () => debouncedFetch())
+      .subscribe();
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      supabase.removeChannel(channel);
+    };
+  }, [fetchUnread, debouncedFetch]);
 
   async function logout() {
     await fetch("/api/logout", { method: "POST" });

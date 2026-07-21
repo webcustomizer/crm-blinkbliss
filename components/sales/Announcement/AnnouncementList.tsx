@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { supabase } from "@/lib/supabase";
 import { formatDate, formatDateTime, formatTime, formatDateShort } from "@/lib/format-date";
+import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 
 type Announcement = {
   id: string;
@@ -25,6 +26,7 @@ export default function AnnouncementList() {
   const [loading, setLoading] = useState(true);
 
   const pinnedRef = useRef<HTMLDivElement | null>(null);
+  const { refetch } = useUnreadCounts();
 
   async function loadAnnouncements() {
     try {
@@ -96,6 +98,7 @@ export default function AnnouncementList() {
         body: JSON.stringify({ announcementIds: unread }),
         cache: "no-store",
       });
+      refetch();
     } catch {
       // silently fail
     }
@@ -266,7 +269,7 @@ active:scale-[0.98]
 
                 `}
             >
-              <div className="flex gap-4">
+              <div className="flex items-start gap-4">
                 <div className="flex flex-col items-center gap-1">
                 <div
                   className={`
