@@ -103,9 +103,9 @@ export default function NotificationBell({ userId }: Props) {
         });
 
         await fetchNotifications();
-      } catch (error) {
-
-      }
+    } catch (error) {
+      console.error("Failed to mark all as read:", error);
+    }
     },
     [fetchNotifications],
   );
@@ -153,7 +153,7 @@ export default function NotificationBell({ userId }: Props) {
           method: "DELETE",
         });
         await fetchNotifications();
-      } catch {}
+      } catch (e) { console.error("Failed to delete notification:", e); }
     },
     [fetchNotifications],
   );

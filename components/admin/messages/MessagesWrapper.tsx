@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import MessagesPanel from "@/components/admin/messages/MessagesPanel";
+import { handleAPIError } from "@/lib/client-error";
 
 export default function AdminMessagesWrapper() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -18,7 +19,7 @@ export default function AdminMessagesWrapper() {
       .then((j) => {
         if (j.user?.id) setCurrentUserId(j.user.id);
       })
-      .catch(() => {});
+      .catch((e) => handleAPIError(e, "Failed to load user session"));
   }, []);
 
   useLayoutEffect(() => {

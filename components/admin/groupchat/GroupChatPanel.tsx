@@ -18,6 +18,7 @@ import {
 import type { GroupChatMessage, MentionLead } from "@/types/lead";
 import { subscribeToGroupMessages, subscribeToTyping } from "@/lib/realtime";
 import ChatImage, { isImageFile } from "@/components/chat/ChatImage";
+import { handleAPIError } from "@/lib/client-error";
 import ImagePreview from "@/components/chat/ImagePreview";
 
 function formatDateLabel(dateStr: string) {
@@ -113,8 +114,8 @@ export default function GroupChatPanel({
       if (json.users) setUsers(json.users);
       setLoading(false);
       initialLoadDoneRef.current = true;
-    } catch {
-      // swallow — keep previous state on transient errors
+    } catch (e) {
+      handleAPIError(e, "Failed to load group chat messages");
     } finally {
       isFetchingRef.current = false;
     }
@@ -150,8 +151,8 @@ export default function GroupChatPanel({
           }
         });
       }
-    } catch {
-      // ignore transient errors, user can retry by scrolling again
+    } catch (e) {
+      console.error("Failed to load older group messages:", e);
     } finally {
       setLoadingMore(false);
     }
@@ -282,7 +283,7 @@ export default function GroupChatPanel({
           );
           const j = await r.json();
           if (j.leads) setMentionResults(j.leads.slice(0, 5));
-        } catch {}
+        } catch (e) { console.error("Failed to search mentions:", e); }
       }, 100);
       return;
     }
@@ -313,7 +314,8 @@ export default function GroupChatPanel({
       } else {
         toast.error(j.message);
       }
-    } catch {
+    } catch (e) {
+      console.error("Failed to clear messages:", e);
       toast.error("Failed to clear messages.");
     }
   }
@@ -356,7 +358,8 @@ export default function GroupChatPanel({
         toast.error(json.message);
         setNewMsg(content);
       }
-    } catch {
+    } catch (e) {
+      console.error("Failed to send group message:", e);
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
       toast.error("Failed.");
       setNewMsg(content);
@@ -427,7 +430,8 @@ export default function GroupChatPanel({
         setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
         toast.error("Upload failed.");
       }
-    } catch {
+    } catch (e) {
+      console.error("Failed to upload file to group chat:", e);
       URL.revokeObjectURL(blobUrl);
       setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
       toast.error("Upload failed.");

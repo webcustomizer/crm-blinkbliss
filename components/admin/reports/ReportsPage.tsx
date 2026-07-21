@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useMemo, useCallback, useState } from "react";
+import useSWR from "swr";
 import dynamic from "next/dynamic";
-
-import { supabase } from "@/lib/supabase";
 
 import ReportStats from "./ReportStats";
 import SalesReportTable from "./SalesReportTable";
@@ -30,11 +29,26 @@ const TimeSeriesChart = dynamic(() => import("./TimeSeriesChart"), {
   ),
 });
 
-type Lead = {
-  id: string;
-  status: string;
-  createdAt: string;
-  assignedTo?: { id: string; name: string } | null;
+type ReportData = {
+  total: number;
+  statusCounts: Record<string, number>;
+  salespersonReport: {
+    id: string;
+    name: string;
+    total: number;
+    called: number;
+    followups: number;
+    training: number;
+    reserved: number;
+    joined: number;
+    dead: number;
+  }[];
+  timeSeries: {
+    date: string;
+    Leads: number;
+    Joined: number;
+    Dead: number;
+  }[];
 };
 
 type FunnelData = {
@@ -43,100 +57,48 @@ type FunnelData = {
   totalLeads: number;
 };
 
+const fetcher = (url: string) => fetch(url, { cache: "no-store" }).then((r) => r.json());
+
 export default function ReportsPage() {
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState("ALL");
-  const [funnel, setFunnel] = useState<FunnelData | null>(null);
 
-  const getLeads = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch("/api/admin/leads?page=1&limit=5000&filter=ALL", {
-        cache: "no-store",
-      });
-      const json = await res.json();
-      setLeads(json.data || []);
-    } catch {
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data: reportData, isLoading } = useSWR<ReportData & { success: boolean }>(
+    `/api/admin/reports/stats?filter=${dateFilter}`,
+    fetcher,
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 10000,
+    },
+  );
 
-  const getFunnel = useCallback(async () => {
-    try {
-      const res = await fetch("/api/admin/analytics/funnel", {
-        cache: "no-store",
-      });
-      const json = await res.json();
-      if (json.success) setFunnel(json.data);
-    } catch {}
-  }, []);
+  const { data: funnelData } = useSWR<FunnelData & { success: boolean }>(
+    "/api/admin/analytics/funnel",
+    fetcher,
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 10000,
+    },
+  );
 
-  const getLeadsRef = useRef(getLeads);
-  useEffect(() => {
-    getLeadsRef.current = getLeads;
-  });
+  const funnel = funnelData?.success ? funnelData : null;
 
-  useEffect(() => {
-    void Promise.resolve().then(getLeads);
-    void Promise.resolve().then(getFunnel);
-
-    const channel = supabase
-      .channel("reports-page")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "Lead" },
-        () => {
-          getLeadsRef.current();
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [getLeads, getFunnel]);
-
-  const filteredLeads = useMemo(() => {
-    if (dateFilter === "ALL") return leads;
-    const now = new Date();
-    const todayStart = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-    );
-    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
-
-    return leads.filter((lead) => {
-      if (!lead.createdAt) return false;
-      const created = new Date(lead.createdAt);
-      switch (dateFilter) {
-        case "TODAY":
-          return created >= todayStart && created <= todayEnd;
-        case "WEEK":
-          return (
-            created >= new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000)
-          );
-        case "MONTH":
-          return (
-            created.getMonth() === now.getMonth() &&
-            created.getFullYear() === now.getFullYear()
-          );
-        default:
-          return true;
-      }
-    });
-  }, [leads, dateFilter]);
-
-  if (loading) {
+  if (isLoading || !reportData?.success) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-32">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#D4AF37]/20 border-t-[#D4AF37]" />
-        <p className="text-sm text-gray-400">Loading analytics…</p>
+        <p className="text-sm text-gray-400">{isLoading ? "Loading analytics…" : "Failed to load. Please refresh."}</p>
       </div>
     );
   }
+
+  const d = reportData;
+
+  const statusLeads = Object.entries(d.statusCounts).map(([status, count]) => ({
+    status,
+    count,
+  }));
 
   return (
     <div className="space-y-8">
@@ -154,7 +116,7 @@ export default function ReportsPage() {
       </div>
 
       {/* KPI Cards */}
-      <ReportStats leads={filteredLeads} />
+      <ReportStats statusCounts={d.statusCounts} total={d.total} />
 
       {/* Charts Row — Funnel + Status Distribution */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
@@ -166,15 +128,15 @@ export default function ReportsPage() {
           />
         )}
         <div className="rounded-2xl border border-[#D4AF37]/20 bg-[#111111] p-6">
-          <StatusChart leads={filteredLeads} />
+          <StatusChart statusCounts={d.statusCounts} />
         </div>
       </div>
 
       {/* Time Series */}
-      <TimeSeriesChart leads={filteredLeads} />
+      <TimeSeriesChart timeSeries={d.timeSeries} />
 
       {/* Salesperson Performance Table */}
-      <SalesReportTable leads={filteredLeads} />
+      <SalesReportTable salespersonReport={d.salespersonReport} />
     </div>
   );
 }

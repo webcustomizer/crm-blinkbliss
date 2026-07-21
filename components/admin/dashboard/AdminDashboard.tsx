@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
+import useSWR from "swr";
 import { supabase } from "@/lib/supabase";
 
 import StatsCards from "./StatsCards";
@@ -10,112 +9,60 @@ import FollowUpCards from "./FollowUpCards";
 import LeadAnalytics from "./LeadAnalytics";
 import FunnelChart from "./FunnelChart";
 
-import type { LeadDetails } from "@/types/lead";
+const fetcher = (url: string) => fetch(url, { cache: "no-store" }).then((r) => r.json());
 
 export default function AdminDashboard() {
-  const [leads, setLeads] = useState<LeadDetails[]>([]);
+  const { data, error, isLoading, mutate } = useSWR(
+    "/api/admin/dashboard/stats",
+    fetcher,
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 5000,
+    },
+  );
 
-  const [loading, setLoading] = useState(true);
-
-  async function getLeads() {
-    try {
-      const res = await fetch(
-        "/api/admin/leads?page=1&limit=10000000000000&filter=ALL",
-        {
-          cache: "no-store",
-        },
-      );
-
-      const json = await res.json();
-
-      setLeads((json.data as LeadDetails[]) || []);
-    } catch (error) {
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    (async () => {
-      await getLeads();
-    })();
-
-    const channel = supabase
-      .channel("admin-dashboard")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "Lead",
-        },
-        () => {
-          getLeads();
-        },
-      )
-      .subscribe((status) => {});
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div
-        className="
-        p-10
-        text-center
-        text-gray-400
-        "
-      >
+      <div className="p-10 text-center text-gray-400">
         Loading Dashboard...
       </div>
     );
   }
 
-  return (
-    <div
-      className="
-      space-y-8
-      "
-    >
-      {/* HEADER */}
+  if (error || !data?.success) {
+    return (
+      <div className="p-10 text-center text-red-400">
+        Failed to load dashboard. Please refresh.
+      </div>
+    );
+  }
 
+  const stats = data.data;
+
+  return (
+    <div className="space-y-8">
+      {/* HEADER */}
       <div>
-        <h1
-          className="
-          text-3xl
-          font-bold
-          text-[#D4AF37]
-          "
-        >
+        <h1 className="text-3xl font-bold text-[#D4AF37]">
           Admin Dashboard
         </h1>
-
-        <p
-          className="
-          mt-2
-          text-gray-400
-          "
-        >
+        <p className="mt-2 text-gray-400">
           CRM Overview & Performance
         </p>
       </div>
 
       {/* STATS */}
-
-      <StatsCards leads={leads} />
+      <StatsCards stats={stats} />
 
       {/* TODAY PERFORMANCE */}
+      <TodayStats stats={stats} />
 
-      <TodayStats leads={leads} />
-
-      <FollowUpCards leads={leads} />
+      <FollowUpCards stats={stats} />
 
       <FunnelChart />
 
-      <LeadAnalytics leads={leads} />
+      <LeadAnalytics stats={stats} />
     </div>
   );
 }

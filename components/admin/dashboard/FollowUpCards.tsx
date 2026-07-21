@@ -12,120 +12,66 @@ import {
   XCircle,
 } from "lucide-react";
 
-type Lead = {
-  status: string;
-  nextFollowUp?: string | null;
+type DashboardStats = {
+  totalLeads: number;
+  statusCounts: Record<string, number>;
 };
 
 type Props = {
-  leads: Lead[];
+  stats: DashboardStats;
 };
 
-export default function FollowUpCards({ leads }: Props) {
+export default function FollowUpCards({ stats }: Props) {
   const router = useRouter();
 
-  // Pakistan Standard Time UTC+5
-  const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
-
-  /**
-   * Convert any date into PKT calendar date
-   */
-  const getPKTDateOnly = (date: string | Date) => {
-    const utcDate = new Date(date);
-
-    const pktDate = new Date(utcDate.getTime() + PKT_OFFSET_MS);
-
-    return {
-      year: pktDate.getUTCFullYear(),
-      month: pktDate.getUTCMonth(),
-      day: pktDate.getUTCDate(),
-    };
-  };
-
-  const todayPKT = getPKTDateOnly(new Date());
-
-  /**
-   * Compare only dates, ignore time
-   */
-  const comparePKTDates = (
-    first: ReturnType<typeof getPKTDateOnly>,
-    second: ReturnType<typeof getPKTDateOnly>,
-  ) => {
-    const firstDate = Date.UTC(first.year, first.month, first.day);
-
-    const secondDate = Date.UTC(second.year, second.month, second.day);
-
-    return firstDate - secondDate;
-  };
-
-  const activeLead = (lead: Lead) => {
-    return lead.status !== "JOINED" && lead.status !== "DEAD";
-  };
-
-  const todayFollowUps = leads.filter((lead) => {
-    if (!lead.nextFollowUp) return false;
-    if (!activeLead(lead)) return false;
-
-    const followUpPKT = getPKTDateOnly(lead.nextFollowUp);
-
-    return comparePKTDates(followUpPKT, todayPKT) === 0;
-  });
-
-  const overdueFollowUps = leads.filter((lead) => {
-    if (!lead.nextFollowUp) return false;
-    if (!activeLead(lead)) return false;
-
-    const followUpPKT = getPKTDateOnly(lead.nextFollowUp);
-
-    return comparePKTDates(followUpPKT, todayPKT) < 0;
-  });
+  const sc = stats.statusCounts;
 
   const cards = [
     {
       title: "Total Leads",
-      value: leads.length,
+      value: stats.totalLeads,
       filter: "ALL",
       icon: <Users size={22} />,
     },
 
     {
       title: "New Leads",
-      value: leads.filter((l) => l.status === "NEW").length,
+      value: sc["NEW"] || 0,
       filter: "NEW",
       icon: <UserPlus size={22} />,
     },
 
     {
       title: "Called",
-      value: leads.filter((l) => l.status === "CALLED").length,
+      value: sc["CALLED"] || 0,
       filter: "CALLED",
       icon: <PhoneCall size={22} />,
     },
 
     {
       title: "Training",
-      value: leads.filter((l) => l.status === "TRAINING_ATTENDED").length,
+      value: sc["TRAINING_ATTENDED"] || 0,
       filter: "TRAINING_ATTENDED",
       icon: <GraduationCap size={22} />,
     },
 
     {
       title: "Reserved",
-      value: leads.filter((l) => l.status === "SEAT_RESERVED").length,
+      value: sc["SEAT_RESERVED"] || 0,
       filter: "SEAT_RESERVED",
       icon: <CalendarCheck size={22} />,
     },
 
     {
       title: "Joined",
-      value: leads.filter((l) => l.status === "JOINED").length,
+      value: sc["JOINED"] || 0,
       filter: "JOINED",
       icon: <CheckCircle size={22} />,
     },
 
     {
       title: "Dead",
-      value: leads.filter((l) => l.status === "DEAD").length,
+      value: sc["DEAD"] || 0,
       filter: "DEAD",
       icon: <XCircle size={22} />,
     },

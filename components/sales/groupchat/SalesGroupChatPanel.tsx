@@ -277,7 +277,7 @@ export default function SalesGroupChatPanel({
           );
           const j = await r.json();
           if (j.leads) setMentionResults(j.leads.slice(0, 5));
-        } catch {}
+        } catch (e) { console.error("Failed to search mentions:", e); }
       }, 100);
       return;
     }

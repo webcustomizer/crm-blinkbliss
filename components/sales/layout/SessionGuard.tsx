@@ -16,7 +16,7 @@ export default function SessionGuard({ userId }: SessionGuardProps) {
       if (hasLoggedOutRef.current) return;
       hasLoggedOutRef.current = true;
 
-      try { await fetch("/api/logout", { method: "POST" }); } catch {}
+      try { await fetch("/api/logout", { method: "POST" }); } catch (e) { console.error("Logout failed:", e); }
       window.location.href = "/login";
     }
 

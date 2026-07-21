@@ -3,66 +3,22 @@
 import { useRouter } from "next/navigation";
 import { CalendarClock, AlertTriangle } from "lucide-react";
 
-type Lead = {
-  nextFollowUp?: string | Date | null;
-  status?: string;
+type DashboardStats = {
+  todayFollowUps: number;
+  overdueFollowUps: number;
 };
 
 type Props = {
-  leads: Lead[];
+  stats: DashboardStats;
 };
 
-export default function FollowUpCards({ leads }: Props) {
+export default function StatsCards({ stats }: Props) {
   const router = useRouter();
-
-  // Pakistan Standard Time UTC+5
-  const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
-
-  function getPKTDayBoundary(daysOffset: number, endOfDay: boolean): Date {
-    const pktNow = new Date(Date.now() + PKT_OFFSET_MS);
-
-    const year = pktNow.getUTCFullYear();
-    const month = pktNow.getUTCMonth();
-    const day = pktNow.getUTCDate() + daysOffset;
-
-    const boundaryInPKT = endOfDay
-      ? new Date(Date.UTC(year, month, day, 23, 59, 59, 999))
-      : new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
-
-    return new Date(boundaryInPKT.getTime() - PKT_OFFSET_MS);
-  }
-
-  const todayStart = getPKTDayBoundary(0, false);
-  const todayEnd = getPKTDayBoundary(0, true);
-
-  const activeLead = (lead: Lead) => {
-    return lead.status !== "JOINED" && lead.status !== "DEAD";
-  };
-
-  const todayFollowUps = leads.filter((lead) => {
-    if (!lead.nextFollowUp) return false;
-
-    if (!activeLead(lead)) return false;
-
-    const followUpDate = new Date(lead.nextFollowUp);
-
-    return followUpDate >= todayStart && followUpDate <= todayEnd;
-  });
-
-  const overdueFollowUps = leads.filter((lead) => {
-    if (!lead.nextFollowUp) return false;
-
-    if (!activeLead(lead)) return false;
-
-    const followUpDate = new Date(lead.nextFollowUp);
-
-    return followUpDate < todayStart;
-  });
 
   const cards = [
     {
       title: "Today's Follow Ups",
-      value: todayFollowUps.length,
+      value: stats.todayFollowUps,
       filter: "TODAY_FOLLOW_UP",
       icon: <CalendarClock size={24} />,
       description: "Leads scheduled for today",
@@ -70,7 +26,7 @@ export default function FollowUpCards({ leads }: Props) {
 
     {
       title: "Overdue Follow Ups",
-      value: overdueFollowUps.length,
+      value: stats.overdueFollowUps,
       filter: "OVERDUE_FOLLOW_UP",
       icon: <AlertTriangle size={24} />,
       description: "Pending follow up leads",

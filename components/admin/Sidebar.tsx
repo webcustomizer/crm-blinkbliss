@@ -38,7 +38,7 @@ export default function Sidebar() {
       const r = await fetch("/api/admin/unread-count", { cache: "no-store" });
       const j = await r.json();
       if (j.success) setUnreadCounts(j.data);
-    } catch {}
+    } catch (e) { console.error("Failed to load unread count:", e); }
   }, []);
 
   const debouncedFetch = useCallback(() => {

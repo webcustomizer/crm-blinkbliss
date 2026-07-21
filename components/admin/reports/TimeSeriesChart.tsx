@@ -4,33 +4,16 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 
-type Lead = { createdAt: string; status: string };
-type Props = { leads: Lead[] };
+type TimeSeriesEntry = {
+  date: string;
+  Leads: number;
+  Joined: number;
+  Dead: number;
+};
 
-function groupByDate(leads: Lead[]) {
-  const map = new Map<string, { total: number; joined: number; dead: number }>();
-  for (const l of leads) {
-    const d = new Date(l.createdAt);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    if (!map.has(key)) map.set(key, { total: 0, joined: 0, dead: 0 });
-    const entry = map.get(key)!;
-    entry.total++;
-    if (l.status === "JOINED") entry.joined++;
-    if (l.status === "DEAD") entry.dead++;
-  }
-  return Array.from(map.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, v]) => ({
-      date: new Date(date).toLocaleDateString("en", { month: "short", day: "numeric" }),
-      Leads: v.total,
-      Joined: v.joined,
-      Dead: v.dead,
-    }));
-}
+type Props = { timeSeries: TimeSeriesEntry[] };
 
-export default function TimeSeriesChart({ leads }: Props) {
-  const data = groupByDate(leads);
-
+export default function TimeSeriesChart({ timeSeries }: Props) {
   return (
     <div className="rounded-2xl border border-[#D4AF37]/20 bg-[#111111] p-6">
       <div className="mb-5">
@@ -38,12 +21,12 @@ export default function TimeSeriesChart({ leads }: Props) {
         <p className="mt-1 text-sm text-gray-400">Daily lead volume, joins & deaths</p>
       </div>
 
-      {data.length === 0 ? (
+      {timeSeries.length === 0 ? (
         <div className="flex h-[300px] items-center justify-center text-gray-400">No data available</div>
       ) : (
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+            <AreaChart data={timeSeries} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <defs>
                 <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3} />

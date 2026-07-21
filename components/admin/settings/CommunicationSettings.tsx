@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { handleAPIError } from "@/lib/client-error";
 
 export default function CommunicationSettings() {
   const [gcEnabled, setGcEnabled] = useState(true);
@@ -17,7 +18,7 @@ export default function CommunicationSettings() {
           setGcEnabled(json.data.groupChatEnabled !== false);
           setMsgEnabled(json.data.messageEnabled !== false);
         }
-      } catch {}
+      } catch (e) { handleAPIError(e, "Failed to load communication settings"); }
     }
     load();
   }, []);

@@ -17,6 +17,7 @@ import type { ChatMessage, MentionLead } from "@/types/lead";
 import { subscribeToMessages, subscribeToTyping } from "@/lib/realtime";
 import ChatImage, { isImageFile } from "@/components/chat/ChatImage";
 import ImagePreview from "@/components/chat/ImagePreview";
+import { handleAPIError } from "@/lib/client-error";
 
 type SalesPerson = { id: string; name: string; phone: string | null; isActive: boolean; lastMessageAt: string | null };
 
@@ -63,7 +64,7 @@ export default function MessagesPanel() {
       .then((j) => {
         if (j.user?.id) setCurrentUserId(j.user.id);
       })
-      .catch(() => {});
+      .catch((e) => handleAPIError(e, "Failed to load session"));
   }, []);
 
   // Load salespeople (sorted by last message)
@@ -73,7 +74,7 @@ export default function MessagesPanel() {
         const r = await fetch("/api/admin/messages/contacts", { cache: "no-store" });
         const j = await r.json();
         if (j.data) setSalespeople(j.data);
-      } catch {}
+      } catch (e) { handleAPIError(e, "Failed to load contacts"); }
       setUsersLoading(false);
     })();
   }, []);
@@ -84,7 +85,7 @@ export default function MessagesPanel() {
       const r = await fetch("/api/admin/messages/unread-per-user", { cache: "no-store" });
       const j = await r.json();
       if (j.success) setUnreadPerUser(j.data);
-    } catch {}
+    } catch (e) { console.error("Failed to load unread per user:", e); }
   }, []);
 
   useEffect(() => {
@@ -159,7 +160,7 @@ export default function MessagesPanel() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ messageIds: unread }),
-    }).catch(() => {});
+    }).catch((e) => console.error("Failed to mark read:", e));
   }, [messages, selectedUser]);
 
   // Load messages when user selected
@@ -178,7 +179,7 @@ export default function MessagesPanel() {
         setMessages(j.data);
         setHasMore(Boolean(j.hasMore));
       }
-    } catch {}
+    } catch (e) { handleAPIError(e, "Failed to load messages"); }
     setLoading(false);
     initialLoadDoneRef.current = true;
     isFetchingRef.current = false;
@@ -220,7 +221,7 @@ export default function MessagesPanel() {
           }
         });
       }
-    } catch {}
+    } catch (e) { console.error("Failed to load older messages:", e); }
     setLoadingMore(false);
   }, [messages, hasMore, loadingMore, selectedUser]);
 
@@ -285,7 +286,7 @@ export default function MessagesPanel() {
             .then((j) => {
               if (j.leads) setMentionResults(j.leads.slice(0, 5));
             })
-            .catch(() => {});
+            .catch((e) => console.error("Failed to search mentions:", e));
         }
       }, 100);
       return;
@@ -344,7 +345,8 @@ export default function MessagesPanel() {
         toast.error(j.message);
         setNewMsg(content);
       }
-    } catch {
+    } catch (e) {
+      console.error("Failed to send message:", e);
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
       toast.error("Failed.");
       setNewMsg(content);
@@ -419,7 +421,8 @@ export default function MessagesPanel() {
         setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
         toast.error("Upload failed.");
       }
-    } catch {
+    } catch (e) {
+      console.error("Failed to upload file:", e);
       URL.revokeObjectURL(blobUrl);
       setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
       toast.error("Upload failed.");

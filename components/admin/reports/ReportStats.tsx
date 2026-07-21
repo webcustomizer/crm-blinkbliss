@@ -2,17 +2,15 @@
 
 import { Users, UserCheck, UserX, CalendarCheck, Activity, TrendingUp, Phone, GraduationCap } from "lucide-react";
 
-type Lead = { status: string };
-type Props = { leads: Lead[] };
+type Props = { statusCounts: Record<string, number>; total: number };
 
-export default function ReportStats({ leads }: Props) {
-  const total = leads.length;
-  const joined = leads.filter((l) => l.status === "JOINED").length;
-  const dead = leads.filter((l) => l.status === "DEAD").length;
-  const reserved = leads.filter((l) => l.status === "SEAT_RESERVED").length;
-  const active = leads.filter((l) => l.status !== "JOINED" && l.status !== "DEAD").length;
-  const called = leads.filter((l) => l.status === "CALLED").length;
-  const training = leads.filter((l) => l.status === "TRAINING_ATTENDED").length;
+export default function ReportStats({ statusCounts, total }: Props) {
+  const joined = statusCounts["JOINED"] || 0;
+  const dead = statusCounts["DEAD"] || 0;
+  const reserved = statusCounts["SEAT_RESERVED"] || 0;
+  const called = statusCounts["CALLED"] || 0;
+  const training = statusCounts["TRAINING_ATTENDED"] || 0;
+  const active = total - joined - dead;
   const conversion = total > 0 ? ((joined / total) * 100).toFixed(1) : "0";
 
   const cards = [

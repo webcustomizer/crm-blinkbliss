@@ -23,7 +23,7 @@ export function UnreadProvider({ children, userId }: { children: ReactNode; user
       const r = await fetch("/api/salesperson/unread-count", { cache: "no-store" });
       const j = await r.json();
       if (j.success) setUnread(j.data);
-    } catch {}
+    } catch (e) { console.error("Failed to load unread counts:", e); }
   }, []);
 
   const debouncedFetch = useCallback(() => {

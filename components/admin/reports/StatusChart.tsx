@@ -9,59 +9,27 @@ import {
   Legend,
 } from "recharts";
 
-type Lead = {
-  status: string;
-};
-
 type Props = {
-  leads: Lead[];
+  statusCounts: Record<string, number>;
 };
 
-export default function StatusChart({ leads }: Props) {
-  const statuses = [
-    {
-      name: "New",
-      key: "NEW",
-    },
+const STATUS_LABELS: Record<string, string> = {
+  NEW: "New",
+  CALLED: "Called",
+  NEED_MORE_FOLLOW_UP: "Follow Up",
+  TRAINING_ATTENDED: "Training",
+  SEAT_RESERVED: "Reserved",
+  JOINED: "Joined",
+  DEAD: "Dead",
+};
 
-    {
-      name: "Called",
-      key: "CALLED",
-    },
-
-    {
-      name: "Follow Up",
-      key: "NEED_MORE_FOLLOW_UP",
-    },
-
-    {
-      name: "Training",
-      key: "TRAINING_ATTENDED",
-    },
-
-    {
-      name: "Reserved",
-      key: "SEAT_RESERVED",
-    },
-
-    {
-      name: "Joined",
-      key: "JOINED",
-    },
-
-    {
-      name: "Dead",
-      key: "DEAD",
-    },
-  ];
-
-  const data = statuses
-    .map((item) => ({
-      name: item.name,
-
-      value: leads.filter((lead) => lead.status === item.key).length,
-    }))
-    .filter((item) => item.value > 0);
+export default function StatusChart({ statusCounts }: Props) {
+  const data = Object.entries(statusCounts)
+    .filter(([, v]) => v > 0)
+    .map(([key, value]) => ({
+      name: STATUS_LABELS[key] || key,
+      value,
+    }));
 
   return (
     <div>
@@ -71,23 +39,11 @@ export default function StatusChart({ leads }: Props) {
       </div>
 
       {data.length === 0 ? (
-        <div
-          className="
-          flex
-          h-[300px]
-          items-center
-          justify-center
-          text-gray-400
-          "
-        >
+        <div className="flex h-[300px] items-center justify-center text-gray-400">
           No data available
         </div>
       ) : (
-        <div
-          className="
-          h-[320px]
-          "
-        >
+        <div className="h-[320px]">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie

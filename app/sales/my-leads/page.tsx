@@ -12,7 +12,7 @@ export default async function Page() {
       const user = await verifyToken(token);
       userId = user.id;
     }
-  } catch {}
+  } catch (e) { console.error("Failed to verify token:", e); }
 
   return (
     <Suspense fallback={<div className="p-6 text-[#D4AF37]">Loading...</div>}>

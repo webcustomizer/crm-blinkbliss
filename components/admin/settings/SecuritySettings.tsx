@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { handleAPIError } from "@/lib/client-error";
 
 export default function SecuritySettings() {
   const [settings, setSettings] = useState({
@@ -29,7 +30,7 @@ export default function SecuritySettings() {
             sessionMaxHours: json.data.sessionMaxHours || 168,
           });
         }
-      } catch {}
+      } catch (e) { handleAPIError(e, "Failed to load security settings"); }
       setLoading(false);
     }
     load();

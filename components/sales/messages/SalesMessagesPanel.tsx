@@ -72,7 +72,7 @@ export default function SalesMessagesPanel({
         const r = await fetch("/api/salesperson/messages/contacts", { cache: "no-store" });
         const j = await r.json();
         if (j.data) setAdmins(j.data);
-      } catch {}
+      } catch (e) { console.error("Failed to load contacts:", e); }
     })();
   }, []);
 
@@ -173,7 +173,7 @@ export default function SalesMessagesPanel({
         setMessages(j.data);
         setHasMore(Boolean(j.hasMore));
       }
-    } catch {}
+    } catch (e) { console.error("Failed to load messages:", e); }
     setLoading(false);
     initialLoadDoneRef.current = true;
     isFetchingRef.current = false;
@@ -215,7 +215,7 @@ export default function SalesMessagesPanel({
           }
         });
       }
-    } catch {}
+    } catch (e) { console.error("Failed to load older messages:", e); }
     setLoadingMore(false);
   }, [messages, hasMore, loadingMore, selectedAdmin]);
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
+import { handleAPIError } from "@/lib/client-error";
 
 export default function GroupChatSettings() {
   const [enabled, setEnabled] = useState(false);
@@ -14,7 +15,7 @@ export default function GroupChatSettings() {
         const res = await fetch("/api/admin/settings", { cache: "no-store" });
         const json = await res.json();
         if (json.data) setEnabled(json.data.groupChatEnabled || false);
-      } catch {}
+      } catch (e) { handleAPIError(e, "Failed to load group chat settings"); }
     }
     load();
   }, []);

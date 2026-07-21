@@ -36,7 +36,7 @@ function detectSource(): string | null {
       const host = new URL(document.referrer).hostname.replace(/^www\./, "");
       if (host) return host;
     }
-  } catch {}
+  } catch (e) { console.error("Referrer detection failed:", e); }
 
   return null;
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { useSidebar } from "./sidebar-context";
+import { handleAPIError } from "@/lib/client-error";
 
 // Mirrors Sidebar.tsx's menuItems — kept separate/lightweight here since
 // Topbar only needs the title, not the icon or badge key.
@@ -56,7 +57,7 @@ export default function Topbar() {
       .then((json) => {
         if (!cancelled && json?.user?.name) setAdminName(json.user.name);
       })
-      .catch(() => {});
+      .catch((e) => handleAPIError(e, "Failed to load admin profile"));
     return () => {
       cancelled = true;
     };

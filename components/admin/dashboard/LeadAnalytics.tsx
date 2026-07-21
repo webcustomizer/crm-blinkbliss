@@ -3,112 +3,55 @@
 import { MapPin, Target, Users, GraduationCap, Clock } from "lucide-react";
 import { Playfair_Display } from "next/font/google";
 
-import type { LeadDetails } from "@/types/lead";
-
 const displayFont = Playfair_Display({
   subsets: ["latin"],
   weight: ["600", "700"],
   variable: "--font-display",
 });
 
-type Props = {
-  leads: LeadDetails[];
+type DashboardStats = {
+  totalLeads: number;
+  topCities: { name: string; count: number }[];
+  topPurposes: { name: string; count: number }[];
+  ageGroups: Record<string, number>;
+  timeSlots: Record<string, number>;
+  trainingInterest: Record<string, number>;
 };
 
-export default function LeadAnalytics({ leads }: Props) {
+type Props = {
+  stats: DashboardStats;
+};
+
+export default function LeadAnalytics({ stats }: Props) {
   function getPercentage(value: number, total: number) {
     if (!total) return 0;
-
     return Math.round((value / total) * 100);
   }
 
-  function getTopItems(items: string[]) {
-    const count: Record<string, number> = {};
+  const totalLeads = stats.totalLeads;
 
-    items.forEach((item) => {
-      const key = item?.trim() || "Other";
+  const cities = stats.topCities.map((c) => [c.name, c.count] as const);
+  const purposes = stats.topPurposes.map((p) => [p.name, p.count] as const);
 
-      count[key] = (count[key] || 0) + 1;
-    });
-
-    return Object.entries(count)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 4);
-  }
-
-  const totalLeads = leads.length;
-
-  const cities = getTopItems(leads.map((lead) => lead.city || "Other"));
-
-  const purposes = getTopItems(leads.map((lead) => lead.purpose || "Other"));
-
-  const ageGroups = [
-    {
-      name: "18–25",
-      value: leads.filter(
-        (lead) => Number(lead.age) >= 18 && Number(lead.age) <= 25,
-      ).length,
-    },
-    {
-      name: "26–35",
-      value: leads.filter(
-        (lead) => Number(lead.age) >= 26 && Number(lead.age) <= 35,
-      ).length,
-    },
-    {
-      name: "36+",
-      value: leads.filter((lead) => Number(lead.age) > 35).length,
-    },
+  const ageGroupsArr = [
+    { name: "18–25", value: stats.ageGroups["18-25"] || 0 },
+    { name: "26–35", value: stats.ageGroups["26-35"] || 0 },
+    { name: "36+", value: stats.ageGroups["36+"] || 0 },
   ];
 
-  const timeSlots = [
-    {
-      name: "9AM – 12PM",
-      value: leads.filter(
-        (lead) => lead.bestTimeToReach === "9:00 AM - 12:00 PM",
-      ).length,
-    },
-    {
-      name: "12PM – 3PM",
-      value: leads.filter(
-        (lead) => lead.bestTimeToReach === "12:00 PM - 3:00 PM",
-      ).length,
-    },
-    {
-      name: "3PM – 6PM",
-      value: leads.filter(
-        (lead) => lead.bestTimeToReach === "3:00 PM - 6:00 PM",
-      ).length,
-    },
-    {
-      name: "6PM – 9PM",
-      value: leads.filter(
-        (lead) => lead.bestTimeToReach === "6:00 PM - 9:00 PM",
-      ).length,
-    },
-    {
-      name: "9PM – 11PM",
-      value: leads.filter(
-        (lead) => lead.bestTimeToReach === "9:00 PM - 11:00 PM",
-      ).length,
-    },
+  const timeSlotsArr = [
+    { name: "9AM – 12PM", value: stats.timeSlots["9:00 AM - 12:00 PM"] || 0 },
+    { name: "12PM – 3PM", value: stats.timeSlots["12:00 PM - 3:00 PM"] || 0 },
+    { name: "3PM – 6PM", value: stats.timeSlots["3:00 PM - 6:00 PM"] || 0 },
+    { name: "6PM – 9PM", value: stats.timeSlots["6:00 PM - 9:00 PM"] || 0 },
+    { name: "9PM – 11PM", value: stats.timeSlots["9:00 PM - 11:00 PM"] || 0 },
   ];
 
-  const training = [
-    {
-      name: "Interested",
-      value: leads.filter((lead) => lead.willingToAttendTraining === true)
-        .length,
-    },
-    {
-      name: "Not Interested",
-      value: leads.filter((lead) => lead.willingToAttendTraining === false)
-        .length,
-    },
+  const trainingArr = [
+    { name: "Interested", value: stats.trainingInterest["interested"] || 0 },
+    { name: "Not Interested", value: stats.trainingInterest["notInterested"] || 0 },
   ];
 
-  // Ranked sections show a position badge (01, 02...) because order is the
-  // actual signal — these are "top N" leaderboards, not an arbitrary list.
   const sections = [
     {
       title: "Top Cities",
@@ -128,21 +71,21 @@ export default function LeadAnalytics({ leads }: Props) {
       title: "Age Groups",
       caption: "Audience by generation",
       icon: <Users size={17} strokeWidth={1.75} />,
-      data: ageGroups.map((item) => [item.name, item.value] as const),
+      data: ageGroupsArr.map((item) => [item.name, item.value] as const),
       ranked: false,
     },
     {
       title: "Best Time to Reach",
       caption: "When leads prefer to be contacted",
       icon: <Clock size={17} strokeWidth={1.75} />,
-      data: timeSlots.map((item) => [item.name, item.value] as const),
+      data: timeSlotsArr.map((item) => [item.name, item.value] as const),
       ranked: false,
     },
     {
       title: "Training Interest",
       caption: "Appetite for enrolment",
       icon: <GraduationCap size={17} strokeWidth={1.75} />,
-      data: training.map((item) => [item.name, item.value] as const),
+      data: trainingArr.map((item) => [item.name, item.value] as const),
       ranked: false,
     },
   ];

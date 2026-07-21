@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { FunnelStage } from "@/types/lead";
+import { handleAPIError } from "@/lib/client-error";
 
 const STAGE_COLORS: Record<string, string> = {
   NEW: "bg-blue-500",
@@ -28,7 +29,7 @@ export default function FunnelChart() {
           setDeadCount(json.data.deadCount);
           setTotalLeads(json.data.totalLeads);
         }
-      } catch {}
+      } catch (e) { handleAPIError(e, "Failed to load funnel data"); }
       setLoading(false);
     }
     load();

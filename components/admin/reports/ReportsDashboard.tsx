@@ -1,15 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import useSWR from "swr";
 import dynamic from "next/dynamic";
 
 import ReportStats from "./ReportStats";
 import SalesReportTable from "./SalesReportTable";
 
-import { supabase } from "@/lib/supabase";
-
-// recharts is a large dependency — load it only when this dashboard is
-// actually rendered, instead of shipping it in every admin bundle.
 const StatusChart = dynamic(() => import("./StatusChart"), {
   ssr: false,
   loading: () => (
@@ -17,120 +14,59 @@ const StatusChart = dynamic(() => import("./StatusChart"), {
   ),
 });
 
-type LeadStatus =
-  | "CALLED"
-  | "NEED_MORE_FOLLOW_UP"
-  | "TRAINING_ATTENDED"
-  | "SEAT_RESERVED"
-  | "JOINED"
-  | "DEAD"
-  | string;
-
-type Lead = {
-  id: string;
-  assignedTo?: {
+type ReportData = {
+  total: number;
+  statusCounts: Record<string, number>;
+  salespersonReport: {
     id: string;
     name: string;
-  } | null;
-  status: LeadStatus;
+    total: number;
+    called: number;
+    followups: number;
+    training: number;
+    reserved: number;
+    joined: number;
+    dead: number;
+  }[];
+  timeSeries: { date: string; Leads: number; Joined: number; Dead: number }[];
 };
 
-
+const fetcher = (url: string) => fetch(url, { cache: "no-store" }).then((r) => r.json());
 
 export default function ReportsDashboard() {
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [dateFilter] = useState("ALL");
+  const { data, isLoading } = useSWR<ReportData & { success: boolean }>(
+    `/api/admin/reports/stats?filter=${dateFilter}`,
+    fetcher,
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 10000,
+    },
+  );
 
-  const [loading, setLoading] = useState(true);
-
-  async function getLeads() {
-    try {
-      const res = await fetch("/api/admin/leads?page=1&limit=1000&filter=ALL", {
-        cache: "no-store",
-      });
-
-      const json = await res.json();
-
-      setLeads(json.data || []);
-    } catch (error) {
-
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    void Promise.resolve().then(getLeads);
-
-    const channel = supabase
-      .channel("reports-dashboard")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "Lead",
-        },
-        () => {
-          getLeads();
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  if (loading) {
+  if (isLoading || !data?.success) {
     return (
-      <div
-        className="
-      p-10
-      text-center
-      text-gray-400
-      "
-      >
+      <div className="p-10 text-center text-gray-400">
         Loading Reports...
       </div>
     );
   }
 
   return (
-    <div
-      className="
-      space-y-8
-      "
-    >
+    <div className="space-y-8">
       <div>
-        <h1
-          className="
-          text-3xl
-          font-bold
-          text-[#D4AF37]
-          "
-        >
+        <h1 className="text-3xl font-bold text-[#D4AF37]">
           Reports Dashboard
         </h1>
-
-        <p
-          className="
-          mt-2
-          text-gray-400
-          "
-        >
+        <p className="mt-2 text-gray-400">
           Sales performance and lead analytics
         </p>
       </div>
 
-      {/* TOP STATS */}
-
-      <ReportStats leads={leads} />
-
-      {/* STATUS GRAPH */}
-
-      <StatusChart leads={leads} />
-
-      <SalesReportTable leads={leads} />
+      <ReportStats statusCounts={data.statusCounts} total={data.total} />
+      <StatusChart statusCounts={data.statusCounts} />
+      <SalesReportTable salespersonReport={data.salespersonReport} />
     </div>
   );
 }

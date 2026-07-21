@@ -2,61 +2,27 @@
 
 import { UserPlus, CheckCircle, TrendingUp } from "lucide-react";
 
-import type { LeadDetails } from "@/types/lead";
-
-type Props = {
-  leads: LeadDetails[];
+type DashboardStats = {
+  todayNewLeads: number;
+  todayJoined: number;
 };
 
-export default function TodayStats({ leads }: Props) {
-  const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
+type Props = {
+  stats: DashboardStats;
+};
 
-  function getPKTDayBoundary(daysOffset: number, endOfDay: boolean): Date {
-    const pktNow = new Date(Date.now() + PKT_OFFSET_MS);
-
-    const year = pktNow.getUTCFullYear();
-    const month = pktNow.getUTCMonth();
-    const day = pktNow.getUTCDate() + daysOffset;
-
-    const boundaryInPKT = endOfDay
-      ? new Date(Date.UTC(year, month, day, 23, 59, 59, 999))
-      : new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
-
-    return new Date(boundaryInPKT.getTime() - PKT_OFFSET_MS);
-  }
-
-  const todayStart = getPKTDayBoundary(0, false);
-
-  const todayEnd = getPKTDayBoundary(0, true);
-
-  const isToday = (date?: string | null) => {
-    if (!date) return false;
-
-    const d = new Date(date);
-
-    return d >= todayStart && d <= todayEnd;
-  };
-
-  const stats = [
+export default function TodayStats({ stats }: Props) {
+  const items = [
     {
       title: "New Leads",
-
-      value: leads.filter((lead) => isToday(lead.createdAt)).length,
-
+      value: stats.todayNewLeads,
       icon: <UserPlus size={20} />,
-
       label: "Received today",
     },
-
     {
       title: "Joined",
-
-      value: leads.filter(
-        (lead) => lead.status === "JOINED" && isToday(lead.updatedAt),
-      ).length,
-
+      value: stats.todayJoined,
       icon: <CheckCircle size={20} />,
-
       label: "Converted today",
     },
   ];
@@ -134,7 +100,7 @@ export default function TodayStats({ leads }: Props) {
         sm:divide-y-0
         "
       >
-        {stats.map((item) => (
+        {items.map((item) => (
           <div
             key={item.title}
             className="

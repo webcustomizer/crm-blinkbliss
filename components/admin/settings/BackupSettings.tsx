@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { handleAPIError } from "@/lib/client-error";
 import { Download, Database } from "lucide-react";
 
 export default function BackupSettings() {
@@ -19,7 +20,7 @@ export default function BackupSettings() {
           setAutoBackup(json.data.autoBackupEnabled || false);
           setFrequencyDays(json.data.backupFrequencyDays || 7);
         }
-      } catch {}
+      } catch (e) { handleAPIError(e, "Failed to load backup settings"); }
     }
     load();
   }, []);
