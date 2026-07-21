@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Target, Users, GraduationCap } from "lucide-react";
+import { MapPin, Target, Users, GraduationCap, Clock } from "lucide-react";
 import { Playfair_Display } from "next/font/google";
 
 import type { LeadDetails } from "@/types/lead";
@@ -61,6 +61,39 @@ export default function LeadAnalytics({ leads }: Props) {
     },
   ];
 
+  const timeSlots = [
+    {
+      name: "9AM – 12PM",
+      value: leads.filter(
+        (lead) => lead.bestTimeToReach === "9:00 AM - 12:00 PM",
+      ).length,
+    },
+    {
+      name: "12PM – 3PM",
+      value: leads.filter(
+        (lead) => lead.bestTimeToReach === "12:00 PM - 3:00 PM",
+      ).length,
+    },
+    {
+      name: "3PM – 6PM",
+      value: leads.filter(
+        (lead) => lead.bestTimeToReach === "3:00 PM - 6:00 PM",
+      ).length,
+    },
+    {
+      name: "6PM – 9PM",
+      value: leads.filter(
+        (lead) => lead.bestTimeToReach === "6:00 PM - 9:00 PM",
+      ).length,
+    },
+    {
+      name: "9PM – 11PM",
+      value: leads.filter(
+        (lead) => lead.bestTimeToReach === "9:00 PM - 11:00 PM",
+      ).length,
+    },
+  ];
+
   const training = [
     {
       name: "Interested",
@@ -96,6 +129,13 @@ export default function LeadAnalytics({ leads }: Props) {
       caption: "Audience by generation",
       icon: <Users size={17} strokeWidth={1.75} />,
       data: ageGroups.map((item) => [item.name, item.value] as const),
+      ranked: false,
+    },
+    {
+      title: "Best Time to Reach",
+      caption: "When leads prefer to be contacted",
+      icon: <Clock size={17} strokeWidth={1.75} />,
+      data: timeSlots.map((item) => [item.name, item.value] as const),
       ranked: false,
     },
     {
