@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const limited = withRateLimit(req, "form");
+  const limited = await withRateLimit(req, "form");
   if (limited) return limited;
 
   try {

@@ -12,7 +12,7 @@ function getIP(req: NextRequest): string {
 
 export async function POST(req: NextRequest) {
   const ip = getIP(req);
-  if (!rateLimit(ip, "login")) {
+  if (!(await rateLimit(ip, "login"))) {
     return NextResponse.json({ success: false, message: "Too many attempts. Try again." }, { status: 429 });
   }
 

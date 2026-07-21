@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   const { email, password } = body;
 
   // Rate limit check
-  if (!rateLimit(ip, "login")) {
+  if (!(await rateLimit(ip, "login"))) {
     return NextResponse.json(
       { message: "Too many login attempts. Please try again later." },
       { status: 429 },
