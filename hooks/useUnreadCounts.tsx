@@ -4,8 +4,14 @@ import { createContext, useContext, useState, useEffect, useRef, useCallback, ty
 import { supabase } from "@/lib/supabase";
 
 type UnreadCounts = { messages: number; groupChat: number; announcements: number };
+type UnreadContextType = UnreadCounts & { refetch: () => void };
 
-const UnreadContext = createContext<UnreadCounts>({ messages: 0, groupChat: 0, announcements: 0 });
+const UnreadContext = createContext<UnreadContextType>({
+  messages: 0,
+  groupChat: 0,
+  announcements: 0,
+  refetch: () => {},
+});
 
 export function UnreadProvider({ children }: { children: ReactNode }) {
   const [unread, setUnread] = useState<UnreadCounts>({ messages: 0, groupChat: 0, announcements: 0 });
@@ -60,7 +66,11 @@ export function UnreadProvider({ children }: { children: ReactNode }) {
     };
   }, [fetchUnread, debouncedFetch]);
 
-  return <UnreadContext.Provider value={unread}>{children}</UnreadContext.Provider>;
+  return (
+    <UnreadContext.Provider value={{ ...unread, refetch: fetchUnread }}>
+      {children}
+    </UnreadContext.Provider>
+  );
 }
 
 export function useUnreadCounts() {
