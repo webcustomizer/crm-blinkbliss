@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/require-auth";
 import { broadcastNewMessage } from "@/lib/realtime";
 import { sendPushNotification } from "@/lib/push";
+import { logActivity } from "@/lib/activity";
+import { ActivityAction } from "@/app/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -169,6 +171,14 @@ export async function POST(req: NextRequest) {
       title: senderName,
       message: content.length > 100 ? content.slice(0, 100) + "…" : content,
       link: `/admin/messages`,
+    }).catch(() => {});
+
+    logActivity({
+      userId: auth.user.id,
+      leadId: leadId || null,
+      action: ActivityAction.MESSAGE_SENT,
+      description: `${senderName} sent a message`,
+      metadata: { receiverId, hasFile: !!fileUrl },
     }).catch(() => {});
 
     return NextResponse.json({ success: true, data: message });

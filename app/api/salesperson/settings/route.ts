@@ -15,6 +15,9 @@ export async function GET(req: NextRequest) {
       data: {
         groupChatEnabled: settings?.groupChatEnabled !== false,
         messageEnabled: settings?.messageEnabled !== false,
+        passwordMinLength: settings?.passwordMinLength || 8,
+        passwordRequireSpecial: settings?.passwordRequireSpecial || false,
+        maxFollowUps: settings?.maxFollowUps ?? 3,
       },
     });
   } catch {

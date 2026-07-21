@@ -8,6 +8,8 @@ import { ActivityAction } from "@/app/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
 
+const VALID_STATUSES = ["NEW", "CALLED", "TRAINING_ATTENDED", "SEAT_RESERVED", "JOINED", "DEAD"];
+
 export async function PATCH(
   req: Request,
   context: {
@@ -84,6 +86,13 @@ export async function PATCH(
         {
           status: 400,
         },
+      );
+    }
+
+    if (!VALID_STATUSES.includes(status)) {
+      return NextResponse.json(
+        { message: "Invalid status value" },
+        { status: 400 },
       );
     }
 

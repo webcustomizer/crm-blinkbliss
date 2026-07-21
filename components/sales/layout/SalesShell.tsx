@@ -21,6 +21,16 @@ export default function SalesShell({ children, user }: SalesShellProps) {
   const router = useRouter();
   const pathname = usePathname();
 
+  const headerTitle = (() => {
+    if (pathname.startsWith("/sales/messages")) return "Messages";
+    if (pathname.startsWith("/sales/group-chat")) return "Group Chat";
+    if (pathname.startsWith("/sales/profile")) return "Profile";
+    if (pathname.startsWith("/sales/my-leads")) return "My Leads";
+    if (pathname.startsWith("/sales/follow-ups")) return "Follow-Ups";
+    if (pathname.startsWith("/sales/announcements")) return "Announcements";
+    return "Dashboard";
+  })();
+
   const handleNewNotification = useCallback(() => {
     if (
       pathname.startsWith("/sales/messages") ||
@@ -47,7 +57,7 @@ export default function SalesShell({ children, user }: SalesShellProps) {
 
             <div className="flex min-w-0 flex-1 flex-col">
               <div style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 8px)" }} className="bg-[#111111]">
-                <Header user={user} onMenuClick={() => setMobileMenuOpen(true)} />
+                <Header title={headerTitle} user={user} onMenuClick={() => setMobileMenuOpen(true)} />
               </div>
               <main className="flex-1 overflow-y-auto bg-[#111111]" style={{ overscrollBehavior: "contain" }}>
                 <div className="mx-auto w-full max-w-7xl px-4 py-5 pb-24 sm:px-6 lg:px-8 lg:pb-8">
@@ -57,13 +67,11 @@ export default function SalesShell({ children, user }: SalesShellProps) {
             </div>
           </div>
 
-          {mobileMenuOpen && (
-            <MobileDrawer
-              open={mobileMenuOpen}
-              onClose={() => setMobileMenuOpen(false)}
-              user={user}
-            />
-          )}
+          <MobileDrawer
+            open={mobileMenuOpen}
+            onClose={() => setMobileMenuOpen(false)}
+            user={user}
+          />
 
           <div className="lg:hidden">
             <MobileBottomNav />

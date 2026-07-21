@@ -17,7 +17,7 @@ export default function ChangePasswordCard() {
   const [requireSpecial, setRequireSpecial] = useState(false);
 
   useEffect(() => {
-    fetch("/api/admin/settings", { cache: "no-store" })
+    fetch("/api/salesperson/settings", { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => {
         if (j.data) {

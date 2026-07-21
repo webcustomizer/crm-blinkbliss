@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { supabase } from "@/lib/supabase";
@@ -44,6 +44,7 @@ export default function MyLeads({ userId }: { userId?: string }) {
   const [totalPages, setTotalPages] = useState(1);
 
   const [currentPage, setCurrentPage] = useState(1);
+  const currentPageRef = useRef(1);
 
   // Sirf first page load ke liye
   const [loading, setLoading] = useState(true);
@@ -57,6 +58,12 @@ export default function MyLeads({ userId }: { userId?: string }) {
   // Isse notification se seedha ek lead open karna aasan ho jata hai,
   // chahe woh lead current page/filter mein listed ho ya na ho.
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+
+  // Keep ref in sync with state so realtime callback always reads the
+  // latest page number (avoids stale closure capture).
+  useEffect(() => {
+    currentPageRef.current = currentPage;
+  }, [currentPage]);
 
   async function getLeads(showLoader = false, page = currentPage) {
     try {
@@ -117,7 +124,7 @@ export default function MyLeads({ userId }: { userId?: string }) {
           },
           () => {
 
-            void getLeads(false, currentPage);
+            void getLeads(false, currentPageRef.current);
           },
         )
         .subscribe((status) => {

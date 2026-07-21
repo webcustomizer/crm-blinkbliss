@@ -53,6 +53,7 @@ export async function GET(req: Request) {
     const limit = Math.max(1, Number(searchParams.get("limit")) || 10);
 
     const where = {
+      isDeleted: false,
       assignedToId: salespersonId,
 
       ...(status !== "ALL" && {

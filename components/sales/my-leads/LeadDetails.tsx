@@ -347,6 +347,16 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
 
   const [showAllFollowups, setShowAllFollowups] = useState(false);
   const [showAllStatusHistory, setShowAllStatusHistory] = useState(false);
+  const [maxFollowUps, setMaxFollowUps] = useState(4);
+
+  useEffect(() => {
+    fetch("/api/salesperson/settings", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.data?.maxFollowUps) setMaxFollowUps(j.data.maxFollowUps);
+      })
+      .catch(() => {});
+  }, []);
 
   // Portal target only exists in the browser — mount flag avoids
   // touching `document` during SSR.
@@ -357,7 +367,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
 
   const isClosed = lead?.status === "JOINED" || lead?.status === "DEAD";
 
-  const maxFollowUpsReached = (lead?.followUpCount || 0) >= 4;
+  const maxFollowUpsReached = (lead?.followUpCount || 0) >= maxFollowUps;
 
   const nextFollowUpReached = (() => {
     if (!lead?.nextFollowUp) return true;

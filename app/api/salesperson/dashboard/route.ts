@@ -73,12 +73,14 @@ export async function GET() {
     ] = await Promise.all([
       prisma.lead.count({
         where: {
+          isDeleted: false,
           assignedToId: salespersonId,
         },
       }),
 
       prisma.lead.count({
         where: {
+          isDeleted: false,
           assignedToId: salespersonId,
           status: "NEW",
         },
@@ -86,6 +88,7 @@ export async function GET() {
 
       prisma.lead.count({
         where: {
+          isDeleted: false,
           assignedToId: salespersonId,
           status: "CALLED",
         },
@@ -93,6 +96,7 @@ export async function GET() {
 
       prisma.lead.count({
         where: {
+          isDeleted: false,
           assignedToId: salespersonId,
           status: "TRAINING_ATTENDED",
         },
@@ -100,6 +104,7 @@ export async function GET() {
 
       prisma.lead.count({
         where: {
+          isDeleted: false,
           assignedToId: salespersonId,
           status: "SEAT_RESERVED",
         },
@@ -107,6 +112,7 @@ export async function GET() {
 
       prisma.lead.count({
         where: {
+          isDeleted: false,
           assignedToId: salespersonId,
           status: "JOINED",
         },
@@ -114,6 +120,7 @@ export async function GET() {
 
       prisma.lead.count({
         where: {
+          isDeleted: false,
           assignedToId: salespersonId,
           status: "DEAD",
         },
@@ -122,6 +129,7 @@ export async function GET() {
       // Today's Follow Ups
       prisma.lead.count({
         where: {
+          isDeleted: false,
           assignedToId: salespersonId,
           status: {
             notIn: ["JOINED", "DEAD"],
@@ -136,6 +144,7 @@ export async function GET() {
       // Overdue Follow Ups
       prisma.lead.count({
         where: {
+          isDeleted: false,
           assignedToId: salespersonId,
           status: {
             notIn: ["JOINED", "DEAD"],
@@ -149,6 +158,7 @@ export async function GET() {
       // Upcoming Follow Ups (Next 2 Days)
       prisma.lead.count({
         where: {
+          isDeleted: false,
           assignedToId: salespersonId,
           status: {
             notIn: ["JOINED", "DEAD"],
