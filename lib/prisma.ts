@@ -6,7 +6,7 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
-  max: 3, // cap connections per instance — tune so (instances × max) stays under your pooler's pool_size
+  max: 10,
 });
 
 export const prisma = globalForPrisma.prisma || new PrismaClient({ adapter });

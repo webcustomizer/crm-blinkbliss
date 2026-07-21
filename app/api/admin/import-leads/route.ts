@@ -105,6 +105,7 @@ export async function POST(req: NextRequest) {
 
     const existingLeads = await prisma.lead.findMany({
       where: {
+        isDeleted: false,
         OR: [
           { phone: { in: phonesToCheck } },
           ...(emailsToCheck.length > 0

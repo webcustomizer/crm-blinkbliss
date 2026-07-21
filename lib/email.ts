@@ -1,7 +1,5 @@
-// Uses Supabase for emails (configure SMTP in Supabase Dashboard → Authentication → Email Templates)
-// We send emails via Supabase's admin API for custom emails
-
 import { createClient } from "@supabase/supabase-js";
+import { randomInt, randomBytes, timingSafeEqual } from "crypto";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,8 +9,13 @@ const supabaseAdmin = createClient(
 
 const OTP_EXPIRY_MINUTES = 5;
 
+export function safeStringCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
+
 export function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return randomInt(100000, 999999).toString();
 }
 
 export function isOTPExpired(createdAt: Date): boolean {
@@ -20,10 +23,7 @@ export function isOTPExpired(createdAt: Date): boolean {
 }
 
 export function generateResetToken(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let token = "";
-  for (let i = 0; i < 48; i++) token += chars[Math.floor(Math.random() * chars.length)];
-  return token;
+  return randomBytes(36).toString("base64url");
 }
 
 // Send email via Supabase's built-in auth email system

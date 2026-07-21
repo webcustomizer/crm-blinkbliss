@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/require-auth";
+import { supabaseAdmin } from "@/lib/supabase-admin";
+import { randomBytes } from "crypto";
 
-// Max file size: 10MB
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const BUCKET = "uploads";
 const ALLOWED_TYPES = [
   "image/jpeg", "image/png", "image/gif", "image/webp",
   "application/pdf",
@@ -11,6 +13,10 @@ const ALLOWED_TYPES = [
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "application/vnd.ms-excel",
 ];
+
+function sanitizeFileName(name: string): string {
+  return name.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/_{2,}/g, "_");
+}
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req, ["ADMIN", "SALESPERSON"]);
@@ -32,17 +38,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "File type not allowed." }, { status: 400 });
     }
 
-    // In production, upload to Supabase Storage or S3
-    // For now, store file metadata
     const buffer = Buffer.from(await file.arrayBuffer());
-    const base64 = buffer.toString("base64");
-    const dataUrl = `data:${file.type};base64,${base64}`;
+    const ext = file.name.split(".").pop() || "bin";
+    const safeName = sanitizeFileName(file.name.replace(/\.[^.]+$/, ""));
+    const path = `${auth.user.id}/${Date.now()}_${randomBytes(8).toString("hex")}_${safeName}.${ext}`;
+
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from(BUCKET)
+      .upload(path, buffer, { contentType: file.type, upsert: false });
+
+    if (uploadError) {
+      console.error("[UPLOAD] Supabase Storage error:", uploadError.message);
+      return NextResponse.json({ success: false, message: "Upload failed." }, { status: 500 });
+    }
+
+    const { data: urlData } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path);
+    const fileUrl = urlData.publicUrl;
 
     const uploaded = await prisma.uploadedFile.create({
       data: {
         userId: auth.user.id,
         fileName: file.name,
-        fileUrl: dataUrl,
+        fileUrl,
         fileSize: file.size,
         mimeType: file.type,
       },

@@ -98,25 +98,23 @@ export async function GET(req: NextRequest) {
   const where: any = { isDeleted: false };
 
   if (type === "today") {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const end = new Date();
-    end.setHours(23, 59, 59, 999);
+    const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
+    const pktNow = new Date(Date.now() + PKT_OFFSET_MS);
+    const year = pktNow.getUTCFullYear();
+    const month = pktNow.getUTCMonth();
+    const day = pktNow.getUTCDate();
+    const start = new Date(Date.UTC(year, month, day, 0, 0, 0, 0) - PKT_OFFSET_MS);
+    const end = new Date(Date.UTC(year, month, day, 23, 59, 59, 999) - PKT_OFFSET_MS);
     where.createdAt = { gte: start, lte: end };
   }
 
   if (type === "month") {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(
-      now.getFullYear(),
-      now.getMonth() + 1,
-      0,
-      23,
-      59,
-      59,
-      999,
-    );
+    const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
+    const pktNow = new Date(Date.now() + PKT_OFFSET_MS);
+    const year = pktNow.getUTCFullYear();
+    const month = pktNow.getUTCMonth();
+    const start = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0) - PKT_OFFSET_MS);
+    const end = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999) - PKT_OFFSET_MS);
     where.createdAt = { gte: start, lte: end };
   }
 

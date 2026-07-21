@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { createToken, verifyTempToken } from "@/lib/auth";
-import { isOTPExpired } from "@/lib/email";
+import { isOTPExpired, safeStringCompare } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
 
 function getIP(req: NextRequest): string {
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     if (!user || !user.isActive) {
       return NextResponse.json({ success: false, message: "Account not found." }, { status: 401 });
     }
-    if (user.twoFactorSecret !== otp) {
+    if (!user.twoFactorSecret || !safeStringCompare(user.twoFactorSecret, otp)) {
       return NextResponse.json({ success: false, message: "Invalid code." }, { status: 401 });
     }
     if (user.lockedUntil && isOTPExpired(user.lockedUntil)) {

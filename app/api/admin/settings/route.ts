@@ -6,7 +6,10 @@ import { broadcastSettingsChange } from "@/lib/realtime";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = await requireAuth(req, ["ADMIN"]);
+  if ("error" in auth) return auth.error;
+
   try {
     let settings = await prisma.cRMSetting.findFirst();
     if (!settings) {

@@ -215,11 +215,14 @@ export async function PATCH(req: NextRequest) {
         break;
       }
       case "delete":
-        await prisma.lead.deleteMany({ where: { id: { in: ids } } });
+        await prisma.lead.updateMany({
+          where: { id: { in: ids }, isDeleted: false },
+          data: { isDeleted: true, deletedAt: new Date(), deletedById: auth.user.id },
+        });
         await logActivity({
           userId: auth.user.id,
           action: ActivityAction.LEAD_BULK_ACTION,
-          description: `Deleted ${ids.length} leads`,
+          description: `Soft-deleted ${ids.length} leads`,
           metadata: { ids, action: "delete" },
         });
         return NextResponse.json({ success: true, message: `${ids.length} leads deleted.` });

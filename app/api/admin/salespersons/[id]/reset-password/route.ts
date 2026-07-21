@@ -36,11 +36,17 @@ export async function PATCH(
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: { password: hashedPassword },
-      select: { id: true, name: true, email: true, phone: true, role: true, isActive: true },
-    });
+    const [updatedUser] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id },
+        data: { password: hashedPassword },
+        select: { id: true, name: true, email: true, phone: true, role: true, isActive: true },
+      }),
+      prisma.loginSession.updateMany({
+        where: { userId: id, isExpired: false },
+        data: { isExpired: true },
+      }),
+    ]);
 
     return NextResponse.json({
       success: true,

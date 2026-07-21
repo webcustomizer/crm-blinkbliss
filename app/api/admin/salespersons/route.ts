@@ -6,7 +6,10 @@ import { validatePasswordStrength } from "@/lib/password-validator";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = await requireAuth(req, ["ADMIN"]);
+  if ("error" in auth) return auth.error;
+
   try {
     const users = await prisma.user.findMany({
       where: { role: "SALESPERSON" },

@@ -108,15 +108,16 @@ export async function POST(req: Request) {
 
     const hashedPassword = await hashPassword(newPassword);
 
-    await prisma.user.update({
-      where: {
-        id: user.id,
-      },
-
-      data: {
-        password: hashedPassword,
-      },
-    });
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword },
+      }),
+      prisma.loginSession.updateMany({
+        where: { userId: user.id, isExpired: false },
+        data: { isExpired: true },
+      }),
+    ]);
 
     await logActivity({
       userId: user.id,

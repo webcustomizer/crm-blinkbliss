@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/hash";
 import { validatePasswordStrength } from "@/lib/password-validator";
+import { safeStringCompare } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     const storedToken = storedSecret.replace("reset:", "");
-    if (storedToken !== token) {
+    if (!safeStringCompare(storedToken, token)) {
       return NextResponse.json({ success: false, message: "Invalid reset token." }, { status: 400 });
     }
 
@@ -43,15 +44,21 @@ export async function POST(req: NextRequest) {
 
     // Reset password
     const hashed = await hashPassword(newPassword);
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        password: hashed,
-        twoFactorSecret: null,
-        lockedUntil: null,
-        failedLoginAttempts: 0,
-      },
-    });
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: {
+          password: hashed,
+          twoFactorSecret: null,
+          lockedUntil: null,
+          failedLoginAttempts: 0,
+        },
+      }),
+      prisma.loginSession.updateMany({
+        where: { userId: user.id, isExpired: false },
+        data: { isExpired: true },
+      }),
+    ]);
 
     return NextResponse.json({ success: true, message: "Password reset successfully. You can now login." });
   } catch {
