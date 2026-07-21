@@ -10,24 +10,18 @@ export async function GET(req: NextRequest) {
 
   const userId = auth.user.id;
 
-  let messageUnread = 0;
-  let groupUnread = 0;
-
-  try {
-    messageUnread = await prisma.message.count({
+  const [messageUnread, groupUnread] = await Promise.all([
+    prisma.message.count({
       where: { receiverId: userId, isRead: false },
-    });
-  } catch {}
-
-  try {
-    groupUnread = await prisma.groupMessage.count({
+    }).catch(() => 0),
+    prisma.groupMessage.count({
       where: {
         deleted: false,
         senderId: { not: userId },
         groupReads: { none: { userId } },
       },
-    });
-  } catch {}
+    }).catch(() => 0),
+  ]);
 
   return NextResponse.json({
     success: true,

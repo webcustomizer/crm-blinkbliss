@@ -15,7 +15,7 @@ export function subscribeToMessages(
   onNewMessage: MessageCallback,
 ): () => void {
   if (activeChannels.has(`msg:${channelKey}`)) {
-    activeChannels.get(`msg:${channelKey}`)!.unsubscribe();
+    supabase.removeChannel(activeChannels.get(`msg:${channelKey}`)!);
   }
   const channel = supabase.channel(`msg:${channelKey}`, {
     config: { broadcast: { self: true } },
@@ -27,7 +27,7 @@ export function subscribeToMessages(
     .subscribe();
   activeChannels.set(`msg:${channelKey}`, channel);
   return () => {
-    channel.unsubscribe();
+    supabase.removeChannel(channel);
     activeChannels.delete(`msg:${channelKey}`);
   };
 }
@@ -36,15 +36,22 @@ export function broadcastNewMessage(
   channelKey: string,
   messageData: any,
 ): Promise<void> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const channel = supabase.channel(`msg:${channelKey}`);
     let settled = false;
 
     const finish = () => {
       if (settled) return;
       settled = true;
-      setTimeout(() => channel.unsubscribe(), 500);
+      setTimeout(() => supabase.removeChannel(channel), 500);
       resolve();
+    };
+
+    const fail = (err?: any) => {
+      if (settled) return;
+      settled = true;
+      setTimeout(() => supabase.removeChannel(channel), 500);
+      reject(err || new Error("Broadcast failed"));
     };
 
     channel.subscribe((status) => {
@@ -56,9 +63,9 @@ export function broadcastNewMessage(
             payload: messageData,
           })
           .then(finish)
-          .catch(finish);
+          .catch(fail);
       } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-        finish();
+        fail(new Error(`Channel ${status}`));
       }
     });
 
@@ -72,7 +79,7 @@ export function subscribeToGroupMessages(
 ): () => void {
   const channelKey = "group:messages";
   if (activeChannels.has(channelKey)) {
-    activeChannels.get(channelKey)!.unsubscribe();
+    supabase.removeChannel(activeChannels.get(channelKey)!);
   }
   const channel = supabase.channel(channelKey, {
     config: { broadcast: { self: false } },
@@ -84,21 +91,28 @@ export function subscribeToGroupMessages(
     .subscribe();
   activeChannels.set(channelKey, channel);
   return () => {
-    channel.unsubscribe();
+    supabase.removeChannel(channel);
     activeChannels.delete(channelKey);
   };
 }
 
 export function broadcastNewGroupMessage(messageData: any): Promise<void> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const channel = supabase.channel("group:messages");
     let settled = false;
 
     const finish = () => {
       if (settled) return;
       settled = true;
-      setTimeout(() => channel.unsubscribe(), 500);
+      setTimeout(() => supabase.removeChannel(channel), 500);
       resolve();
+    };
+
+    const fail = (err?: any) => {
+      if (settled) return;
+      settled = true;
+      setTimeout(() => supabase.removeChannel(channel), 500);
+      reject(err || new Error("Group broadcast failed"));
     };
 
     channel.subscribe((status) => {
@@ -110,9 +124,9 @@ export function broadcastNewGroupMessage(messageData: any): Promise<void> {
             payload: messageData,
           })
           .then(finish)
-          .catch(finish);
+          .catch(fail);
       } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-        finish();
+        fail(new Error("Channel error"));
       }
     });
 
@@ -129,7 +143,7 @@ export function subscribeToTyping(
   sendTyping: (isTyping: boolean, name: string) => void;
 } {
   if (activeChannels.has(`typing:${channelKey}`)) {
-    activeChannels.get(`typing:${channelKey}`)!.unsubscribe();
+    supabase.removeChannel(activeChannels.get(`typing:${channelKey}`)!);
   }
   const channel = supabase.channel(`typing:${channelKey}`, {
     config: { broadcast: { self: false } },
@@ -142,7 +156,7 @@ export function subscribeToTyping(
   activeChannels.set(`typing:${channelKey}`, channel);
   return {
     unsubscribe: () => {
-      channel.unsubscribe();
+      supabase.removeChannel(channel);
       activeChannels.delete(`typing:${channelKey}`);
     },
     sendTyping: (isTyping: boolean, name: string) => {
@@ -168,7 +182,7 @@ export function broadcastSettingsChange(payload: {
   const finish = () => {
     if (settled) return;
     settled = true;
-    setTimeout(() => channel.unsubscribe(), 1000);
+    setTimeout(() => supabase.removeChannel(channel), 1000);
   };
   channel.subscribe((status) => {
     if (status === "SUBSCRIBED") {
@@ -195,7 +209,7 @@ export function subscribeToSettingsChanges(
 ): () => void {
   const channelKey = "crmsetting:changes";
   if (activeChannels.has(channelKey)) {
-    activeChannels.get(channelKey)!.unsubscribe();
+    supabase.removeChannel(activeChannels.get(channelKey)!);
   }
   const channel = supabase.channel(channelKey);
   // Postgres Changes (needs replication enabled on Supabase)
@@ -222,7 +236,7 @@ export function subscribeToSettingsChanges(
     .subscribe();
   activeChannels.set(channelKey, channel);
   return () => {
-    channel.unsubscribe();
+    supabase.removeChannel(channel);
     activeChannels.delete(channelKey);
   };
 }

@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     const where = {
+      isDeleted: false,
       status: "JOINED" as const,
 
       OR: search

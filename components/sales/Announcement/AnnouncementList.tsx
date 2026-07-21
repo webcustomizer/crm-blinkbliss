@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { Megaphone, Pin } from "lucide-react";
+import { Megaphone, Pin, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/lib/supabase";
@@ -167,61 +167,31 @@ export default function AnnouncementList() {
               }}
               className="
 sticky
-top-3
+top-0
 z-20
+flex
 cursor-pointer
-rounded-2xl
-border
-border-[#D4AF37]/40
+items-center
+gap-2
+border-l-4
+border-[#D4AF37]
 bg-[#18140A]/95
+py-2.5
+pl-3
+pr-2
 backdrop-blur-md
-p-3
-shadow-xl
 transition
 active:scale-[0.98]
 "
             >
-              <div className="flex items-center gap-3">
-                <div
-                  className="
-                    flex
-                    h-9
-                    w-9
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-xl
-                    bg-[#D4AF37]/20
-                    text-[#D4AF37]
-                    "
-                >
-                  <Pin size={17} />
-                </div>
+              <Pin size={14} className="shrink-0 text-[#D4AF37]" />
 
-                <div className="flex-1 min-w-0">
-                  <p
-                    className="
-                      text-xs
-                      font-semibold
-                      text-[#D4AF37]
-                      "
-                  >
-                    📌 Pinned Announcement
-                  </p>
+              <p className="min-w-0 flex-1 truncate text-sm text-white">
+                <span className="font-semibold text-[#D4AF37]">Pinned · </span>
+                {pinnedAnnouncement.title}
+              </p>
 
-                  <p
-                    className="
-                      truncate
-                      text-sm
-                      text-white
-                      "
-                  >
-                    {pinnedAnnouncement.title}
-                  </p>
-                </div>
-
-                <span className="text-xs text-gray-500">Tap</span>
-              </div>
+              <ChevronDown size={16} className="shrink-0 text-gray-500" />
             </div>
           )}
 
@@ -237,10 +207,12 @@ active:scale-[0.98]
                 }
               }}
               className={`
-                rounded-3xl
-                p-5
+                rounded-2xl
+                p-4
                 shadow-lg
                 transition
+                sm:rounded-3xl
+                sm:p-5
 
                 ${
                   announcement.isPinned
@@ -250,17 +222,19 @@ active:scale-[0.98]
 
                 `}
             >
-              <div className="flex items-start gap-4">
-                <div className="flex flex-col items-center gap-1">
+              {/* TITLE ROW — icon sits only next to the title, not the
+                  whole card height, so the message/footer below can use
+                  the card's full width instead of staying indented. */}
+              <div className="flex items-center gap-2.5">
                 <div
                   className={`
                     flex
-                    h-11
-                    w-11
+                    h-8
+                    w-8
                     shrink-0
                     items-center
                     justify-center
-                    rounded-xl
+                    rounded-lg
 
                     ${
                       announcement.isPinned
@@ -271,55 +245,58 @@ active:scale-[0.98]
                     `}
                 >
                   {announcement.isPinned ? (
-                    <Pin size={22} />
+                    <Pin size={16} />
                   ) : (
-                    <Megaphone size={22} />
+                    <Megaphone size={16} />
                   )}
                 </div>
+
+                <h3
+                  className="
+                    min-w-0
+                    flex-1
+                    break-words
+                    text-base
+                    font-semibold
+                    text-white
+                    "
+                >
+                  {announcement.title}
+                </h3>
+
                 {!announcement.isRead && (
-                  <span className="mx-auto h-2 w-2 rounded-full bg-blue-500" />
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />
                 )}
-                </div>
+              </div>
 
-                <div className="flex-1">
-                  <h3
-                    className="
-                      text-base
-                      font-semibold
-                      text-white
-                      "
-                  >
-                    {announcement.title}
-                  </h3>
+              {/* MESSAGE + FOOTER — full card width, no icon-column indent */}
+              <p
+                className="
+                  mt-3
+                  whitespace-pre-wrap
+                  break-words
+                  text-sm
+                  leading-relaxed
+                  text-gray-300
+                  "
+              >
+                {announcement.message}
+              </p>
 
-                  <p
-                    className="
-                      mt-3
-                      whitespace-pre-wrap
-                      text-sm
-                      leading-relaxed
-                      text-gray-300
-                      "
-                  >
-                    {announcement.message}
-                  </p>
+              <div
+                className="
+                  mt-4
+                  flex
+                  justify-between
+                  text-xs
+                  text-gray-500
+                  "
+              >
+                <span>By {announcement.createdBy.name}</span>
 
-                  <div
-                    className="
-                      mt-4
-                      flex
-                      justify-between
-                      text-xs
-                      text-gray-500
-                      "
-                  >
-                    <span>By {announcement.createdBy.name}</span>
-
-                    <span>
-                      {formatDate(announcement.createdAt)}
-                    </span>
-                  </div>
-                </div>
+                <span>
+                  {formatDate(announcement.createdAt)}
+                </span>
               </div>
             </div>
           ))}

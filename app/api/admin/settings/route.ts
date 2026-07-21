@@ -38,25 +38,25 @@ export async function PATCH(req: NextRequest) {
     const updated = await prisma.cRMSetting.update({
       where: { id: settings.id },
       data: {
-        ...(body.firstFollowUpDays !== undefined && { firstFollowUpDays: body.firstFollowUpDays }),
-        ...(body.secondFollowUpDays !== undefined && { secondFollowUpDays: body.secondFollowUpDays }),
-        ...(body.thirdFollowUpDays !== undefined && { thirdFollowUpDays: body.thirdFollowUpDays }),
-        ...(body.maxFollowUps !== undefined && { maxFollowUps: body.maxFollowUps }),
-        ...(body.autoDeadEnabled !== undefined && { autoDeadEnabled: body.autoDeadEnabled }),
-        ...(body.deadAfterDays !== undefined && { deadAfterDays: body.deadAfterDays }),
-        ...(body.autoAssignEnabled !== undefined && { autoAssignEnabled: body.autoAssignEnabled }),
+        ...(body.firstFollowUpDays !== undefined && { firstFollowUpDays: Math.max(0, Math.floor(body.firstFollowUpDays)) }),
+        ...(body.secondFollowUpDays !== undefined && { secondFollowUpDays: Math.max(0, Math.floor(body.secondFollowUpDays)) }),
+        ...(body.thirdFollowUpDays !== undefined && { thirdFollowUpDays: Math.max(0, Math.floor(body.thirdFollowUpDays)) }),
+        ...(body.maxFollowUps !== undefined && { maxFollowUps: Math.max(1, Math.min(20, Math.floor(body.maxFollowUps))) }),
+        ...(body.autoDeadEnabled !== undefined && { autoDeadEnabled: !!body.autoDeadEnabled }),
+        ...(body.deadAfterDays !== undefined && { deadAfterDays: Math.max(1, Math.floor(body.deadAfterDays)) }),
+        ...(body.autoAssignEnabled !== undefined && { autoAssignEnabled: !!body.autoAssignEnabled }),
         // Group chat
-        ...(body.groupChatEnabled !== undefined && { groupChatEnabled: body.groupChatEnabled }),
-        ...(body.messageEnabled !== undefined && { messageEnabled: body.messageEnabled }),
+        ...(body.groupChatEnabled !== undefined && { groupChatEnabled: !!body.groupChatEnabled }),
+        ...(body.messageEnabled !== undefined && { messageEnabled: !!body.messageEnabled }),
         // Security
-        ...(body.twoFactorRequired !== undefined && { twoFactorRequired: body.twoFactorRequired }),
-        ...(body.passwordMinLength !== undefined && { passwordMinLength: body.passwordMinLength }),
-        ...(body.passwordRequireSpecial !== undefined && { passwordRequireSpecial: body.passwordRequireSpecial }),
-        ...(body.sessionMaxHours !== undefined && { sessionMaxHours: body.sessionMaxHours }),
-        ...(body.forgotPasswordEnabled !== undefined && { forgotPasswordEnabled: body.forgotPasswordEnabled }),
+        ...(body.twoFactorRequired !== undefined && { twoFactorRequired: !!body.twoFactorRequired }),
+        ...(body.passwordMinLength !== undefined && { passwordMinLength: Math.max(6, Math.min(32, Math.floor(body.passwordMinLength))) }),
+        ...(body.passwordRequireSpecial !== undefined && { passwordRequireSpecial: !!body.passwordRequireSpecial }),
+        ...(body.sessionMaxHours !== undefined && { sessionMaxHours: Math.max(1, Math.min(720, Math.floor(body.sessionMaxHours))) }),
+        ...(body.forgotPasswordEnabled !== undefined && { forgotPasswordEnabled: !!body.forgotPasswordEnabled }),
         // Backup
-        ...(body.autoBackupEnabled !== undefined && { autoBackupEnabled: body.autoBackupEnabled }),
-        ...(body.backupFrequencyDays !== undefined && { backupFrequencyDays: body.backupFrequencyDays }),
+        ...(body.autoBackupEnabled !== undefined && { autoBackupEnabled: !!body.autoBackupEnabled }),
+        ...(body.backupFrequencyDays !== undefined && { backupFrequencyDays: Math.max(1, Math.floor(body.backupFrequencyDays)) }),
       },
     });
 

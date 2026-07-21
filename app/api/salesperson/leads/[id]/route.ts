@@ -51,7 +51,7 @@ export async function GET(
     const lead = await prisma.lead.findFirst({
       where: {
         id,
-
+        isDeleted: false,
         assignedToId: user.id,
       },
 
@@ -174,6 +174,7 @@ export async function PATCH(
     const lead = await prisma.lead.findFirst({
       where: {
         id,
+        isDeleted: false,
         assignedToId: user.id,
       },
     });

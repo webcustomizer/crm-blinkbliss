@@ -31,13 +31,12 @@ export default function SalesMessagesPanel({
 }: {
   currentUserId: string;
 }) {
-  const { refetch } = useUnreadCounts();
+  const { messages: unreadMessages, refetch } = useUnreadCounts();
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMsg, setNewMsg] = useState("");
   const [loading, setLoading] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [showChat, setShowChat] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [mentionedLead, setMentionedLead] = useState<MentionLead | null>(null);
@@ -476,9 +475,9 @@ export default function SalesMessagesPanel({
           <h2 className="text-sm font-semibold text-[#D4AF37] flex items-center gap-2">
             <MessageSquare size={16} /> Admin Chat
           </h2>
-          {unreadCount > 0 && (
+          {unreadMessages > 0 && (
             <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
-              {unreadCount}
+              {unreadMessages}
             </span>
           )}
         </div>

@@ -78,6 +78,7 @@ export default function AdminActivityPage() {
 
   const stats = {
     total: activities.length,
+    note: "Showing last 100 entries",
 
     login: activities.filter((a) => a.action === "LOGIN").length,
 
@@ -129,7 +130,7 @@ text-sm
 text-zinc-400
 "
             >
-              Monitor every salesperson action live
+              Monitor every salesperson action live — {stats.note}
             </p>
           </div>
 

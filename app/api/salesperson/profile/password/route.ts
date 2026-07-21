@@ -18,7 +18,12 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   try {
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    await rateLimit(ip, "login");
+    if (!(await rateLimit(ip, "login"))) {
+      return NextResponse.json(
+        { message: "Too many requests. Please try again later." },
+        { status: 429 },
+      );
+    }
 
     const cookieStore = await cookies();
 

@@ -55,6 +55,7 @@ export async function POST() {
 
     const leads = await prisma.lead.findMany({
       where: {
+        isDeleted: false,
         status: {
           notIn: ["DEAD", "JOINED"],
         },

@@ -12,37 +12,27 @@ export async function GET(req: NextRequest) {
 
   const settings = await prisma.cRMSetting.findFirst();
 
-  let messageUnread = 0;
-  let groupUnread = 0;
-  let announcementUnread = 0;
-
-  try {
-    if (settings?.messageEnabled !== false) {
-      messageUnread = await prisma.message.count({
-        where: { receiverId: userId, isRead: false },
-      });
-    }
-  } catch {}
-
-  try {
-    if (settings?.groupChatEnabled !== false) {
-      groupUnread = await prisma.groupMessage.count({
-        where: {
-          deleted: false,
-          senderId: { not: userId },
-          groupReads: { none: { userId } },
-        },
-      });
-    }
-  } catch {}
-
-  try {
-    announcementUnread = await prisma.announcement.count({
+  const [messageUnread, groupUnread, announcementUnread] = await Promise.all([
+    settings?.messageEnabled !== false
+      ? prisma.message.count({
+          where: { receiverId: userId, isRead: false },
+        }).catch(() => 0)
+      : 0,
+    settings?.groupChatEnabled !== false
+      ? prisma.groupMessage.count({
+          where: {
+            deleted: false,
+            senderId: { not: userId },
+            groupReads: { none: { userId } },
+          },
+        }).catch(() => 0)
+      : 0,
+    prisma.announcement.count({
       where: {
         reads: { none: { userId } },
       },
-    });
-  } catch {}
+    }).catch(() => 0),
+  ]);
 
   return NextResponse.json({
     success: true,

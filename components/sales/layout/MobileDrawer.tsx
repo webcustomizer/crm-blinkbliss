@@ -35,7 +35,7 @@ export default function MobileDrawer({ open, onClose, user }: { open: boolean; o
           <div className="flex-1 p-4 space-y-1.5 overflow-y-auto">
             {items.map(item => {
               const Icon = item.icon;
-              const active = pathname === item.href;
+              const active = pathname === item.href || pathname.startsWith(item.href + "/");
               const badge = item.badgeKey ? unread[item.badgeKey] : 0;
               return (
                 <Link key={item.href} href={item.href} onClick={onClose}

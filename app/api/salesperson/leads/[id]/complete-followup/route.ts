@@ -123,6 +123,7 @@ export async function POST(
       prisma.lead.findFirst({
         where: {
           id,
+          isDeleted: false,
           assignedToId: user.id,
         },
         // Only what's actually read below — smaller round trip than

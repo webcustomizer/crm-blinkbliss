@@ -35,7 +35,7 @@ export async function PATCH(
       return NextResponse.json({ message: validation.errors[0] }, { status: 400 });
     }
 
-    const salesperson = await prisma.user.findUnique({ where: { id } });
+    const salesperson = await prisma.user.findUnique({ where: { id, role: "SALESPERSON" } });
     if (!salesperson) {
       return NextResponse.json({ message: "Salesperson not found." }, { status: 404 });
     }

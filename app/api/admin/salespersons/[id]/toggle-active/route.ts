@@ -9,7 +9,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if ("error" in auth) return auth.error;
   const { id } = await params;
   try {
-    const user = await prisma.user.findUnique({ where: { id } });
+    const user = await prisma.user.findUnique({ where: { id, role: "SALESPERSON" } });
     if (!user) return NextResponse.json({ success: false, message: "Not found." }, { status: 404 });
     const updated = await prisma.user.update({
       where: { id },

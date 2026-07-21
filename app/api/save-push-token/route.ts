@@ -1,18 +1,11 @@
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyToken } from "@/lib/auth";
+import { requireAuth } from "@/lib/require-auth";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("token")?.value;
-
-    if (!token) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const user = await verifyToken(token);
+    const auth = await requireAuth(req, ["ADMIN", "SALESPERSON"]);
+    if ("error" in auth) return auth.error;
 
     const body = await req.json();
     const { token: pushToken } = body;
@@ -31,10 +24,10 @@ export async function POST(req: Request) {
 
     if (existing) {
       // Token already saved — just make sure it's linked to the current user
-      if (existing.userId !== user.id) {
+      if (existing.userId !== auth.user.id) {
         await prisma.pushToken.update({
           where: { id: existing.id },
-          data: { userId: user.id },
+          data: { userId: auth.user.id },
         });
       }
 
@@ -46,7 +39,7 @@ export async function POST(req: Request) {
 
     await prisma.pushToken.create({
       data: {
-        userId: user.id,
+        userId: auth.user.id,
         token: pushToken,
       },
     });
@@ -56,8 +49,6 @@ export async function POST(req: Request) {
       message: "Push token saved successfully",
     });
   } catch (error) {
-
-
     return NextResponse.json(
       { message: "Something went wrong" },
       { status: 500 },

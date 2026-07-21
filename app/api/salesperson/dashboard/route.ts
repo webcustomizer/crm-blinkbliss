@@ -3,34 +3,13 @@ import { cookies } from "next/headers";
 
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
+import { getPKTDayBoundaryUTC } from "@/lib/format-date";
 
 export const dynamic = "force-dynamic";
 
 
 // Pakistan Standard Time = UTC+5 (no daylight saving)
 const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
-
-/**
- * Returns a UTC Date object that represents the start or end of a given
- * PKT calendar day, correctly converted back to UTC for DB comparisons.
- * This works correctly regardless of the server's system timezone
- * (fixes the local-vs-production UTC mismatch bug).
- */
-function getPKTDayBoundary(daysOffset: number, endOfDay: boolean): Date {
-  // Shift "now" into PKT wall-clock time
-  const pktNow = new Date(Date.now() + PKT_OFFSET_MS);
-
-  const year = pktNow.getUTCFullYear();
-  const month = pktNow.getUTCMonth();
-  const day = pktNow.getUTCDate() + daysOffset;
-
-  const boundaryInPKT = endOfDay
-    ? new Date(Date.UTC(year, month, day, 23, 59, 59, 999))
-    : new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
-
-  // Convert back to the real UTC instant for Prisma to query against
-  return new Date(boundaryInPKT.getTime() - PKT_OFFSET_MS);
-}
 
 export async function GET() {
   try {
@@ -51,13 +30,13 @@ export async function GET() {
     const salespersonId = user.id;
 
     // Today Start (00:00:00 PKT, converted to correct UTC instant)
-    const todayStart = getPKTDayBoundary(0, false);
+    const todayStart = getPKTDayBoundaryUTC(0, false);
 
     // Today End (23:59:59.999 PKT, converted to correct UTC instant)
-    const todayEnd = getPKTDayBoundary(0, true);
+    const todayEnd = getPKTDayBoundaryUTC(0, true);
 
     // Upcoming after 2 days (23:59:59.999 PKT, 2 days from now)
-    const twoDaysLater = getPKTDayBoundary(2, true);
+    const twoDaysLater = getPKTDayBoundaryUTC(2, true);
 
     const [
       totalLeads,

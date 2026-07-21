@@ -7,21 +7,9 @@ import { logActivity } from "@/lib/activity";
 import { ActivityAction } from "@/app/generated/prisma/client";
 import { checkLeadCompletion } from "@/lib/lead-completion";
 import { withRateLimit } from "@/lib/api-rate-limit";
+import { getPKTDayBoundaryUTC } from "@/lib/format-date";
 
 const GOOGLE_SHEET_WEBHOOK = process.env.GOOGLE_SHEET_WEBHOOK;
-
-const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
-
-function getPKTDayBoundary(daysOffset: number, endOfDay: boolean) {
-  const pktNow = new Date(Date.now() + PKT_OFFSET_MS);
-  const year = pktNow.getUTCFullYear();
-  const month = pktNow.getUTCMonth();
-  const day = pktNow.getUTCDate() + daysOffset;
-  const boundaryInPKT = endOfDay
-    ? new Date(Date.UTC(year, month, day, 23, 59, 59, 999))
-    : new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
-  return new Date(boundaryInPKT.getTime() - PKT_OFFSET_MS);
-}
 
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req, ["ADMIN"]);
@@ -58,12 +46,12 @@ export async function GET(req: NextRequest) {
       } else if (filter === "UNASSIGNED") {
         where.assignedToId = null;
       } else if (filter === "TODAY_FOLLOW_UP") {
-        const start = getPKTDayBoundary(0, false);
-        const end = getPKTDayBoundary(0, true);
+        const start = getPKTDayBoundaryUTC(0, false);
+        const end = getPKTDayBoundaryUTC(0, true);
         where.nextFollowUp = { gte: start, lte: end };
         where.status = { notIn: ["JOINED", "DEAD"] };
       } else if (filter === "OVERDUE_FOLLOW_UP") {
-        const todayStart = getPKTDayBoundary(0, false);
+        const todayStart = getPKTDayBoundaryUTC(0, false);
         where.nextFollowUp = { lt: todayStart };
         where.status = { notIn: ["JOINED", "DEAD"] };
       } else {
@@ -231,7 +219,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     await prisma.lead.updateMany({
-      where: { id: { in: ids } },
+      where: { id: { in: ids }, isDeleted: false },
       data: updateData,
     });
 

@@ -8,7 +8,7 @@ import { ActivityAction } from "@/app/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
 
-const VALID_STATUSES = ["NEW", "CALLED", "TRAINING_ATTENDED", "SEAT_RESERVED", "JOINED", "DEAD"];
+const VALID_STATUSES = ["NEW", "CALLED", "TRAINING_ATTENDED", "SEAT_RESERVED", "NEED_MORE_FOLLOW_UP", "JOINED", "DEAD"];
 
 export async function PATCH(
   req: Request,
@@ -54,6 +54,7 @@ export async function PATCH(
     const lead = await prisma.lead.findFirst({
       where: {
         id,
+        isDeleted: false,
         assignedToId: user.id,
       },
       // Only what's read below — status/name/phone for the diff and

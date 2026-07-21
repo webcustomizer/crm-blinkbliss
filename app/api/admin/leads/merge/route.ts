@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
       prisma.statusHistory.updateMany({ where: { leadId: sourceId }, data: { leadId: targetId } }),
       prisma.activityLog.updateMany({ where: { leadId: sourceId }, data: { leadId: targetId } }),
       prisma.message.updateMany({ where: { leadId: sourceId }, data: { leadId: targetId } }),
+      prisma.groupMessage.updateMany({ where: { leadId: sourceId }, data: { leadId: targetId } }),
       prisma.lead.update({
         where: { id: sourceId },
         data: { mergedIntoId: targetId, isDeleted: true, deletedAt: new Date(), deletedById: auth.user.id },

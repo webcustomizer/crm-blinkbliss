@@ -1,27 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/require-auth";
-
-const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
-
-function getPKTDayBoundary(daysOffset: number, endOfDay: boolean) {
-  const pktNow = new Date(Date.now() + PKT_OFFSET_MS);
-  const year = pktNow.getUTCFullYear();
-  const month = pktNow.getUTCMonth();
-  const day = pktNow.getUTCDate() + daysOffset;
-  const boundaryInPKT = endOfDay
-    ? new Date(Date.UTC(year, month, day, 23, 59, 59, 999))
-    : new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
-  return new Date(boundaryInPKT.getTime() - PKT_OFFSET_MS);
-}
+import { getPKTDayBoundaryUTC } from "@/lib/format-date";
 
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req, ["ADMIN"]);
   if ("error" in auth) return auth.error;
 
   try {
-    const todayStart = getPKTDayBoundary(0, false);
-    const todayEnd = getPKTDayBoundary(0, true);
+    const todayStart = getPKTDayBoundaryUTC(0, false);
+    const todayEnd = getPKTDayBoundaryUTC(0, true);
     const whereActive = { isDeleted: false };
 
     const [

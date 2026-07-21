@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
@@ -13,7 +14,7 @@ export default async function SalespersonProfilePage() {
   const token = cookieStore.get("token")?.value;
 
   if (!token) {
-    return null;
+    redirect("/login");
   }
 
   const user = await verifyToken(token);
@@ -35,7 +36,7 @@ export default async function SalespersonProfilePage() {
   });
 
   if (!profile) {
-    return null;
+    redirect("/login");
   }
 
   const formattedProfile = {

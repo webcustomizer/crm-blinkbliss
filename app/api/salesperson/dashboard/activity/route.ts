@@ -48,6 +48,7 @@ export async function GET() {
         },
 
         lead: {
+          isDeleted: false,
           assignedToId: user.id,
         },
       },
