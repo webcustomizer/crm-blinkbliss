@@ -104,36 +104,17 @@ export default function AnnouncementList() {
     }
   }
 
-  const readSetRef = useRef<Set<string>>(new Set());
-
+  // Opening this page counts as having seen everything currently loaded —
+  // same pattern as Group Chat / Messages ("mark all on page open"), instead
+  // of relying on scroll-into-view detection which needs a card to reach
+  // 60% visibility to count. That threshold can never be met on a small
+  // screen (e.g. the mobile app) when an announcement's text is taller than
+  // the viewport, so long announcements were never marked read.
   useEffect(() => {
     if (announcements.length === 0) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visibleIds: string[] = [];
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const id = entry.target.getAttribute("data-announcement-id");
-            if (id && !readSetRef.current.has(id)) {
-              readSetRef.current.add(id);
-              visibleIds.push(id);
-            }
-          }
-        });
-        if (visibleIds.length > 0) markAsRead(visibleIds);
-      },
-      { threshold: 0.6 },
-    );
-
-    const timer = setTimeout(() => {
-      document.querySelectorAll("[data-announcement-id]").forEach((el) => observer.observe(el));
-    }, 300);
-
-    return () => {
-      clearTimeout(timer);
-      observer.disconnect();
-    };
+    const unreadIds = announcements.filter((a) => !a.isRead).map((a) => a.id);
+    if (unreadIds.length > 0) markAsRead(unreadIds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [announcements.length]);
 
   if (loading) {

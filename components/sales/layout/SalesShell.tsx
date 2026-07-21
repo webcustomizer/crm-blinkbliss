@@ -38,7 +38,7 @@ export default function SalesShell({ children, user }: SalesShellProps) {
 
   return (
     <SalesSettingsProvider>
-      <UnreadProvider>
+      <UnreadProvider userId={user?.id}>
         <div className="flex h-screen overflow-hidden bg-[#111111] text-white">
           <div className="flex min-w-0 flex-1">
             <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 lg:border-r lg:border-[#D4AF37]/20 lg:bg-[#161616]">
