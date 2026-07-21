@@ -189,19 +189,3 @@ export async function PATCH(req: NextRequest) {
     );
   }
 }
-
-export async function DELETE(req: NextRequest) {
-  const auth = await requireAuth(req, ["SALESPERSON"]);
-  if ("error" in auth) return auth.error;
-
-  try {
-    await prisma.groupReadReceipt.deleteMany({});
-    await prisma.groupMessage.deleteMany({ where: { deleted: false } });
-    return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json(
-      { success: false, message: "Failed to delete messages." },
-      { status: 500 },
-    );
-  }
-}

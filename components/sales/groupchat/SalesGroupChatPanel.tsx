@@ -11,7 +11,6 @@ import {
   ShieldAlert,
   Paperclip,
   ChevronUp,
-  Trash2,
 } from "lucide-react";
 import type { GroupChatMessage, MentionLead } from "@/types/lead";
 import { useUnreadCounts } from "@/hooks/useUnreadCounts";
@@ -296,24 +295,6 @@ export default function SalesGroupChatPanel({
     inputRef.current?.focus();
   }
 
-  async function deleteAllMessages() {
-    if (!confirm("Delete all group chat messages? This cannot be undone.")) return;
-    try {
-      const r = await fetch("/api/salesperson/group-chat", {
-        method: "DELETE",
-      });
-      const j = await r.json();
-      if (j.success) {
-        setMessages([]);
-        toast.success("All messages cleared.");
-      } else {
-        toast.error(j.message);
-      }
-    } catch {
-      toast.error("Failed to clear messages.");
-    }
-  }
-
   async function sendMessage() {
     if (!newMsg.trim()) return;
     const content = newMsg.trim();
@@ -491,13 +472,6 @@ export default function SalesGroupChatPanel({
             {users.length} members
           </p>
         </div>
-        <button
-          onClick={deleteAllMessages}
-          title="Clear all messages"
-          className="ml-auto shrink-0 rounded-lg border border-white/10 p-2 text-white/30 transition hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-400"
-        >
-          <Trash2 size={15} />
-        </button>
       </div>
       <div
         ref={scrollContainerRef}
