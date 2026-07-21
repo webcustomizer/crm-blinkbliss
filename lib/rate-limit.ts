@@ -6,59 +6,64 @@ const LOGIN_MAX = 5;
 const FORM_MAX = 8;
 const API_MAX = 60;
 
-let redis: Redis | null = null;
-let loginLimiter: Ratelimit | null = null;
-let formLimiter: Ratelimit | null = null;
-let apiLimiter: Ratelimit | null = null;
+let _redis: Redis | null = null;
+let _loginLimiter: Ratelimit | null = null;
+let _formLimiter: Ratelimit | null = null;
+let _apiLimiter: Ratelimit | null = null;
+let _initialized = false;
 
-if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-  redis = new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN,
-  });
+function ensureUpstash() {
+  if (_initialized) return;
+  _initialized = true;
 
-  loginLimiter = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(LOGIN_MAX, "60 s"),
-    analytics: true,
-    prefix: "rl:login",
-  });
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-  formLimiter = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(FORM_MAX, "60 s"),
-    analytics: true,
-    prefix: "rl:form",
-  });
+  if (url && token && url.startsWith("https://")) {
+    _redis = new Redis({ url, token });
 
-  apiLimiter = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(API_MAX, "60 s"),
-    analytics: true,
-    prefix: "rl:api",
-  });
+    _loginLimiter = new Ratelimit({
+      redis: _redis,
+      limiter: Ratelimit.slidingWindow(LOGIN_MAX, "60 s"),
+      analytics: true,
+      prefix: "rl:login",
+    });
+
+    _formLimiter = new Ratelimit({
+      redis: _redis,
+      limiter: Ratelimit.slidingWindow(FORM_MAX, "60 s"),
+      analytics: true,
+      prefix: "rl:form",
+    });
+
+    _apiLimiter = new Ratelimit({
+      redis: _redis,
+      limiter: Ratelimit.slidingWindow(API_MAX, "60 s"),
+      analytics: true,
+      prefix: "rl:api",
+    });
+  }
 }
 
-// Fallback: in-memory for local dev when Upstash is not configured
 const fallbackStore = new Map<string, { count: number; resetAt: number }>();
 
-if (!redis) {
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, entry] of fallbackStore.entries()) {
-      if (now > entry.resetAt) fallbackStore.delete(key);
-    }
-  }, 300_000);
-}
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of fallbackStore.entries()) {
+    if (now > entry.resetAt) fallbackStore.delete(key);
+  }
+}, 300_000);
 
 export async function rateLimit(ip: string, type: "api" | "login" | "form" = "api"): Promise<boolean> {
-  if (redis) {
-    const limiter = type === "login" ? loginLimiter! : type === "form" ? formLimiter! : apiLimiter!;
+  ensureUpstash();
+
+  if (_redis) {
+    const limiter = type === "login" ? _loginLimiter! : type === "form" ? _formLimiter! : _apiLimiter!;
     const { success } = await limiter.limit(ip);
     return success;
   }
 
-  // Fallback to in-memory (local dev only)
+  // Fallback to in-memory (local dev / build time)
   const now = Date.now();
   const key = `${type}:${ip}`;
   const entry = fallbackStore.get(key);
