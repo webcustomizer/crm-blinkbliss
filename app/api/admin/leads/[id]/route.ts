@@ -32,24 +32,6 @@ export async function GET(
       return NextResponse.json({ success: false, message: "Lead not found" }, { status: 404 });
     }
 
-    // Auto dead check
-    const setting = await prisma.cRMSetting.findFirst();
-    if (
-      setting &&
-      lead.followUpCount >= (setting.maxFollowUps ?? 3) &&
-      lead.nextFollowUp &&
-      new Date() >= new Date(lead.nextFollowUp) &&
-      lead.status !== "JOINED" &&
-      lead.status !== "DEAD"
-    ) {
-      await prisma.lead.update({
-        where: { id: lead.id },
-        data: { status: "DEAD", nextFollowUp: null },
-      });
-      lead.status = "DEAD";
-      lead.nextFollowUp = null;
-    }
-
     return NextResponse.json({ success: true, data: lead });
   } catch (error) {
     return NextResponse.json({ success: false, message: "Failed to get lead" }, { status: 500 });

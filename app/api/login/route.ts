@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
       const otp = generateOTP();
       await prisma.user.update({
         where: { id: user.id },
-        data: { twoFactorSecret: otp, lockedUntil: new Date(Date.now() + 300000) },
+        data: { twoFactorSecret: otp, otpExpiresAt: new Date() },
       });
 
       const html = getOTPEmailTemplate(otp, user.name);

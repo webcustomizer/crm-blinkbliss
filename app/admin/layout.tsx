@@ -1,10 +1,12 @@
 import { ReactNode } from "react";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Sidebar from "@/components/admin/Sidebar";
 import Topbar from "@/components/admin/Topbar";
 import { Toaster } from "@/components/ui/sonner";
 import { SidebarProvider } from "@/components/admin/sidebar-context";
-import { getActiveSession } from "@/lib/get-active-session";
+import { verifyToken } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +15,25 @@ export default async function AdminLayout({
 }: {
   children: ReactNode;
 }) {
-  const session = await getActiveSession();
-  if (!session || session.role !== "ADMIN") {
-    redirect("/api/force-logout");
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+  if (!token) redirect("/login");
+
+  let user;
+  try {
+    user = await verifyToken(token);
+  } catch {
+    redirect("/login");
   }
+
+  if (user.role !== "ADMIN") redirect("/login");
+
+  const activeSession = await prisma.loginSession.findFirst({
+    where: { token, isExpired: false },
+    select: { id: true, user: { select: { isActive: true } } },
+  });
+
+  if (!activeSession || !activeSession.user?.isActive) redirect("/api/force-logout");
 
   return (
     <SidebarProvider>

@@ -1,8 +1,7 @@
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
-import { verifyToken } from "@/lib/auth";
+import { requireAuth } from "@/lib/require-auth";
 
 import { comparePassword, hashPassword } from "@/lib/hash";
 import { validatePasswordStrength } from "@/lib/password-validator";
@@ -15,7 +14,7 @@ import { logActivity } from "@/lib/activity";
 export const dynamic = "force-dynamic";
 
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     if (!(await rateLimit(ip, "login"))) {
@@ -25,33 +24,9 @@ export async function POST(req: Request) {
       );
     }
 
-    const cookieStore = await cookies();
-
-    const token = cookieStore.get("token")?.value;
-
-    if (!token) {
-      return NextResponse.json(
-        {
-          message: "Unauthorized",
-        },
-        {
-          status: 401,
-        },
-      );
-    }
-
-    const user = await verifyToken(token);
-
-    if (user.role !== "SALESPERSON") {
-      return NextResponse.json(
-        {
-          message: "Access denied",
-        },
-        {
-          status: 403,
-        },
-      );
-    }
+    const auth = await requireAuth(req, ["SALESPERSON"]);
+    if ("error" in auth) return auth.error;
+    const user = auth.user;
 
     const body = await req.json();
 

@@ -79,6 +79,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAuth(req, ["ADMIN", "SALESPERSON"]);
+  if ("error" in auth) return auth.error;
+
   const limited = await withRateLimit(req, "form");
   if (limited) return limited;
 

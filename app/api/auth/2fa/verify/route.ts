@@ -37,14 +37,14 @@ export async function POST(req: NextRequest) {
     if (!user.twoFactorSecret || !safeStringCompare(user.twoFactorSecret, otp)) {
       return NextResponse.json({ success: false, message: "Invalid code." }, { status: 401 });
     }
-    if (user.lockedUntil && isOTPExpired(user.lockedUntil)) {
+    if (user.otpExpiresAt && isOTPExpired(user.otpExpiresAt)) {
       return NextResponse.json({ success: false, message: "Code expired." }, { status: 410 });
     }
     const settings = await prisma.cRMSetting.findFirst();
     const hours = settings?.sessionMaxHours || 168;
     await prisma.user.update({
       where: { id: user.id },
-      data: { twoFactorSecret: null, lockedUntil: null, failedLoginAttempts: 0 },
+      data: { twoFactorSecret: null, otpExpiresAt: null, failedLoginAttempts: 0 },
     });
     const token = await createToken({ id: user.id, name: user.name, email: user.email, role: user.role });
     const ck = await cookies();

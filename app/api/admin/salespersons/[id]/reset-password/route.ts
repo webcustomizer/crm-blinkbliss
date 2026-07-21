@@ -15,7 +15,12 @@ export async function PATCH(
   if ("error" in auth) return auth.error;
 
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  await rateLimit(ip, "api");
+  if (!(await rateLimit(ip, "api"))) {
+    return NextResponse.json(
+      { message: "Too many requests. Please try again later." },
+      { status: 429 },
+    );
+  }
 
   try {
     const { id } = await context.params;

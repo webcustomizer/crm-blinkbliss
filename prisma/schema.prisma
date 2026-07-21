@@ -65,6 +65,7 @@ model User {
   responseTimeAvg Int @default(0)
   twoFactorEnabled Boolean @default(false)
   twoFactorSecret String?
+  otpExpiresAt DateTime?
   failedLoginAttempts Int @default(0)
   lockedUntil DateTime?
   sessionTimeoutMinutes Int @default(10080)

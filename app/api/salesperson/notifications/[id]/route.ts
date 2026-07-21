@@ -1,34 +1,20 @@
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
-import { verifyToken } from "@/lib/auth";
+import { requireAuth } from "@/lib/require-auth";
 
 export const dynamic = "force-dynamic";
 
 export async function PATCH(
-  req: Request,
+  req: NextRequest,
   context: {
     params: Promise<{ id: string }>;
   },
 ) {
   try {
-    const cookieStore = await cookies();
-
-    const token = cookieStore.get("token")?.value;
-
-    if (!token) {
-      return NextResponse.json(
-        {
-          message: "Unauthorized",
-        },
-        {
-          status: 401,
-        },
-      );
-    }
-
-    const user = await verifyToken(token);
+    const auth = await requireAuth(req, ["SALESPERSON"]);
+    if ("error" in auth) return auth.error;
+    const user = auth.user;
 
     const { id } = await context.params;
 
@@ -93,20 +79,16 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  req: Request,
+  req: NextRequest,
   context: {
     params: Promise<{ id: string }>;
   },
 ) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("token")?.value;
+    const auth = await requireAuth(req, ["SALESPERSON"]);
+    if ("error" in auth) return auth.error;
+    const user = auth.user;
 
-    if (!token) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const user = await verifyToken(token);
     const { id } = await context.params;
 
     const notification = await prisma.notification.findUnique({ where: { id } });

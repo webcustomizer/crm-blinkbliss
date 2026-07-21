@@ -52,6 +52,8 @@ export default function MyLeads({ userId }: { userId?: string }) {
   const [search, setSearch] = useState("");
 
   const [status, setStatus] = useState("");
+  const searchRef = useRef("");
+  const statusRef = useRef("");
 
   // LeadDetails sirf leadId use karta hai (khud fetch kar leta hai),
   // isliye poora Lead object rakhne ki zaroorat nahi — sirf id.
@@ -59,11 +61,17 @@ export default function MyLeads({ userId }: { userId?: string }) {
   // chahe woh lead current page/filter mein listed ho ya na ho.
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
-  // Keep ref in sync with state so realtime callback always reads the
-  // latest page number (avoids stale closure capture).
+  // Keep refs in sync with state so realtime callback always reads the
+  // latest values (avoids stale closure capture).
   useEffect(() => {
     currentPageRef.current = currentPage;
   }, [currentPage]);
+  useEffect(() => {
+    searchRef.current = search;
+  }, [search]);
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
   async function getLeads(showLoader = false, page = currentPage) {
     try {
@@ -73,12 +81,12 @@ export default function MyLeads({ userId }: { userId?: string }) {
 
       const params = new URLSearchParams();
 
-      if (search) {
-        params.append("search", search);
+      if (searchRef.current) {
+        params.append("search", searchRef.current);
       }
 
-      if (status) {
-        params.append("status", status);
+      if (statusRef.current) {
+        params.append("status", statusRef.current);
       }
 
       params.append("page", String(page));
