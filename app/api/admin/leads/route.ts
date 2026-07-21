@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/require-auth";
 import { logActivity } from "@/lib/activity";
 import { ActivityAction } from "@/app/generated/prisma/client";
 import { checkLeadCompletion } from "@/lib/lead-completion";
+import { withRateLimit } from "@/lib/api-rate-limit";
 
 const GOOGLE_SHEET_WEBHOOK = process.env.GOOGLE_SHEET_WEBHOOK;
 
@@ -90,6 +91,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const limited = withRateLimit(req, "form");
+  if (limited) return limited;
+
   try {
     const body = await req.json();
     const {

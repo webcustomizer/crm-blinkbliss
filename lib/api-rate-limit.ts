@@ -3,7 +3,7 @@ import { rateLimit } from "@/lib/rate-limit";
 
 export function withRateLimit(
   req: NextRequest,
-  type: "api" | "login" = "api",
+  type: "api" | "login" | "form" = "api",
 ): NextResponse | null {
   const forwarded = req.headers.get("x-forwarded-for") || "";
   const ip = forwarded.split(",")[0]?.trim() || "unknown";

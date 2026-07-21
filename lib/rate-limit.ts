@@ -5,8 +5,9 @@ const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 const WINDOW_MS = 60_000; // 1 minute
 const MAX_REQUESTS = 60; // 60 requests per minute per IP
 const LOGIN_MAX = 5; // 5 login attempts per minute per IP
+const FORM_MAX = 8; // 8 public form submissions per minute per IP
 
-export function rateLimit(ip: string, type: "api" | "login" = "api"): boolean {
+export function rateLimit(ip: string, type: "api" | "login" | "form" = "api"): boolean {
   const now = Date.now();
   const key = `${type}:${ip}`;
   const entry = rateLimitStore.get(key);
@@ -16,7 +17,7 @@ export function rateLimit(ip: string, type: "api" | "login" = "api"): boolean {
     return true;
   }
 
-  const max = type === "login" ? LOGIN_MAX : MAX_REQUESTS;
+  const max = type === "login" ? LOGIN_MAX : type === "form" ? FORM_MAX : MAX_REQUESTS;
   if (entry.count >= max) return false;
 
   entry.count++;
