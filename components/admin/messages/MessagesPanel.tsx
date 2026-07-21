@@ -153,7 +153,7 @@ export default function MessagesPanel() {
   useEffect(() => {
     if (messages.length === 0 || !selectedUser) return;
     const unread = messages
-      .filter((m) => !m.isRead && m.senderId !== selectedUser.id)
+      .filter((m) => !m.isRead && m.senderId === selectedUser.id)
       .map((m) => m.id);
     if (unread.length === 0) return;
     fetch("/api/admin/messages", {

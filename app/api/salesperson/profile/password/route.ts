@@ -6,6 +6,7 @@ import { verifyToken } from "@/lib/auth";
 
 import { comparePassword, hashPassword } from "@/lib/hash";
 import { validatePasswordStrength } from "@/lib/password-validator";
+import { rateLimit } from "@/lib/rate-limit";
 
 import { ActivityAction } from "@/app/generated/prisma/client";
 
@@ -16,6 +17,9 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    await rateLimit(ip, "login");
+
     const cookieStore = await cookies();
 
     const token = cookieStore.get("token")?.value;

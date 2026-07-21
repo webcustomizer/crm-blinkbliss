@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcrypt";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/require-auth";
+import { hashPassword } from "@/lib/hash";
 import { validatePasswordStrength } from "@/lib/password-validator";
+import { rateLimit } from "@/lib/rate-limit";
+import { logActivity } from "@/lib/activity";
+import { ActivityAction } from "@/app/generated/prisma/client";
 
 export async function PATCH(
   req: NextRequest,
@@ -10,6 +13,9 @@ export async function PATCH(
 ) {
   const auth = await requireAuth(req, ["ADMIN"]);
   if ("error" in auth) return auth.error;
+
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  await rateLimit(ip, "api");
 
   try {
     const { id } = await context.params;
@@ -34,7 +40,7 @@ export async function PATCH(
       return NextResponse.json({ message: "Salesperson not found." }, { status: 404 });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = await hashPassword(password);
 
     const [updatedUser] = await prisma.$transaction([
       prisma.user.update({
@@ -48,15 +54,21 @@ export async function PATCH(
       }),
     ]);
 
+    await logActivity({
+      userId: auth.user.id,
+      action: ActivityAction.PASSWORD_CHANGED,
+      description: `${auth.user.name} reset password for ${salesperson.name}`,
+      metadata: { type: "ADMIN_PASSWORD_RESET", targetUserId: id },
+    });
+
     return NextResponse.json({
       success: true,
       message: "Password reset successfully.",
       user: updatedUser,
     });
-  } catch (error: any) {
-    console.error("RESET PASSWORD ERROR:", error);
+  } catch {
     return NextResponse.json(
-      { message: error.message || "Something went wrong." },
+      { message: "Something went wrong." },
       { status: 500 },
     );
   }
