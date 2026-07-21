@@ -62,7 +62,7 @@ const fetcher = (url: string) => fetch(url, { cache: "no-store" }).then((r) => r
 export default function ReportsPage() {
   const [dateFilter, setDateFilter] = useState("ALL");
 
-  const { data: reportData, isLoading } = useSWR<ReportData & { success: boolean }>(
+  const { data: reportData, isLoading } = useSWR<{ success: boolean; data: ReportData }>(
     `/api/admin/reports/stats?filter=${dateFilter}`,
     fetcher,
     {
@@ -72,7 +72,7 @@ export default function ReportsPage() {
     },
   );
 
-  const { data: funnelData } = useSWR<FunnelData & { success: boolean }>(
+  const { data: funnelData } = useSWR<{ success: boolean; data: FunnelData }>(
     "/api/admin/analytics/funnel",
     fetcher,
     {
@@ -82,7 +82,7 @@ export default function ReportsPage() {
     },
   );
 
-  const funnel = funnelData?.success ? funnelData : null;
+  const funnel = funnelData?.success ? funnelData.data : null;
 
   if (isLoading || !reportData?.success) {
     return (
@@ -93,7 +93,7 @@ export default function ReportsPage() {
     );
   }
 
-  const d = reportData;
+  const d = reportData.data;
 
   const statusLeads = Object.entries(d.statusCounts).map(([status, count]) => ({
     status,

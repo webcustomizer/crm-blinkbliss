@@ -80,7 +80,7 @@ export default function NotificationBell({ userId }: Props) {
         );
       }
     } catch (error) {
-
+      console.error("Failed to fetch notifications:", error);
     } finally {
       isFetchingRef.current = false;
     }
@@ -103,9 +103,9 @@ export default function NotificationBell({ userId }: Props) {
         });
 
         await fetchNotifications();
-    } catch (error) {
-      console.error("Failed to mark all as read:", error);
-    }
+      } catch (error) {
+        console.error("Failed to mark notification as read:", error);
+      }
     },
     [fetchNotifications],
   );
@@ -120,7 +120,7 @@ export default function NotificationBell({ userId }: Props) {
           method: "PATCH",
         })
           .then(() => fetchNotifications())
-          .catch(() => {});
+          .catch((e) => console.error("Failed to mark notification as read:", e));
       }
 
       setOpen(false);
