@@ -1,6 +1,13 @@
 "use client";
 
-import { MapPin, Target, Users, GraduationCap, Clock } from "lucide-react";
+import {
+  MapPin,
+  Target,
+  Users,
+  GraduationCap,
+  Clock,
+  TrendingUp,
+} from "lucide-react";
 import { Playfair_Display } from "next/font/google";
 
 const displayFont = Playfair_Display({
@@ -55,90 +62,83 @@ export default function LeadAnalytics({ stats }: Props) {
     { name: "Not Interested", value: stats.trainingInterest["notInterested"] || 0 },
   ];
 
-  const sections = [
-    {
-      title: "Top Cities",
-      caption: "Where your leads are coming from",
-      icon: <MapPin size={17} strokeWidth={1.75} />,
-      data: cities,
-      ranked: true,
-    },
-    {
-      title: "Top Purposes",
-      caption: "What leads are here for",
-      icon: <Target size={17} strokeWidth={1.75} />,
-      data: purposes,
-      ranked: true,
-    },
-    {
-      title: "Age Groups",
-      caption: "Audience by generation",
-      icon: <Users size={17} strokeWidth={1.75} />,
-      data: ageGroupsArr.map((item) => [item.name, item.value] as const),
-      ranked: false,
-    },
-    {
-      title: "Best Time to Reach",
-      caption: "When leads prefer to be contacted",
-      icon: <Clock size={17} strokeWidth={1.75} />,
-      data: timeSlotsArr.map((item) => [item.name, item.value] as const),
-      ranked: false,
-    },
-    {
-      title: "Training Interest",
-      caption: "Appetite for enrolment",
-      icon: <GraduationCap size={17} strokeWidth={1.75} />,
-      data: trainingArr.map((item) => [item.name, item.value] as const),
-      ranked: false,
-    },
-  ];
+const sections = [
+  {
+    title: "Top Cities",
+    caption: "Where your leads are coming from",
+    icon: <MapPin size={18} />,
+    color: "text-blue-400",
+    bg: "bg-blue-500/10",
+    border: "border-blue-500/20",
+    progress: "bg-blue-500",
+    data: cities,
+    ranked: true,
+  },
+  {
+    title: "Top Purposes",
+    caption: "What leads are here for",
+    icon: <Target size={18} />,
+    color: "text-yellow-400",
+    bg: "bg-yellow-500/10",
+    border: "border-yellow-500/20",
+    progress: "bg-yellow-500",
+    data: purposes,
+    ranked: true,
+  },
+  {
+    title: "Age Groups",
+    caption: "Audience by generation",
+    icon: <Users size={18} />,
+    color: "text-cyan-400",
+    bg: "bg-cyan-500/10",
+    border: "border-cyan-500/20",
+    progress: "bg-cyan-500",
+    data: ageGroupsArr.map((item) => [item.name, item.value] as const),
+    ranked: false,
+  },
+  {
+    title: "Best Time to Reach",
+    caption: "When leads prefer to be contacted",
+    icon: <Clock size={18} />,
+    color: "text-purple-400",
+    bg: "bg-purple-500/10",
+    border: "border-purple-500/20",
+    progress: "bg-purple-500",
+    data: timeSlotsArr.map((item) => [item.name, item.value] as const),
+    ranked: false,
+  },
+  {
+    title: "Training Interest",
+    caption: "Appetite for enrolment",
+    icon: <GraduationCap size={18} />,
+    color: "text-emerald-400",
+    bg: "bg-emerald-500/10",
+    border: "border-emerald-500/20",
+    progress: "bg-emerald-500",
+    data: trainingArr.map((item) => [item.name, item.value] as const),
+    ranked: false,
+  },
+];
 
   return (
-    <section
-      className={`
-      ${displayFont.variable}
-      relative
-      overflow-hidden
-      rounded-[28px]
-      border
-      border-[#D4AF37]/20
-      bg-gradient-to-b
-      from-[#161616]
-      to-[#0c0c0c]
-      p-7
-      shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)]
-      sm:p-9
-      `}
-    >
-      {/* ambient gold glow, purely atmospheric */}
-      <div
-        aria-hidden
-        className="
-        pointer-events-none
-        absolute
-        -right-24
-        -top-24
-        h-72
-        w-72
-        rounded-full
-        bg-[#D4AF37]/10
-        blur-3xl
-        "
-      />
+   <section
+  className={`
+  ${displayFont.variable}
+  relative
+  overflow-hidden
+  rounded-3xl
+  border
+  border-white/10
+  bg-transparent
+  p-7
+  sm:p-9
+  `}
+>
+   
 
       <div className="relative mb-8 flex items-end justify-between gap-4">
         <div>
-          <span
-            className="
-            text-[11px]
-            font-semibold
-            uppercase
-            tracking-[0.2em]
-            text-[#D4AF37]/70
-            "
-          >
-            Insights
-          </span>
+          
 
           <h2
             style={{ fontFamily: "var(--font-display)" }}
@@ -147,7 +147,7 @@ export default function LeadAnalytics({ stats }: Props) {
             text-[26px]
             font-semibold
             leading-tight
-            text-white
+            text-[#D4AF37]
             sm:text-[28px]
             "
           >
@@ -188,37 +188,42 @@ export default function LeadAnalytics({ stats }: Props) {
       <div className="relative grid grid-cols-1 gap-5 md:grid-cols-2">
         {sections.map((section) => (
           <div
-            key={section.title}
-            className="
-            group
-            rounded-2xl
-            border
-            border-white/[0.08]
-            bg-white/[0.02]
-            p-6
-            transition-colors
-            duration-300
-            hover:border-[#D4AF37]/25
-            hover:bg-white/[0.035]
-            "
-          >
+  key={section.title}
+  className={`
+    group
+    rounded-2xl
+    border
+    ${section.border}
+    bg-[#111111]
+    p-6
+    transition-all
+    duration-300
+    hover:-translate-y-1
+    hover:shadow-xl
+    hover:shadow-black/40
+    hover:${section.border.replace("border-", "border-")}
+  `}
+>
             <div className="flex items-center gap-3">
               <div
-                className="
-                flex
-                h-9
-                w-9
-                items-center
-                justify-center
-                rounded-full
-                border
-                border-[#D4AF37]/25
-                bg-[#D4AF37]/[0.08]
-                text-[#D4AF37]
-                "
-              >
-                {section.icon}
-              </div>
+  className={`
+    flex
+    h-10
+    w-10
+    items-center
+    justify-center
+    rounded-xl
+    border
+    ${section.border}
+    ${section.bg}
+    ${section.color}
+    transition-all
+    duration-300
+    group-hover:scale-110
+  `}
+>
+  {section.icon}
+</div>
 
               <div>
                 <h3 className="text-[15px] font-semibold text-white">
@@ -272,19 +277,16 @@ export default function LeadAnalytics({ stats }: Props) {
                       "
                     >
                       <div
-                        className="
-                        h-full
-                        rounded-full
-                        bg-gradient-to-r
-                        from-[#8a6d1f]
-                        via-[#D4AF37]
-                        to-[#f1d888]
-                        transition-[width]
-                        duration-700
-                        ease-out
-                        "
-                        style={{ width: `${pct}%` }}
-                      />
+  className={`
+    h-full
+    rounded-full
+    ${section.progress}
+    transition-[width]
+    duration-700
+    ease-out
+  `}
+  style={{ width: `${pct}%` }}
+/>
                     </div>
                   </div>
                 );

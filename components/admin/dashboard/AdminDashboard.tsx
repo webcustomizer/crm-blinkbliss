@@ -60,7 +60,7 @@ export default function AdminDashboard() {
 
       <FollowUpCards stats={stats} />
 
-      <FunnelChart />
+     
 
       <LeadAnalytics stats={stats} />
     </div>

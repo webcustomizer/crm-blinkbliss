@@ -259,9 +259,9 @@ export default function LeadsTable({ salespersons }: Props) {
   }
 
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-[#D4AF37]/20 bg-gradient-to-br from-[#171717] to-[#0d0d0d] shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)]">
+    <div className="relative overflow-hidden rounded-[28px] border border-[#D4AF37]/20 ">
       <LeadDetailsPanel onUpdate={() => getLeads()} />
-      <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-[#D4AF37]/10 blur-[90px]" />
+      <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full" />
 
       {/* TOP FILTER BAR */}
       <div className="relative flex flex-col gap-4 border-b border-white/10 p-4 sm:p-6">

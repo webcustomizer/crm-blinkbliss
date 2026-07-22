@@ -20,175 +20,121 @@ export default function StatsCards({ stats }: Props) {
       title: "Today's Follow Ups",
       value: stats.todayFollowUps,
       filter: "TODAY_FOLLOW_UP",
-      icon: <CalendarClock size={24} />,
+      icon: <CalendarClock size={22} />,
       description: "Leads scheduled for today",
+      color: "text-cyan-400",
+      bg: "bg-cyan-500/10",
+      border: "border-cyan-500/20",
     },
-
     {
       title: "Overdue Follow Ups",
       value: stats.overdueFollowUps,
       filter: "OVERDUE_FOLLOW_UP",
-      icon: <AlertTriangle size={24} />,
-      description: "Pending follow up leads",
+      icon: <AlertTriangle size={22} />,
+      description: "Pending follow-up leads",
+      color: "text-red-400",
+      bg: "bg-red-500/10",
+      border: "border-red-500/20",
     },
   ];
 
   return (
-    <div
-      className="
-    grid
-    grid-cols-1
-    gap-5
-    sm:grid-cols-2
-    "
-    >
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
       {cards.map((card) => (
         <div
           key={card.title}
-          onClick={() => router.push(`/admin/leads?filter=${card.filter}`)}
+          onClick={() =>
+            router.push(`/admin/leads?filter=${card.filter}`)
+          }
           className="
-        group
-        cursor-pointer
-        relative
-        overflow-hidden
-        rounded-3xl
-        border
-        border-white/10
-        bg-gradient-to-br
-        from-[#181818]
-        to-[#0c0c0c]
-        p-6
-        shadow-xl
-        "
-        >
-          {/* Gold Glow */}
-          <div
-            className="
-          absolute
-          -right-12
-          -top-12
-          h-32
-          w-32
-          rounded-full
-          bg-[#D4AF37]/10
-          blur-3xl
-          "
-          />
-
-          <div
-            className="
-          relative
-          flex
-          items-start
-          justify-between
-          "
-          >
-            <div
-              className="
-            flex
-            h-14
-            w-14
-            items-center
-            justify-center
+            cursor-pointer
             rounded-2xl
             border
-            border-[#D4AF37]/20
-            bg-[#D4AF37]/10
-            text-[#D4AF37]
-            "
+            border-[#D4AF37]/15
+            bg-[#111111]
+            p-5
+            transition-all
+            duration-300
+            hover:-translate-y-1
+            hover:border-[#D4AF37]/40
+            hover:bg-[#161616]
+            hover:shadow-lg
+            hover:shadow-[#D4AF37]/5
+          "
+        >
+
+          {/* Header */}
+          <div className="flex items-center justify-between">
+
+            <div
+              className={`
+                flex
+                h-12
+                w-12
+                items-center
+                justify-center
+                rounded-xl
+                border
+                ${card.border}
+                ${card.bg}
+                ${card.color}
+              `}
             >
               {card.icon}
             </div>
 
-            <div
-              className="
-            text-right
-            "
-            >
-              <p
-                className="
-              text-4xl
-              font-bold
-              tracking-tight
-              text-white
-              "
+
+            <div className="text-right">
+              <h2
+                className={`
+                  text-4xl
+                  font-bold
+                  tracking-tight
+                  ${card.color}
+                `}
               >
                 {card.value}
-              </p>
+              </h2>
 
               <p
                 className="
-              mt-1
-              text-xs
-              uppercase
-              tracking-widest
-              text-gray-500
-              "
+                  mt-1
+                  text-[11px]
+                  font-semibold
+                  uppercase
+                  tracking-[0.15em]
+                  text-gray-400
+                "
               >
                 Leads
               </p>
             </div>
+
           </div>
 
-          <div
-            className="
-          relative
-          mt-7
-          "
-          >
-            <h3
-              className="
-            text-xl
-            font-semibold
-            text-[#D4AF37]
-            "
-            >
+
+          {/* Content */}
+          <div className="mt-5">
+
+            <h3 className="text-sm font-semibold text-white">
               {card.title}
             </h3>
 
             <p
               className="
-            mt-2
-            text-sm
-            leading-relaxed
-            text-gray-400
-            "
+                mt-2
+                text-xs
+                font-medium
+                uppercase
+                tracking-wider
+                text-gray-400
+              "
             >
               {card.description}
             </p>
+
           </div>
 
-          <div
-            className="
-          relative
-          mt-6
-          h-px
-          w-full
-          bg-white/10
-          "
-          />
-
-          <div
-            className="
-          relative
-          mt-4
-          flex
-          items-center
-          justify-between
-          text-xs
-          text-gray-500
-          "
-          >
-            <span>Click to view leads</span>
-
-            <span
-              className="
-            text-[#D4AF37]
-            "
-            >
-              →
-            </span>
-          </div>
         </div>
       ))}
     </div>
