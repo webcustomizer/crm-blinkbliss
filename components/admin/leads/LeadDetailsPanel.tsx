@@ -6,7 +6,7 @@ import type { LeadDetails } from "@/types/lead";
 import {
   X, User, Phone, Mail, MapPin, Briefcase, Target,
   Calendar, Clock, CheckCircle, History, MessageSquareText,
-  ArrowRight, Activity, Zap,
+  ArrowRight, Activity, Zap,AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 import EditLeadDialog from "@/components/admin/leads/EditLeadDialog";
@@ -111,13 +111,30 @@ export default function LeadDetailsPanel({ onUpdate }: Props) {
         ref={panelRef}
         className={`fixed right-0 top-0 z-50 flex h-full w-full sm:w-1/2 sm:min-w-[480px] flex-col border-l border-[#D4AF37]/20 bg-gradient-to-br from-[#171717] to-[#0d0d0d] shadow-[−20px_0_60px_-20px_rgba(0,0,0,0.7)] transition-transform duration-300 ease-in-out ${visible ? "translate-x-0" : "translate-x-full"}`}
       >
-        {/* Header */}
+               {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-          <h2 className="text-lg font-semibold text-white">Lead Details</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-white">Lead Details</h2>
+            {lead && (
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                lead.completion === "COMPLETE"
+                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                  : "bg-red-500/15 text-red-400 border border-red-500/30"
+              }`}>
+                {lead.completion === "COMPLETE" ? (
+                  <CheckCircle size={12} />
+                ) : (
+                  <AlertTriangle size={12} />
+                )}
+                {lead.completion}
+              </span>
+            )}
+          </div>
           <button onClick={close} className="rounded-lg p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white">
             <X size={20} />
           </button>
         </div>
+
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-5 scrollbar-thin scrollbar-thumb-[#D4AF37] scrollbar-track-[#111111]">

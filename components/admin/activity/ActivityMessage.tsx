@@ -1,3 +1,4 @@
+import Link from "next/link"; // 👈 CHANGED — Yeh line add karo (pehle nahi thi)
 import ActivityIcon from "./ActivityIcon";
 import { formatDate, formatDateTime, formatTime, formatDateShort } from "@/lib/format-date";
 
@@ -16,11 +17,13 @@ export interface ActivityMessageProps {
     };
 
     lead?: {
+      id: string;        // 👈 CHANGED — Yeh line add karo
       name: string | null;
       phone: string;
     } | null;
 
     metadata?: {
+      leadId?: string;   // 👈 CHANGED — Yeh line add karo (fallback)
       leadName?: string;
       oldStatus?: string;
       newStatus?: string;
@@ -38,6 +41,15 @@ export default function ActivityMessage({
   activity,
   isLast,
 }: ActivityMessageProps) {
+
+  // 👈 CHANGED — Yeh do lines add karo
+  const leadId = activity.lead?.id || activity.metadata?.leadId || null;
+  const leadLabel =
+    activity.lead?.name ||
+    activity.metadata?.leadName ||
+    activity.lead?.phone ||
+    null;
+
   return (
     <div
       className="
@@ -130,7 +142,8 @@ export default function ActivityMessage({
 
         {/* LEAD */}
 
-        {(activity.lead || activity.metadata?.leadName) && (
+        {/* 👈 CHANGED — Pura LEAD block replace karo. Pehle yeh plain span tha */}
+        {leadLabel && (
           <p
             className="
             mt-1
@@ -142,13 +155,29 @@ export default function ActivityMessage({
             "
           >
             <span>Lead</span>
-            <span className="font-medium text-white/80">
-              {activity.lead?.name ||
-                activity.metadata?.leadName ||
-                activity.lead?.phone}
-            </span>
+            {leadId ? (
+              <Link
+                 href={`/admin/activity?leadId=${leadId}`} 
+                className="
+                  font-medium
+                  text-white/80
+                  underline
+                  decoration-white/20
+                  underline-offset-2
+                  transition-colors
+                  hover:text-[#D4AF37]
+                  hover:decoration-[#D4AF37]/60
+                "
+              >
+                {leadLabel}
+              </Link>
+            ) : (
+              <span className="font-medium text-white/80">{leadLabel}</span>
+            )}
           </p>
         )}
+
+        {/* Baqi ka code (status change, followup, remark, lead update details) — WAHI REHNE DO, NO CHANGE */}
 
         {/* STATUS CHANGE DETAILS */}
 
