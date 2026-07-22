@@ -7,7 +7,7 @@ import { verifyToken, TokenPayload } from "@/lib/auth";
  * detecting force-terminated sessions within the TTL window.
  */
 const sessionCache = new Map<string, { valid: boolean; ts: number }>();
-const SESSION_CACHE_TTL = 15_000; // 15 seconds
+const SESSION_CACHE_TTL = 60_000; // 60 seconds
 
 /**
  * Confirms a token's LoginSession row still exists and isn't expired

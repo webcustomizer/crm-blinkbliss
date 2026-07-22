@@ -480,8 +480,16 @@ export default function SalesGroupChatPanel({
         className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3"
       >
         {loading ? (
-          <div className="flex justify-center py-8">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#D4AF37]/20 border-t-[#D4AF37]" />
+          <div className="space-y-3 p-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-start gap-3">
+                <div className="h-8 w-8 animate-pulse rounded-full bg-white/[0.06]" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-20 animate-pulse rounded-lg bg-white/[0.06]" />
+                  <div className="h-4 w-48 animate-pulse rounded-lg bg-white/[0.04]" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : messages.length === 0 ? (
           <div className="flex items-start justify-center pt-8 h-full text-white/40 text-center">
