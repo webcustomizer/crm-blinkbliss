@@ -86,23 +86,30 @@ export async function POST(req: NextRequest) {
             changedById: user.id,
           },
         });
-
-        await logActivity({
-          userId: user.id,
-
-          leadId: lead.id,
-
-          action: ActivityAction.STATUS_CHANGED,
-
-          description: `${user.name} moved expired lead to DEAD`,
-
-          metadata: {
-            reason: "Follow up expired",
-            leadName: lead.name || lead.phone,
-          },
-        });
       }
     });
+
+    // Activity logging happens AFTER the transaction commits — using a
+    // separate DB connection inside the transaction risks pool exhaustion
+    // and creates phantom audit entries on rollback.
+    for (const lead of leads) {
+      logActivity({
+        userId: user.id,
+
+        leadId: lead.id,
+
+        action: ActivityAction.STATUS_CHANGED,
+
+        description: `${user.name} moved expired lead to DEAD`,
+
+        metadata: {
+          reason: "Follow up expired",
+          leadName: lead.name || lead.phone,
+        },
+      }).catch((error) => {
+        console.error("Activity log error (process-dead):", error);
+      });
+    }
 
     return NextResponse.json({
       success: true,

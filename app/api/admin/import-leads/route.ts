@@ -1,20 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyToken } from "@/lib/auth";
+import { requireAuth } from "@/lib/require-auth";
 import { checkLeadCompletion } from "@/lib/lead-completion";
-
-async function getAdminId(req: NextRequest): Promise<string | null> {
-  const token = req.cookies.get("token")?.value;
-  if (!token) return null;
-
-  try {
-    const user = await verifyToken(token);
-    if (!user || user.role !== "ADMIN") return null;
-    return user.id ?? null;
-  } catch {
-    return null;
-  }
-}
+import { getNextAutoAssignee } from "@/lib/auto-assign";
 
 type CSVRow = {
   Name?: string;
@@ -44,10 +32,8 @@ function parseAge(value?: string): number | null {
 }
 
 export async function POST(req: NextRequest) {
-  const adminId = await getAdminId(req);
-  if (!adminId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAuth(req, ["ADMIN"]);
+  if ("error" in auth) return auth.error;
 
   try {
     const body = await req.json();
@@ -145,41 +131,20 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Step 4: Auto-assign logic (round-robin) — agar setting ON hai
+    // Step 4: Auto-assign logic — use shared transactional round-robin
     const settings = await prisma.cRMSetting.findFirst();
     const autoAssignEnabled = settings?.autoAssignEnabled ?? false;
 
     let assignedToIds: (string | null)[] = newRows.map(() => null);
     let autoAssignedCount = 0;
-    let newLastAssignedId: string | null =
-      settings?.lastAssignedSalespersonId ?? null;
 
     if (autoAssignEnabled) {
-      const salespeople = await prisma.user.findMany({
-        where: { role: "SALESPERSON", isActive: true },
-        select: { id: true },
-        orderBy: { name: "asc" },
-      });
-
-      if (salespeople.length > 0) {
-        // Pichli baar jahan chhoda tha, wahan se next salesperson se continue karein
-        let startIndex = 0;
-        if (settings?.lastAssignedSalespersonId) {
-          const lastIndex = salespeople.findIndex(
-            (sp) => sp.id === settings.lastAssignedSalespersonId,
-          );
-          startIndex =
-            lastIndex === -1 ? 0 : (lastIndex + 1) % salespeople.length;
+      for (let i = 0; i < newRows.length; i++) {
+        const assigneeId = await getNextAutoAssignee();
+        if (assigneeId) {
+          assignedToIds[i] = assigneeId;
+          autoAssignedCount++;
         }
-
-        assignedToIds = newRows.map((_, i) => {
-          const salesperson =
-            salespeople[(startIndex + i) % salespeople.length];
-          return salesperson.id;
-        });
-
-        autoAssignedCount = assignedToIds.filter(Boolean).length;
-        newLastAssignedId = assignedToIds[assignedToIds.length - 1];
       }
     }
 
@@ -217,14 +182,6 @@ export async function POST(req: NextRequest) {
       data: dataToInsert,
       skipDuplicates: true,
     });
-
-    // Step 6: Round-robin pointer save karein taake agli import se continue ho
-    if (autoAssignEnabled && settings && newLastAssignedId) {
-      await prisma.cRMSetting.update({
-        where: { id: settings.id },
-        data: { lastAssignedSalespersonId: newLastAssignedId },
-      });
-    }
 
     return NextResponse.json({
       totalRows: rows.length,

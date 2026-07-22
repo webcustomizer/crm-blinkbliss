@@ -143,6 +143,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Validate receiver exists and has an appropriate role
+    const receiver = await prisma.user.findUnique({
+      where: { id: receiverId },
+      select: { id: true, role: true, isActive: true },
+    });
+    if (!receiver || !receiver.isActive || receiver.role !== "ADMIN") {
+      return NextResponse.json(
+        { success: false, message: "Invalid receiver." },
+        { status: 400 },
+      );
+    }
+
     const message = await prisma.message.create({
       data: {
         senderId: auth.user.id,

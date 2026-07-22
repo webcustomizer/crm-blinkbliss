@@ -79,8 +79,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  // Allow unauthenticated public lead-capture submissions (proxy.ts bypasses
+  // auth for this route). Authenticated callers are also accepted.
   const auth = await requireAuth(req, ["ADMIN", "SALESPERSON"]);
-  if ("error" in auth) return auth.error;
+  const isPublic = "error" in auth;
 
   const limited = await withRateLimit(req, "form");
   if (limited) return limited;
@@ -103,7 +105,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "A lead with this phone number already exists." }, { status: 409 });
     }
 
-    // Check for exact phone match OR email match (both phone AND email are unique)
     if (email && email.trim() !== "") {
       const existingEmail = await prisma.lead.findFirst({
         where: { email: email.trim(), isDeleted: false },

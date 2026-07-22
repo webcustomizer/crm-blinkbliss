@@ -73,10 +73,19 @@ export async function GET(req: NextRequest) {
         take: 4,
       }),
 
-      prisma.lead.aggregate({
-        where: whereActive,
-        _count: { age: true },
-      }),
+      // Age bucketing via SQL — avoids fetching every lead row into Node
+      prisma.$queryRaw<{ bucket: string; count: bigint }[]>`
+        SELECT
+          CASE
+            WHEN age >= 18 AND age <= 25 THEN '18-25'
+            WHEN age >= 26 AND age <= 35 THEN '26-35'
+            WHEN age > 35 THEN '36+'
+          END as bucket,
+          COUNT(*) as count
+        FROM "Lead"
+        WHERE "isDeleted" = false AND age IS NOT NULL
+        GROUP BY bucket
+      `,
 
       prisma.lead.groupBy({
         by: ["bestTimeToReach"],
@@ -96,17 +105,11 @@ export async function GET(req: NextRequest) {
       statusMap[s.status] = s._count;
     }
 
-    const ageBuckets = { "18-25": 0, "26-35": 0, "36+": 0 };
-
-    const allLeads = await prisma.lead.findMany({
-      where: whereActive,
-      select: { age: true },
-    });
-    for (const l of allLeads) {
-      if (l.age == null) continue;
-      if (l.age >= 18 && l.age <= 25) ageBuckets["18-25"]++;
-      else if (l.age >= 26 && l.age <= 35) ageBuckets["26-35"]++;
-      else if (l.age > 35) ageBuckets["36+"]++;
+    const ageBuckets: Record<string, number> = { "18-25": 0, "26-35": 0, "36+": 0 };
+    for (const row of ageGroups) {
+      if (row.bucket && row.bucket in ageBuckets) {
+        ageBuckets[row.bucket] = Number(row.count);
+      }
     }
 
     const timeSlotMap: Record<string, number> = {};

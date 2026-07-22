@@ -4,10 +4,22 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/require-auth";
 import { logActivity } from "@/lib/activity";
 import { ActivityAction } from "@/app/generated/prisma/client";
+import { updateResponseTimeAverage } from "@/lib/update-response-time";
 
 export const dynamic = "force-dynamic";
 
 const VALID_STATUSES = ["NEW", "CALLED", "TRAINING_ATTENDED", "SEAT_RESERVED", "NEED_MORE_FOLLOW_UP", "JOINED", "DEAD"];
+
+// Pakistan Standard Time = UTC+5 (no daylight saving)
+const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
+
+function isFollowUpDuePKT(nextFollowUp: Date): boolean {
+  const followUpPKT = new Date(nextFollowUp.getTime() + PKT_OFFSET_MS);
+  const nowPKT = new Date(Date.now() + PKT_OFFSET_MS);
+  const followUpDateStr = followUpPKT.toISOString().split("T")[0];
+  const nowDateStr = nowPKT.toISOString().split("T")[0];
+  return followUpDateStr <= nowDateStr;
+}
 
 export async function PATCH(
   req: NextRequest,
@@ -32,14 +44,14 @@ export async function PATCH(
         isDeleted: false,
         assignedToId: user.id,
       },
-      // Only what's read below — status/name/phone for the diff and
-      // activity-log metadata — instead of pulling the whole row.
       select: {
         id: true,
         status: true,
         name: true,
         phone: true,
         firstResponseAt: true,
+        followUpCount: true,
+        nextFollowUp: true,
       },
     });
 
@@ -72,12 +84,18 @@ export async function PATCH(
       );
     }
 
+    // Enforce follow-up due-date lock: don't allow status changes before
+    // the scheduled follow-up date, same as complete-followup route.
+    // DEAD is always allowed (admin/system can mark dead anytime).
+    if (status !== "DEAD" && lead.nextFollowUp && !isFollowUpDuePKT(new Date(lead.nextFollowUp))) {
+      return NextResponse.json(
+        { message: "Follow up is not due yet. Please wait for the scheduled date." },
+        { status: 400 },
+      );
+    }
+
     const statusChanged = lead.status !== status;
 
-    // Only the lead update + status-history row need to be atomic with
-    // each other. The activity log is audit trail, not core state — it
-    // doesn't need to share a transaction with the state change, and it
-    // doesn't need to finish before the client gets a response.
     await prisma.$transaction(async (tx) => {
       await tx.lead.update({
         where: {
@@ -105,9 +123,6 @@ export async function PATCH(
       }
     });
 
-    // Fire-and-forget — runs after the transaction commits without the
-    // client waiting on it. Errors are logged rather than turning a
-    // successful status update into a 500.
     if (statusChanged) {
       logActivity({
         userId: user.id,
@@ -122,6 +137,10 @@ export async function PATCH(
       }).catch((error) => {
         console.error("Activity log error (status changed):", error);
       });
+    }
+
+    if (!lead.firstResponseAt) {
+      updateResponseTimeAverage(user.id).catch(() => {});
     }
 
     return NextResponse.json({

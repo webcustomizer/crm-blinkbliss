@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyToken } from "@/lib/auth";
+import { requireAuth } from "@/lib/require-auth";
 import * as XLSX from "xlsx";
 
 const EXPORT_LABELS: Record<string, string> = {
@@ -12,19 +12,6 @@ const EXPORT_LABELS: Record<string, string> = {
   salesperson: "Export by Salesperson",
   dateRange: "Export by Date Range",
 };
-
-async function getAdminId(req: NextRequest): Promise<string | null> {
-  const token = req.cookies.get("token")?.value;
-  if (!token) return null;
-
-  try {
-    const user = await verifyToken(token);
-    if (!user || user.role !== "ADMIN") return null;
-    return user.id ?? null;
-  } catch {
-    return null;
-  }
-}
 
 function generateXLSX(leads: any[]): Buffer {
   const rows = leads.map((lead) => ({
@@ -80,10 +67,9 @@ function generateXLSX(leads: any[]): Buffer {
 }
 
 export async function GET(req: NextRequest) {
-  const adminId = await getAdminId(req);
-  if (!adminId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAuth(req, ["ADMIN"]);
+  if ("error" in auth) return auth.error;
+  const adminId = auth.user.id;
 
   const { searchParams } = new URL(req.url);
 
@@ -125,9 +111,17 @@ export async function GET(req: NextRequest) {
     where.assignedToId = salespersonId;
 
   if (type === "dateRange" && dateFrom && dateTo) {
-    const end = new Date(dateTo);
-    end.setHours(23, 59, 59, 999);
-    where.createdAt = { gte: new Date(dateFrom), lte: end };
+    // Use PKT-aware end-of-day (23:59:59.999 PKT) so the full
+    // "to" date is included — naive `new Date(dateTo)` truncates
+    // at midnight UTC which is 5 hours before midnight PKT.
+    const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
+    const toDate = new Date(dateTo);
+    const pktToDate = new Date(toDate.getTime() + PKT_OFFSET_MS);
+    const year = pktToDate.getUTCFullYear();
+    const month = pktToDate.getUTCMonth();
+    const day = pktToDate.getUTCDate();
+    const endOfDayPKT = new Date(Date.UTC(year, month, day, 23, 59, 59, 999) - PKT_OFFSET_MS);
+    where.createdAt = { gte: new Date(dateFrom), lte: endOfDayPKT };
   }
 
   try {

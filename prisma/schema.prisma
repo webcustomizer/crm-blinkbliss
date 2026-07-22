@@ -131,7 +131,7 @@ model Lead {
 
   @@index([assignedToId])
   @@index([assignedToId, status])
-  @@unique([phone, isDeleted])
+  @@index([phone, isDeleted])
   @@index([email, isDeleted])
   @@index([nextFollowUp, status])
   @@index([source])

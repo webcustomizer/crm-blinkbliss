@@ -37,10 +37,24 @@ async function performForceLogout(req: NextRequest, token: string | null) {
 
 /**
  * GET handler — used by `redirect("/api/force-logout")` in layouts.
- * Layouts call this when the session is invalid/inactive; there's no
- * request body or origin to verify — just clear the cookie + DB session.
+ * Layouts call this when the session is invalid/inactive.
+ * CSRF protection: verify Origin/Referer to prevent cross-site forced logouts.
  */
 export async function GET(req: NextRequest) {
+  const origin = req.headers.get("origin") || "";
+  const referer = req.headers.get("referer") || "";
+  const host = req.headers.get("host") || "";
+
+  const isSameOrigin =
+    (origin && origin === `https://${host}`) ||
+    (origin && origin === `http://${host}`) ||
+    (referer && referer.startsWith(`https://${host}/`)) ||
+    (referer && referer.startsWith(`http://${host}/`));
+
+  if (!isSameOrigin) {
+    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+  }
+
   const token = req.cookies.get("token")?.value || null;
   return performForceLogout(req, token);
 }

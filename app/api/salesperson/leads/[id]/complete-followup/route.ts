@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/require-auth";
 export const dynamic = "force-dynamic";
 import { logActivity } from "@/lib/activity";
 import { ActivityAction } from "@/app/generated/prisma/client";
+import { updateResponseTimeAverage } from "@/lib/update-response-time";
 
 // Pakistan Standard Time = UTC+5 (no daylight saving)
 const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
@@ -294,6 +295,9 @@ export async function POST(
     // them. Errors are swallowed here (and should be surfaced via
     // whatever logging/monitoring logActivity itself already reports
     // to) rather than turning a successful follow-up into a 500.
+    if (!lead.firstResponseAt) {
+      updateResponseTimeAverage(user.id).catch(() => {});
+    }
     if (statusChanged) {
       logActivity({
         userId: user.id,

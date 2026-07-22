@@ -30,6 +30,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate reset token — store in twoFactorSecret (reused) + set expiry
+    // in otpExpiresAt (NOT lockedUntil — that field is for login lockout only;
+    // reusing it lets an attacker DoS any account by requesting a password reset).
     const resetToken = generateResetToken();
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
@@ -37,7 +39,7 @@ export async function POST(req: NextRequest) {
       where: { id: user.id },
       data: {
         twoFactorSecret: `reset:${resetToken}`,
-        lockedUntil: expiresAt,
+        otpExpiresAt: expiresAt,
       },
     });
 

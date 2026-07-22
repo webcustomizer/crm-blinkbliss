@@ -1,28 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma"; // apna prisma client ka path yahan confirm/adjust karein
-import { verifyToken } from "@/lib/auth";
-
-async function getAdminId(req: NextRequest): Promise<string | null> {
-  const token = req.cookies.get("token")?.value;
-  if (!token) return null;
-
-  try {
-    const user = await verifyToken(token);
-    if (!user || user.role !== "ADMIN") return null;
-
-    // ⚠️ Agar JWT payload mein id ka field naam "id" ke ilawa kuch aur hai
-    // (jaise "userId" ya "sub"), to yahan replace kar dein: user.userId ya user.sub
-    return user.id ?? null;
-  } catch {
-    return null;
-  }
-}
+import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/require-auth";
 
 export async function GET(req: NextRequest) {
-  const adminId = await getAdminId(req);
-  if (!adminId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAuth(req, ["ADMIN"]);
+  if ("error" in auth) return auth.error;
 
   try {
     const lastExport = await prisma.exportLog.findFirst({

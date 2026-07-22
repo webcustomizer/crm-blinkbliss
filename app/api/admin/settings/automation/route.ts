@@ -1,21 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyToken } from "@/lib/auth";
+import { requireAuth } from "@/lib/require-auth";
 
 export const dynamic = "force-dynamic";
-
-async function getAdminId(req: NextRequest): Promise<string | null> {
-  const token = req.cookies.get("token")?.value;
-  if (!token) return null;
-
-  try {
-    const user = await verifyToken(token);
-    if (!user || user.role !== "ADMIN") return null;
-    return user.id ?? null;
-  } catch {
-    return null;
-  }
-}
 
 // CRMSetting hamesha ek hi row hoti hai — agar exist nahi karti to create kar dein
 async function getOrCreateSettings() {
@@ -26,10 +13,8 @@ async function getOrCreateSettings() {
 }
 
 export async function GET(req: NextRequest) {
-  const adminId = await getAdminId(req);
-  if (!adminId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAuth(req, ["ADMIN"]);
+  if ("error" in auth) return auth.error;
 
   try {
     const settings = await getOrCreateSettings();
@@ -44,10 +29,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const adminId = await getAdminId(req);
-  if (!adminId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAuth(req, ["ADMIN"]);
+  if ("error" in auth) return auth.error;
 
   try {
     const body = await req.json();

@@ -37,8 +37,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Invalid reset token." }, { status: 400 });
     }
 
-    // Check expiry
-    if (user.lockedUntil && new Date() > new Date(user.lockedUntil)) {
+    // Check expiry (stored in otpExpiresAt, NOT lockedUntil — see forgot-password)
+    if (user.otpExpiresAt && new Date() > new Date(user.otpExpiresAt)) {
       return NextResponse.json({ success: false, message: "Reset link has expired. Please request a new one." }, { status: 410 });
     }
 
@@ -50,8 +50,9 @@ export async function POST(req: NextRequest) {
         data: {
           password: hashed,
           twoFactorSecret: null,
-          lockedUntil: null,
+          otpExpiresAt: null,
           failedLoginAttempts: 0,
+          lockedUntil: null,
         },
       }),
       prisma.loginSession.updateMany({
