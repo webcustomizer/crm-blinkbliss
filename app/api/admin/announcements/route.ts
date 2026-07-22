@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
 
     // ADD THIS:
     if (salespersons.length > 0) {
-      await Promise.all(
+      Promise.all(
         salespersons.map((salesperson) =>
           sendPushNotification({
             userId: salesperson.id,
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
             link: `/sales/announcements?announcementId=${announcement.id}`,
           }),
         ),
-      );
+      ).catch(() => {});
     }
 
     await logActivity({
@@ -102,16 +102,10 @@ export async function POST(req: NextRequest) {
       success: true,
       message: "Announcement published successfully.",
     });
-  } catch (error) {
-
-
+  } catch {
     return NextResponse.json(
-      {
-        message: "Something went wrong",
-      },
-      {
-        status: 500,
-      },
+      { success: false, message: "Something went wrong" },
+      { status: 500 },
     );
   }
 }
@@ -120,7 +114,6 @@ export async function GET(req: NextRequest) {
   try {
     const auth = await requireAuth(req, ["ADMIN"]);
     if ("error" in auth) return auth.error;
-    const user = auth.user;
 
     const announcements = await prisma.announcement.findMany({
       include: {
@@ -143,16 +136,10 @@ export async function GET(req: NextRequest) {
       success: true,
       data: announcements,
     });
-  } catch (error) {
-
-
+  } catch {
     return NextResponse.json(
-      {
-        message: "Something went wrong",
-      },
-      {
-        status: 500,
-      },
+      { success: false, message: "Something went wrong" },
+      { status: 500 },
     );
   }
 }

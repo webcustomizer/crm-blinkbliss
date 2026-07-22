@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, UserCog, UserRoundCheck,
   ChartColumn, Settings, LogOut, Activity, Megaphone,
-  X, MessageSquare, Shield,
+  X, MessageSquare, Shield, Trash2,
 } from "lucide-react";
 import { useSidebar } from "./sidebar-context";
 import { supabase } from "@/lib/supabase";
@@ -22,6 +22,7 @@ const menuItems = [
   { title: "Announcements", href: "/admin/announcements", icon: Megaphone },
   { title: "Group Chat", href: "/admin/group-chat", icon: MessageSquare, badgeKey: "groupChat" as const },
   { title: "Activity", href: "/admin/activity", icon: Activity },
+  { title: "Trash", href: "/admin/trash", icon: Trash2 },
   { title: "Sessions", href: "/admin/sessions", icon: Shield },
   { title: "Settings", href: "/admin/settings", icon: Settings },
 ];

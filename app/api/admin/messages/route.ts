@@ -214,6 +214,13 @@ export async function DELETE(req: NextRequest) {
   try {
     const { withUserId } = await req.json();
     if (withUserId) {
+      const target = await prisma.user.findUnique({ where: { id: withUserId }, select: { role: true } });
+      if (!target || target.role !== "SALESPERSON") {
+        return NextResponse.json(
+          { success: false, message: "Can only delete conversations with salespersons." },
+          { status: 403 },
+        );
+      }
       await prisma.message.deleteMany({
         where: {
           OR: [

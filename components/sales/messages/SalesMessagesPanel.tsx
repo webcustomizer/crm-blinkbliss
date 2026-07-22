@@ -169,12 +169,13 @@ export default function SalesMessagesPanel({
       const j = await r.json();
       if (j.success && j.data) {
         shouldAutoScrollRef.current = true;
+        initialLoadDoneRef.current = true;
         setMessages(j.data);
         setHasMore(Boolean(j.hasMore));
       }
     } catch (e) { console.error("Failed to load messages:", e); }
     setLoading(false);
-    initialLoadDoneRef.current = true;
+    if (!initialLoadDoneRef.current) initialLoadDoneRef.current = true;
     isFetchingRef.current = false;
   }, []);
 

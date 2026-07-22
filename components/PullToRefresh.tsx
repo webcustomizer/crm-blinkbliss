@@ -16,24 +16,19 @@ export default function PullToRefresh({
   const [refreshing, setRefreshing] = useState(false);
   const startY = useRef(0);
   const pulling = useRef(false);
+  const pullDistanceRef = useRef(0);
+  const refreshingRef = useRef(false);
 
   useEffect(() => {
-    // Only enable on native (skip on plain web/desktop if you want)
-    // Remove this check if you want it on web too
     if (!Capacitor.isNativePlatform()) return;
 
     const onTouchStart = (e: TouchEvent) => {
-      // Agar touch kisi modal/overlay/fixed panel ke andar shuru hua hai
-      // (jaise LeadDetails jismein data-no-ptr laga hua hai), to
-      // pull-to-refresh bilkul track hi na karein — us panel ka apna
-      // internal scroll hai, window.scrollY yahan bharosemand nahi hota
       const target = e.target as HTMLElement;
       if (target.closest("[data-no-ptr]")) {
         pulling.current = false;
         return;
       }
 
-      // Only start tracking if page is already scrolled to top
       if (window.scrollY === 0) {
         startY.current = e.touches[0].clientY;
         pulling.current = true;
@@ -41,15 +36,16 @@ export default function PullToRefresh({
     };
 
     const onTouchMove = (e: TouchEvent) => {
-      if (!pulling.current || refreshing) return;
+      if (!pulling.current || refreshingRef.current) return;
 
       const currentY = e.touches[0].clientY;
       const diff = currentY - startY.current;
 
       if (diff > 0 && window.scrollY === 0) {
-        // prevent the native page bounce/scroll while pulling
         e.preventDefault();
-        setPullDistance(Math.min(diff * 0.5, MAX_PULL));
+        const next = Math.min(diff * 0.5, MAX_PULL);
+        pullDistanceRef.current = next;
+        setPullDistance(next);
       }
     };
 
@@ -57,18 +53,13 @@ export default function PullToRefresh({
       if (!pulling.current) return;
       pulling.current = false;
 
-      if (pullDistance >= PULL_THRESHOLD) {
+      if (pullDistanceRef.current >= PULL_THRESHOLD) {
+        refreshingRef.current = true;
         setRefreshing(true);
         setPullDistance(PULL_THRESHOLD);
-        // trigger actual refresh
         window.location.reload();
-        // If you'd rather refetch data instead of a full reload,
-        // replace the line above with your own refetch logic and
-        // then reset state:
-        // await refetchData();
-        // setRefreshing(false);
-        // setPullDistance(0);
       } else {
+        pullDistanceRef.current = 0;
         setPullDistance(0);
       }
     };
@@ -82,7 +73,7 @@ export default function PullToRefresh({
       document.removeEventListener("touchmove", onTouchMove);
       document.removeEventListener("touchend", onTouchEnd);
     };
-  }, [pullDistance, refreshing]);
+  }, []);
 
   return (
     <>

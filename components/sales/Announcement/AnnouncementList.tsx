@@ -5,7 +5,7 @@ import { Megaphone, Pin, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/lib/supabase";
-import { formatDate, formatDateTime, formatTime, formatDateShort } from "@/lib/format-date";
+import { formatDate } from "@/lib/format-date";
 import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 
 type Announcement = {

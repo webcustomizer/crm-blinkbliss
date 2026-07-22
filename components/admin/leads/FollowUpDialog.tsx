@@ -38,12 +38,7 @@ export default function FollowUpDialog({ leadId }: Props) {
         },
         body: JSON.stringify({
           remarks,
-
           nextFollowUp,
-
-          // temporary
-          // baad mein auth user id se ayegi
-          userId: "admin",
         }),
       });
 

@@ -18,6 +18,7 @@ const PAGE_TITLES: { href: string; title: string }[] = [
   { href: "/admin/announcements", title: "Announcements" },
   { href: "/admin/group-chat", title: "Group Chat" },
   { href: "/admin/activity", title: "Activity" },
+  { href: "/admin/trash", title: "Trash" },
   { href: "/admin/sessions", title: "Sessions" },
   { href: "/admin/settings", title: "Settings" },
 ];

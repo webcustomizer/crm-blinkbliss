@@ -108,12 +108,12 @@ export default function GroupChatPanel({
       setDisabled(false);
       if (json.data) {
         shouldAutoScrollRef.current = true;
+        initialLoadDoneRef.current = true;
         setMessages(json.data);
       }
       setHasMore(Boolean(json.hasMore));
       if (json.users) setUsers(json.users);
       setLoading(false);
-      initialLoadDoneRef.current = true;
     } catch (e) {
       handleAPIError(e, "Failed to load group chat messages");
     } finally {

@@ -176,12 +176,13 @@ export default function MessagesPanel() {
       const j = await r.json();
       if (j.success && j.data) {
         shouldAutoScrollRef.current = true;
+        initialLoadDoneRef.current = true;
         setMessages(j.data);
         setHasMore(Boolean(j.hasMore));
       }
     } catch (e) { handleAPIError(e, "Failed to load messages"); }
     setLoading(false);
-    initialLoadDoneRef.current = true;
+    if (!initialLoadDoneRef.current) initialLoadDoneRef.current = true;
     isFetchingRef.current = false;
   }, []);
 

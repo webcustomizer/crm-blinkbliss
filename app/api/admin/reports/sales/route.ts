@@ -47,11 +47,9 @@ export async function GET(req: NextRequest) {
       })
       .sort((a, b) => b.conversion - a.conversion);
 
-    return NextResponse.json(data);
+    return NextResponse.json({ success: true, data });
   } catch (e) {
-
-
-    return NextResponse.json([], {
+    return NextResponse.json({ success: false, data: [] }, {
       status: 500,
     });
   }

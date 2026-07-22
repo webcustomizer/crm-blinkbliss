@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
     const settings = await prisma.cRMSetting.findFirst();
     const autoAssignEnabled = settings?.autoAssignEnabled ?? false;
 
-    let assignedToIds: (string | null)[] = newRows.map(() => null);
+    const assignedToIds: (string | null)[] = newRows.map(() => null);
     let autoAssignedCount = 0;
 
     if (autoAssignEnabled) {

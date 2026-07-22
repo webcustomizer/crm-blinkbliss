@@ -44,13 +44,13 @@ export async function POST(
 
     const body = await req.json();
 
-    const { remarks, nextFollowUp, userId } = body;
+    const { remarks, nextFollowUp } = body;
 
-    if (!remarks || !userId) {
+    if (!remarks) {
       return NextResponse.json(
         {
           success: false,
-          message: "Remarks and user are required.",
+          message: "Remarks are required.",
         },
         {
           status: 400,
@@ -66,7 +66,7 @@ export async function POST(
 
         leadId: id,
 
-        userId,
+        userId: auth.user.id,
       },
     });
 

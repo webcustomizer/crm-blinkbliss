@@ -18,7 +18,6 @@ export async function PATCH(
   try {
     const auth = await requireAuth(req, ["ADMIN"]);
     if ("error" in auth) return auth.error;
-    const user = auth.user;
 
     const { id } = await context.params;
 
@@ -41,16 +40,10 @@ export async function PATCH(
 
       announcement,
     });
-  } catch (error) {
-
-
+  } catch {
     return NextResponse.json(
-      {
-        message: "Something went wrong",
-      },
-      {
-        status: 500,
-      },
+      { success: false, message: "Something went wrong" },
+      { status: 500 },
     );
   }
 }
@@ -70,7 +63,6 @@ export async function DELETE(
   try {
     const auth = await requireAuth(req, ["ADMIN"]);
     if ("error" in auth) return auth.error;
-    const user = auth.user;
 
     const { id } = await context.params;
 
@@ -82,19 +74,12 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-
       message: "Announcement deleted successfully",
     });
-  } catch (error) {
-
-
+  } catch {
     return NextResponse.json(
-      {
-        message: "Something went wrong",
-      },
-      {
-        status: 500,
-      },
+      { success: false, message: "Something went wrong" },
+      { status: 500 },
     );
   }
 }

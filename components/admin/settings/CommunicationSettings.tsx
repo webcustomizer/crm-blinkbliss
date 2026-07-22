@@ -7,7 +7,8 @@ import { handleAPIError } from "@/lib/client-error";
 export default function CommunicationSettings() {
   const [gcEnabled, setGcEnabled] = useState(true);
   const [msgEnabled, setMsgEnabled] = useState(true);
-  const [loading, setLoading] = useState(false);
+  const [gcLoading, setGcLoading] = useState(false);
+  const [msgLoading, setMsgLoading] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -26,7 +27,7 @@ export default function CommunicationSettings() {
   async function toggleGC() {
     const newVal = !gcEnabled;
     setGcEnabled(newVal);
-    setLoading(true);
+    setGcLoading(true);
     try {
       const res = await fetch("/api/admin/settings", {
         method: "PATCH",
@@ -37,13 +38,13 @@ export default function CommunicationSettings() {
       if (json.success) toast.success(`Group Chat ${newVal ? "enabled" : "disabled"}`);
       else { toast.error(json.message || "Failed"); setGcEnabled(!newVal); }
     } catch { toast.error("Failed"); setGcEnabled(!newVal); }
-    finally { setLoading(false); }
+    finally { setGcLoading(false); }
   }
 
   async function toggleMsg() {
     const newVal = !msgEnabled;
     setMsgEnabled(newVal);
-    setLoading(true);
+    setMsgLoading(true);
     try {
       const res = await fetch("/api/admin/settings", {
         method: "PATCH",
@@ -54,17 +55,17 @@ export default function CommunicationSettings() {
       if (json.success) toast.success(`1-on-1 Messages ${newVal ? "enabled" : "disabled"}`);
       else { toast.error(json.message || "Failed"); setMsgEnabled(!newVal); }
     } catch { toast.error("Failed"); setMsgEnabled(!newVal); }
-    finally { setLoading(false); }
+    finally { setMsgLoading(false); }
   }
 
-  function Toggle({ label, desc, value, onToggle }: { label: string; desc?: string; value: boolean; onToggle: () => void }) {
+  function Toggle({ label, desc, value, onToggle, disabled }: { label: string; desc?: string; value: boolean; onToggle: () => void; disabled?: boolean }) {
     return (
       <div className="flex items-center justify-between gap-4 py-3 border-b border-white/5 last:border-0">
         <div>
           <p className="text-sm text-gray-200">{label}</p>
           {desc && <p className="text-xs text-gray-500 mt-0.5">{desc}</p>}
         </div>
-        <button onClick={onToggle} disabled={loading}
+        <button onClick={onToggle} disabled={disabled}
           className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${value ? "bg-emerald-500" : "bg-white/20"}`}>
           <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${value ? "translate-x-6" : "translate-x-1"}`} />
         </button>
@@ -77,8 +78,8 @@ export default function CommunicationSettings() {
       <h3 className="text-lg font-semibold text-[#D4AF37] mb-1">Communication</h3>
       <p className="text-sm text-gray-400 mb-4 sm:mb-5">Enable or disable messaging features for salespersons.</p>
       <div className="space-y-1">
-        <Toggle label="Group Chat" desc="Team-wide chat for all members" value={gcEnabled} onToggle={toggleGC} />
-        <Toggle label="1-on-1 Messages" desc="Private messages between salesperson and admin" value={msgEnabled} onToggle={toggleMsg} />
+        <Toggle label="Group Chat" desc="Team-wide chat for all members" value={gcEnabled} onToggle={toggleGC} disabled={gcLoading} />
+        <Toggle label="1-on-1 Messages" desc="Private messages between salesperson and admin" value={msgEnabled} onToggle={toggleMsg} disabled={msgLoading} />
       </div>
     </div>
   );
