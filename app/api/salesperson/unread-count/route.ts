@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCachedCRMSettings } from "@/lib/settings-cache";
 import { requireAuth } from "@/lib/require-auth";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,7 @@ export async function GET(req: NextRequest) {
 
   const userId = auth.user.id;
 
-  const settings = await prisma.cRMSetting.findFirst();
+  const settings = await getCachedCRMSettings();
 
   const [messageUnread, groupUnread, announcementUnread] = await Promise.all([
     settings?.messageEnabled !== false

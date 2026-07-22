@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { LogOut, LayoutDashboard, Users, Megaphone, User } from "lucide-react";
 import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { useSalesSettings } from "@/hooks/useSalesSettings";
 
@@ -13,10 +13,10 @@ export default function Sidebar() {
   const { navItems, navLoaded } = useSalesSettings();
 
   const items = navLoaded ? navItems : [
-    { title: "Dashboard", href: "/sales/dashboard", icon: require("lucide-react").LayoutDashboard },
-    { title: "My Leads", href: "/sales/my-leads", icon: require("lucide-react").Users },
-    { title: "Announcements", href: "/sales/announcements", icon: require("lucide-react").Megaphone, badgeKey: "announcements" as const },
-    { title: "Profile", href: "/sales/profile", icon: require("lucide-react").User },
+    { title: "Dashboard", href: "/sales/dashboard", icon: LayoutDashboard },
+    { title: "My Leads", href: "/sales/my-leads", icon: Users },
+    { title: "Announcements", href: "/sales/announcements", icon: Megaphone, badgeKey: "announcements" as const },
+    { title: "Profile", href: "/sales/profile", icon: User },
   ];
 
   async function logout() {

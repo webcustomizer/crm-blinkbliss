@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCachedCRMSettings } from "@/lib/settings-cache";
 import { requireAuth } from "@/lib/require-auth";
 import { hashPassword } from "@/lib/hash";
 import { validatePasswordStrength } from "@/lib/password-validator";
@@ -30,7 +31,7 @@ export async function PATCH(
       return NextResponse.json({ message: "Password is required." }, { status: 400 });
     }
 
-    const settings = await prisma.cRMSetting.findFirst();
+    const settings = await getCachedCRMSettings();
     const validation = validatePasswordStrength(
       password,
       settings?.passwordMinLength || 8,

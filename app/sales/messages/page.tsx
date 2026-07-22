@@ -16,7 +16,14 @@ export default async function SalesMessagesPage() {
   }
 
   return (
-    <Suspense>
+    <Suspense fallback={
+      <div className="flex h-[70vh] items-center justify-center">
+        <div className="space-y-4 text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#D4AF37]/20 border-t-[#D4AF37]" />
+          <p className="text-sm text-white/40">Loading messages…</p>
+        </div>
+      </div>
+    }>
       <SalesMessagesWrapper currentUserId={user.id} />
     </Suspense>
   );

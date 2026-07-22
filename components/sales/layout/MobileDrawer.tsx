@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { X, LogOut } from "lucide-react";
+import { X, LogOut, User } from "lucide-react";
 import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { useSalesSettings } from "@/hooks/useSalesSettings";
 
@@ -14,7 +14,7 @@ export default function MobileDrawer({ open, onClose, user }: { open: boolean; o
   const items = [
     ...navItems,
     ...(navItems.some(i => i.href === "/sales/profile") ? [] : [
-      { title: "Profile", href: "/sales/profile", icon: require("lucide-react").User },
+      { title: "Profile", href: "/sales/profile", icon: User },
     ]),
   ];
 

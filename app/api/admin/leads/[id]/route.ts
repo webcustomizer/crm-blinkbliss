@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCachedCRMSettings } from "@/lib/settings-cache";
 import { requireAuth } from "@/lib/require-auth";
 import { checkLeadCompletion } from "@/lib/lead-completion";
 
@@ -65,7 +66,7 @@ export async function PATCH(
 
     let followUpUpdate: any = {};
     if (body.followUpDone === true) {
-      const setting = await prisma.cRMSetting.findFirst();
+      const setting = await getCachedCRMSettings();
       const currentCount = oldLead.followUpCount || 0;
       const newCount = currentCount + 1;
       const maxFollowUps = setting?.maxFollowUps ?? 3;

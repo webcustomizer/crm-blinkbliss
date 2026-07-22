@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCachedCRMSettings } from "@/lib/settings-cache";
 import { generateResetToken, getResetPasswordTemplate } from "@/lib/email";
 import { sendEmailDirect } from "@/lib/email-sender";
 import { rateLimit } from "@/lib/rate-limit";
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if forgot password is enabled in settings
-    const settings = await prisma.cRMSetting.findFirst();
+    const settings = await getCachedCRMSettings();
     if (!settings?.forgotPasswordEnabled) {
       return NextResponse.json({ success: false, message: "Password reset is currently disabled." }, { status: 403 });
     }

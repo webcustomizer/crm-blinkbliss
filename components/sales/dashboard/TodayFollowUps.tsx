@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Phone, Clock } from "lucide-react";
-import { formatDate, formatDateTime, formatTime, formatDateShort } from "@/lib/format-date";
+import { formatDateTime } from "@/lib/format-date";
 
 interface FollowUp {
   id: string;
@@ -61,31 +60,8 @@ function smartCall(phone: string) {
   }, 1200);
 }
 
-export default function TodayFollowUps({ refreshKey }: { refreshKey?: number }) {
-  const [followUps, setFollowUps] = useState<FollowUp[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadFollowUps() {
-      try {
-        const res = await fetch("/api/salesperson/dashboard/followups", {
-          cache: "no-store",
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-          setFollowUps(data.followUps);
-        }
-      } catch (error) {
-
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadFollowUps();
-  }, [refreshKey]);
+export default function TodayFollowUps({ followUps }: { followUps: FollowUp[] }) {
+  const loading = false;
 
   return (
     <div
@@ -114,7 +90,17 @@ export default function TodayFollowUps({ refreshKey }: { refreshKey?: number }) 
       </div>
 
       {loading ? (
-        <p className="mt-5 text-sm text-zinc-400">Loading follow ups...</p>
+        <div className="mt-5 space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+              <div className="h-9 w-9 animate-pulse rounded-full bg-white/[0.06]" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3.5 w-28 animate-pulse rounded-lg bg-white/[0.06]" />
+                <div className="h-3 w-20 animate-pulse rounded-lg bg-white/[0.04]" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : followUps.length === 0 ? (
         <p className="mt-5 text-sm text-zinc-400">No follow ups for today 🎉</p>
       ) : (

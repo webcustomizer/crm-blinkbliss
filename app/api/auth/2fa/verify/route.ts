@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { getCachedCRMSettings } from "@/lib/settings-cache";
 import { createToken, verifyTempToken } from "@/lib/auth";
 import { isOTPExpired, safeStringCompare } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
     if (user.otpExpiresAt && isOTPExpired(user.otpExpiresAt)) {
       return NextResponse.json({ success: false, message: "Code expired." }, { status: 410 });
     }
-    const settings = await prisma.cRMSetting.findFirst();
+    const settings = await getCachedCRMSettings();
     const hours = settings?.sessionMaxHours || 168;
     await prisma.user.update({
       where: { id: user.id },

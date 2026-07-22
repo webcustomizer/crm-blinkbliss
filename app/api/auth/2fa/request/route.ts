@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCachedCRMSettings } from "@/lib/settings-cache";
 import { comparePassword } from "@/lib/hash";
 import { generateOTP, getOTPEmailTemplate } from "@/lib/email";
 import { sendEmailDirect } from "@/lib/email-sender";
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Invalid credentials." }, { status: 401 });
     }
 
-    const settings = await prisma.cRMSetting.findFirst();
+    const settings = await getCachedCRMSettings();
     const require2FA = settings?.twoFactorRequired || user.twoFactorEnabled;
     if (!require2FA) {
       return NextResponse.json({ success: true, require2FA: false });

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCachedCRMSettings } from "@/lib/settings-cache";
 import { hashPassword } from "@/lib/hash";
 import { requireAuth } from "@/lib/require-auth";
 import { validatePasswordStrength } from "@/lib/password-validator";
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const settings = await prisma.cRMSetting.findFirst();
+    const settings = await getCachedCRMSettings();
     const validation = validatePasswordStrength(
       password,
       settings?.passwordMinLength || 8,

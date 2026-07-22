@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCachedCRMSettings, invalidateSettingsCache } from "@/lib/settings-cache";
 import { requireAuth } from "@/lib/require-auth";
 import { broadcastSettingsChange } from "@/lib/realtime";
 // Settings changes are automatically pushed via Supabase Postgres Changes (CRMSetting table)
@@ -11,7 +12,7 @@ export async function GET(req: NextRequest) {
   if ("error" in auth) return auth.error;
 
   try {
-    let settings = await prisma.cRMSetting.findFirst();
+    let settings = await getCachedCRMSettings();
     if (!settings) {
       settings = await prisma.cRMSetting.create({ data: {} });
     }
@@ -30,7 +31,7 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json();
-    let settings = await prisma.cRMSetting.findFirst();
+    let settings = await getCachedCRMSettings();
     if (!settings) {
       settings = await prisma.cRMSetting.create({ data: {} });
     }
@@ -68,6 +69,7 @@ export async function PATCH(req: NextRequest) {
       broadcastSettingsChange(broadcastPayload);
     }
 
+    invalidateSettingsCache();
     return NextResponse.json({ success: true, data: updated, message: "Settings updated." });
   } catch {
     return NextResponse.json(

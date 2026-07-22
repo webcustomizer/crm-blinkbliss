@@ -4,38 +4,29 @@ import { prisma } from "@/lib/prisma";
  * Updates the salesperson's rolling average response time when a lead
  * receives its first response. Called after firstResponseAt is set.
  *
- * Computes the average of (firstResponseAt - createdAt) across ALL
- * leads assigned to this salesperson that have a first response.
+ * Computes the average entirely in PostgreSQL via SQL aggregation,
+ * replacing the previous unbounded Node.js loop over all leads.
  */
 export async function updateResponseTimeAverage(
   userId: string,
 ): Promise<void> {
   try {
-    const leads = await prisma.lead.findMany({
-      where: {
-        assignedToId: userId,
-        firstResponseAt: { not: null },
-      },
-      select: {
-        createdAt: true,
-        firstResponseAt: true,
-      },
-    });
+    const rows = await prisma.$queryRaw<{ avg_ms: number | null }[]>`
+      SELECT AVG(
+        EXTRACT(EPOCH FROM ("firstResponseAt" - "createdAt")) * 1000
+      )::bigint AS avg_ms
+      FROM "Lead"
+      WHERE "assignedToId" = ${userId}
+        AND "firstResponseAt" IS NOT NULL
+    `;
 
-    if (leads.length === 0) return;
+    const avgMs = rows[0]?.avg_ms;
 
-    let totalMs = 0;
-    for (const lead of leads) {
-      if (lead.firstResponseAt) {
-        totalMs += lead.firstResponseAt.getTime() - lead.createdAt.getTime();
-      }
-    }
-
-    const avgMs = Math.round(totalMs / leads.length);
+    if (avgMs === null || avgMs === undefined) return;
 
     await prisma.user.update({
       where: { id: userId },
-      data: { responseTimeAvg: avgMs },
+      data: { responseTimeAvg: Number(avgMs) },
     });
   } catch {
     // Response time tracking should never break the main request

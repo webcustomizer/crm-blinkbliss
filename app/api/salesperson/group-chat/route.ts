@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCachedCRMSettings } from "@/lib/settings-cache";
 import { requireAuth } from "@/lib/require-auth";
 import { broadcastNewGroupMessage } from "@/lib/realtime";
 import { sendPushNotification } from "@/lib/push";
@@ -11,7 +12,7 @@ export async function GET(req: NextRequest) {
   if ("error" in auth) return auth.error;
 
   try {
-    const settings = await prisma.cRMSetting.findFirst();
+    const settings = await getCachedCRMSettings();
     if (!settings?.groupChatEnabled) {
       return NextResponse.json(
         { success: false, message: "Group chat is disabled." },
@@ -81,7 +82,7 @@ export async function POST(req: NextRequest) {
   if ("error" in auth) return auth.error;
 
   try {
-    const settings = await prisma.cRMSetting.findFirst();
+    const settings = await getCachedCRMSettings();
     if (!settings?.groupChatEnabled) {
       return NextResponse.json(
         { success: false, message: "Group chat is disabled." },

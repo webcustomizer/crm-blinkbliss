@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { getCachedCRMSettings } from "@/lib/settings-cache";
 import { requireAuth } from "@/lib/require-auth";
 import { ActivityAction } from "@/app/generated/prisma/client";
 import { logActivity } from "@/lib/activity";
@@ -11,7 +12,7 @@ export async function POST(req: NextRequest) {
     if ("error" in auth) return auth.error;
     const user = auth.user;
 
-    const settings = await prisma.cRMSetting.findFirst();
+    const settings = await getCachedCRMSettings();
 
     if (!settings) {
       return NextResponse.json(

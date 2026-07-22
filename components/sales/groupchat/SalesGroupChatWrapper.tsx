@@ -1,9 +1,14 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import SalesGroupChatPanel from "@/components/sales/groupchat/SalesGroupChatPanel";
+import dynamic from "next/dynamic";
 import { useSalesSettings } from "@/hooks/useSalesSettings";
 import { ShieldAlert } from "lucide-react";
+
+const SalesGroupChatPanel = dynamic(
+  () => import("@/components/sales/groupchat/SalesGroupChatPanel"),
+  { ssr: false, loading: () => <div className="h-[70vh] animate-pulse rounded-2xl bg-white/[0.03]" /> },
+);
 
 export default function SalesGroupChatWrapper({
   currentUserId,

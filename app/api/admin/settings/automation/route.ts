@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCachedCRMSettings } from "@/lib/settings-cache";
 import { requireAuth } from "@/lib/require-auth";
 
 export const dynamic = "force-dynamic";
 
 // CRMSetting hamesha ek hi row hoti hai — agar exist nahi karti to create kar dein
 async function getOrCreateSettings() {
-  const existing = await prisma.cRMSetting.findFirst();
+  const existing = await getCachedCRMSettings();
   if (existing) return existing;
 
   return prisma.cRMSetting.create({ data: {} });

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCachedCRMSettings } from "@/lib/settings-cache";
 import { requireAuth } from "@/lib/require-auth";
 import { checkLeadCompletion } from "@/lib/lead-completion";
 import { getNextAutoAssignee } from "@/lib/auto-assign";
@@ -132,7 +133,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 4: Auto-assign logic — use shared transactional round-robin
-    const settings = await prisma.cRMSetting.findFirst();
+    const settings = await getCachedCRMSettings();
     const autoAssignEnabled = settings?.autoAssignEnabled ?? false;
 
     const assignedToIds: (string | null)[] = newRows.map(() => null);

@@ -6,10 +6,6 @@ import { getPKTDayBoundaryUTC } from "@/lib/format-date";
 
 export const dynamic = "force-dynamic";
 
-
-// Pakistan Standard Time = UTC+5 (no daylight saving)
-const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
-
 export async function GET(req: NextRequest) {
   try {
     const auth = await requireAuth(req, ["SALESPERSON"]);
@@ -18,133 +14,106 @@ export async function GET(req: NextRequest) {
 
     const salespersonId = user.id;
 
-    // Today Start (00:00:00 PKT, converted to correct UTC instant)
     const todayStart = getPKTDayBoundaryUTC(0, false);
-
-    // Today End (23:59:59.999 PKT, converted to correct UTC instant)
     const todayEnd = getPKTDayBoundaryUTC(0, true);
-
-    // Upcoming after 2 days (23:59:59.999 PKT, 2 days from now)
     const twoDaysLater = getPKTDayBoundaryUTC(2, true);
 
-    const [
-      totalLeads,
-      newLeads,
-      calledLeads,
-      trainingLeads,
-      reservedLeads,
-      joinedLeads,
-      deadLeads,
-      todayFollowUps,
-      overdueFollowUps,
-      upcomingFollowUps,
-    ] = await Promise.all([
-      prisma.lead.count({
-        where: {
-          isDeleted: false,
-          assignedToId: salespersonId,
-        },
-      }),
+    const [statusGroups, followUpLeads, activities] =
+      await Promise.all([
+        // 1 query: all status counts via GROUP BY
+        prisma.lead.groupBy({
+          by: ["status"],
+          where: { isDeleted: false, assignedToId: salespersonId },
+          _count: { id: true },
+        }),
 
-      prisma.lead.count({
-        where: {
-          isDeleted: false,
-          assignedToId: salespersonId,
-          status: "NEW",
-        },
-      }),
-
-      prisma.lead.count({
-        where: {
-          isDeleted: false,
-          assignedToId: salespersonId,
-          status: "CALLED",
-        },
-      }),
-
-      prisma.lead.count({
-        where: {
-          isDeleted: false,
-          assignedToId: salespersonId,
-          status: "TRAINING_ATTENDED",
-        },
-      }),
-
-      prisma.lead.count({
-        where: {
-          isDeleted: false,
-          assignedToId: salespersonId,
-          status: "SEAT_RESERVED",
-        },
-      }),
-
-      prisma.lead.count({
-        where: {
-          isDeleted: false,
-          assignedToId: salespersonId,
-          status: "JOINED",
-        },
-      }),
-
-      prisma.lead.count({
-        where: {
-          isDeleted: false,
-          assignedToId: salespersonId,
-          status: "DEAD",
-        },
-      }),
-
-      // Today's Follow Ups
-      prisma.lead.count({
-        where: {
-          isDeleted: false,
-          assignedToId: salespersonId,
-          status: {
-            notIn: ["JOINED", "DEAD"],
+        // Follow-up leads for today (detail list)
+        prisma.lead.findMany({
+          where: {
+            isDeleted: false,
+            assignedToId: salespersonId,
+            status: { notIn: ["JOINED", "DEAD"] },
+            nextFollowUp: { gte: todayStart, lte: todayEnd },
           },
-          nextFollowUp: {
-            gte: todayStart,
-            lte: todayEnd,
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            status: true,
+            remarks: true,
+            nextFollowUp: true,
           },
-        },
-      }),
+          orderBy: { nextFollowUp: "asc" },
+        }),
 
-      // Overdue Follow Ups
+        // Recent activity (last 2 days)
+        prisma.statusHistory.findMany({
+          where: {
+            changedAt: { gte: twoDaysAgo() },
+            lead: { isDeleted: false, assignedToId: salespersonId },
+          },
+          orderBy: { changedAt: "desc" },
+          take: 20,
+          include: {
+            lead: { select: { name: true, phone: true } },
+            changedBy: { select: { name: true } },
+          },
+        }),
+      ]);
+
+    // Build status count map from GROUP BY result
+    const statusMap = new Map(
+      statusGroups.map((g) => [g.status, g._count.id]),
+    );
+
+    const totalLeads = statusGroups.reduce((s, g) => s + g._count.id, 0);
+    const newLeads = statusMap.get("NEW") ?? 0;
+    const calledLeads = statusMap.get("CALLED") ?? 0;
+    const trainingLeads = statusMap.get("TRAINING_ATTENDED") ?? 0;
+    const reservedLeads = statusMap.get("SEAT_RESERVED") ?? 0;
+    const joinedLeads = statusMap.get("JOINED") ?? 0;
+    const deadLeads = statusMap.get("DEAD") ?? 0;
+    const conversionRate =
+      totalLeads === 0 ? 0 : Math.round((joinedLeads / totalLeads) * 100);
+
+    // Compute follow-up date buckets from the detail list + remaining queries
+    let todayFollowUps = 0;
+    let overdueFollowUps = 0;
+    let upcomingFollowUps = 0;
+
+    for (const lead of followUpLeads) {
+      if (!lead.nextFollowUp) continue;
+      const t = lead.nextFollowUp.getTime();
+      if (t >= todayStart.getTime() && t <= todayEnd.getTime()) {
+        todayFollowUps++;
+      }
+    }
+
+    // For overdue and upcoming, use individual counts (small, fast queries)
+    const [overdueCount, upcomingCount] = await Promise.all([
       prisma.lead.count({
         where: {
           isDeleted: false,
           assignedToId: salespersonId,
-          status: {
-            notIn: ["JOINED", "DEAD"],
-          },
-          nextFollowUp: {
-            lt: todayStart,
-          },
+          status: { notIn: ["JOINED", "DEAD"] },
+          nextFollowUp: { lt: todayStart },
         },
       }),
-
-      // Upcoming Follow Ups (Next 2 Days)
       prisma.lead.count({
         where: {
           isDeleted: false,
           assignedToId: salespersonId,
-          status: {
-            notIn: ["JOINED", "DEAD"],
-          },
-          nextFollowUp: {
-            gt: todayEnd,
-            lte: twoDaysLater,
-          },
+          status: { notIn: ["JOINED", "DEAD"] },
+          nextFollowUp: { gt: todayEnd, lte: twoDaysLater },
         },
       }),
     ]);
 
-    const conversionRate =
-      totalLeads === 0 ? 0 : Math.round((joinedLeads / totalLeads) * 100);
+    overdueFollowUps = overdueCount;
+    upcomingFollowUps = upcomingCount;
 
     return NextResponse.json({
       userId: salespersonId,
-
       stats: {
         totalLeads,
         newLeads,
@@ -158,17 +127,21 @@ export async function GET(req: NextRequest) {
         upcomingFollowUps,
         conversionRate,
       },
+      followUps: followUpLeads,
+      activities,
     });
   } catch (error) {
     console.error("Sales Dashboard Error:", error);
 
     return NextResponse.json(
-      {
-        message: "Something went wrong",
-      },
-      {
-        status: 500,
-      },
+      { message: "Something went wrong" },
+      { status: 500 },
     );
   }
+}
+
+function twoDaysAgo(): Date {
+  const d = new Date();
+  d.setDate(d.getDate() - 2);
+  return d;
 }

@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { ArrowRight, Clock, User } from "lucide-react";
-import { formatDate, formatDateTime, formatTime, formatDateShort } from "@/lib/format-date";
+import { formatDateTime } from "@/lib/format-date";
 
 interface Activity {
   id: string;
@@ -15,31 +14,8 @@ interface Activity {
   };
 }
 
-export default function RecentActivity({ refreshKey }: { refreshKey?: number }) {
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  async function fetchActivities() {
-    try {
-      const res = await fetch("/api/salesperson/dashboard/activity", {
-        cache: "no-store",
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setActivities(data.activities || []);
-      }
-    } catch (error) {
-
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    fetchActivities();
-  }, [refreshKey]);
+export default function RecentActivity({ activities }: { activities: Activity[] }) {
+  const loading = false;
 
   return (
     <div
@@ -84,7 +60,17 @@ export default function RecentActivity({ refreshKey }: { refreshKey?: number }) 
       </div>
 
       {loading && (
-        <p className="mt-5 text-sm text-zinc-400">Loading activity...</p>
+        <div className="mt-5 space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+              <div className="h-8 w-8 animate-pulse rounded-full bg-white/[0.06]" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3.5 w-36 animate-pulse rounded-lg bg-white/[0.06]" />
+                <div className="h-3 w-24 animate-pulse rounded-lg bg-white/[0.04]" />
+              </div>
+            </div>
+          ))}
+        </div>
       )}
 
       {!loading && activities.length === 0 && (

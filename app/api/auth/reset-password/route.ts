@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/hash";
 import { validatePasswordStrength } from "@/lib/password-validator";
 import { safeStringCompare } from "@/lib/email";
+import { getCachedCRMSettings } from "@/lib/settings-cache";
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate password strength
-    const settings = await prisma.cRMSetting.findFirst();
+    const settings = await getCachedCRMSettings();
     const minLen = settings?.passwordMinLength || 8;
     const requireSpecial = settings?.passwordRequireSpecial || false;
     const validation = validatePasswordStrength(newPassword, minLen, requireSpecial);

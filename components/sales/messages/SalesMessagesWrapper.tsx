@@ -1,9 +1,14 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import SalesMessagesPanel from "@/components/sales/messages/SalesMessagesPanel";
+import dynamic from "next/dynamic";
 import { useSalesSettings } from "@/hooks/useSalesSettings";
 import { ShieldAlert } from "lucide-react";
+
+const SalesMessagesPanel = dynamic(
+  () => import("@/components/sales/messages/SalesMessagesPanel"),
+  { ssr: false, loading: () => <div className="h-[70vh] animate-pulse rounded-2xl bg-white/[0.03]" /> },
+);
 
 export default function SalesMessagesWrapper({
   currentUserId,

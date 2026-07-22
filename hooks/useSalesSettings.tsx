@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { LayoutDashboard, Users, Megaphone, MessageSquare, User } from "lucide-react";
 import { subscribeToSettingsChanges } from "@/lib/realtime";
 
 type NavItem = { title: string; href: string; icon: any; badgeKey?: "messages" | "groupChat" | "announcements" };
@@ -17,7 +18,6 @@ export function SalesSettingsProvider({ children }: { children: ReactNode }) {
   const [navLoaded, setNavLoaded] = useState(false);
 
   const buildNav = useCallback((payload: { messageEnabled?: boolean; groupChatEnabled?: boolean }) => {
-    const { LayoutDashboard, Users, Megaphone, MessageSquare, User } = require("lucide-react");
     const base: NavItem[] = [
       { title: "Dashboard", href: "/sales/dashboard", icon: LayoutDashboard },
       { title: "My Leads", href: "/sales/my-leads", icon: Users },

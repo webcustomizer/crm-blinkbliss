@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifyToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getCachedCRMSettings } from "@/lib/settings-cache";
 import AdminMessagesWrapper from "@/components/admin/messages/MessagesWrapper";
 import { ShieldAlert } from "lucide-react";
 
@@ -18,7 +19,7 @@ export default async function MessagesPage() {
     redirect("/login");
   }
 
-  const settings = await prisma.cRMSetting.findFirst();
+  const settings = await getCachedCRMSettings();
   if (settings?.messageEnabled === false) {
     return (
       <div className="space-y-8">

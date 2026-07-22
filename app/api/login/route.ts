@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { getCachedCRMSettings } from "@/lib/settings-cache";
 import { comparePassword } from "@/lib/hash";
 import { createToken, createTempToken } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if 2FA is required
-    const settings = await prisma.cRMSetting.findFirst();
+    const settings = await getCachedCRMSettings();
     const require2FA = settings?.twoFactorRequired || user.twoFactorEnabled;
 
     if (require2FA) {

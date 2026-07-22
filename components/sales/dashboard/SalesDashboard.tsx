@@ -22,15 +22,33 @@ interface DashboardStats {
   conversionRate: number;
 }
 
+interface FollowUp {
+  id: string;
+  name: string | null;
+  phone: string;
+  status: string;
+  remarks: string | null;
+  nextFollowUp: string | null;
+}
+
+interface Activity {
+  id: string;
+  oldStatus: string;
+  newStatus: string;
+  changedAt: string;
+  lead: { name: string | null; phone: string };
+}
+
 export default function SalesDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [followUps, setFollowUps] = useState<FollowUp[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
 
   const [userId, setUserId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
 
   const [refreshing, setRefreshing] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
   const [error, setError] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
@@ -51,7 +69,7 @@ export default function SalesDashboard() {
 
         setUserId(data.user.id);
       }
-    } catch (error) {
+    } catch {
 
     }
   }, []);
@@ -77,6 +95,8 @@ export default function SalesDashboard() {
 
       if (res.ok) {
         setStats(data.stats);
+        setFollowUps(data.followUps ?? []);
+        setActivities(data.activities ?? []);
         setError(false);
       } else {
 
@@ -109,7 +129,6 @@ export default function SalesDashboard() {
 
     debounceRef.current = setTimeout(() => {
       getDashboard(true);
-      setRefreshKey((k) => k + 1);
     }, 600);
   }, [getDashboard]);
 
@@ -254,9 +273,9 @@ export default function SalesDashboard() {
       {stats && <StatsCards stats={stats} />}
 
       <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-2">
-        <TodayFollowUps refreshKey={refreshKey} />
+        <TodayFollowUps followUps={followUps} />
 
-        <RecentActivity refreshKey={refreshKey} />
+        <RecentActivity activities={activities} />
       </div>
     </div>
   );

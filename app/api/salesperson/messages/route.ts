@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCachedCRMSettings } from "@/lib/settings-cache";
 import { requireAuth } from "@/lib/require-auth";
 import { broadcastNewMessage } from "@/lib/realtime";
 import { sendPushNotification } from "@/lib/push";
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req, ["SALESPERSON"]);
   if ("error" in auth) return auth.error;
-  const settings = await prisma.cRMSetting.findFirst();
+  const settings = await getCachedCRMSettings();
   if (settings?.messageEnabled === false)
     return NextResponse.json(
       { success: false, message: "Messages disabled by admin." },
@@ -126,7 +127,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req, ["SALESPERSON"]);
   if ("error" in auth) return auth.error;
-  const settings = await prisma.cRMSetting.findFirst();
+  const settings = await getCachedCRMSettings();
   if (settings?.messageEnabled === false)
     return NextResponse.json(
       { success: false, message: "Messages disabled by admin." },
