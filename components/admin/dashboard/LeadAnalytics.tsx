@@ -39,15 +39,15 @@ export default function LeadAnalytics({ stats }: Props) {
     { name: "36+", value: stats.ageGroups["36+"] || 0 },
   ];
 
+  // Keys here MUST match exactly what LeadForm.tsx saves in the
+  // "bestTimeToReach" <select> options — plain hyphen "-" with
+  // single spaces, and only the 5 slots that form actually offers.
   const timeSlotsArr = [
-    { name: "12AM – 3AM", value: stats.timeSlots["12:00 AM \u2013 3:00 AM"] || 0 },
-    { name: "3AM – 6AM", value: stats.timeSlots["3:00 AM \u2013 6:00 AM"] || 0 },
-    { name: "6AM – 9AM", value: stats.timeSlots["6:00 AM \u2013 9:00 AM"] || 0 },
-    { name: "9AM – 12PM", value: stats.timeSlots["9:00 AM \u2013 12:00 PM"] || 0 },
-    { name: "12PM – 3PM", value: stats.timeSlots["12:00 PM \u2013 3:00 PM"] || 0 },
-    { name: "3PM – 6PM", value: stats.timeSlots["3:00 PM \u2013 6:00 PM"] || 0 },
-    { name: "6PM – 9PM", value: stats.timeSlots["6:00 PM \u2013 9:00 PM"] || 0 },
-    { name: "9PM – 12AM", value: stats.timeSlots["9:00 PM \u2013 12:00 AM"] || 0 },
+    { name: "9AM – 12PM", value: stats.timeSlots["9:00 AM - 12:00 PM"] || 0 },
+    { name: "12PM – 3PM", value: stats.timeSlots["12:00 PM - 3:00 PM"] || 0 },
+    { name: "3PM – 6PM", value: stats.timeSlots["3:00 PM - 6:00 PM"] || 0 },
+    { name: "6PM – 9PM", value: stats.timeSlots["6:00 PM - 9:00 PM"] || 0 },
+    { name: "9PM – 11PM", value: stats.timeSlots["9:00 PM - 11:00 PM"] || 0 },
   ];
 
   const trainingArr = [

@@ -30,6 +30,38 @@ type Salesperson = { id: string; name: string };
 
 interface Props { salespersons: Salesperson[] }
 
+// Builds a compact page list with ellipses, e.g. for current=6, total=28:
+// [1, "...", 4, 5, 6, 7, 8, "...", 28]
+// Always shows first page, last page, and a window around the current page.
+function getPageNumbers(current: number, total: number): (number | "...")[] {
+  const siblingCount = 1;
+  const totalNumbersShown = siblingCount * 2 + 5; // first, last, current, 2 ellipses, siblings
+
+  if (total <= totalNumbersShown) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+
+  const leftSibling = Math.max(current - siblingCount, 1);
+  const rightSibling = Math.min(current + siblingCount, total);
+
+  const showLeftEllipsis = leftSibling > 2;
+  const showRightEllipsis = rightSibling < total - 1;
+
+  const pages: (number | "...")[] = [1];
+
+  if (showLeftEllipsis) pages.push("...");
+
+  for (let i = Math.max(leftSibling, 2); i <= Math.min(rightSibling, total - 1); i++) {
+    pages.push(i);
+  }
+
+  if (showRightEllipsis) pages.push("...");
+
+  if (total > 1) pages.push(total);
+
+  return pages;
+}
+
 export default function LeadsTable({ salespersons }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -52,6 +84,9 @@ export default function LeadsTable({ salespersons }: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const [showBulkMenu, setShowBulkMenu] = useState(false);
+
+  // Go-to-page input
+  const [pageInput, setPageInput] = useState("");
 
   const markUpdating = useCallback((id: string) => {
     setUpdatingIds((prev) => { const next = new Set(prev); next.add(id); return next; });
@@ -182,6 +217,17 @@ export default function LeadsTable({ salespersons }: Props) {
       } else toast.error(json.message || "Bulk action failed.");
     } catch { toast.error("Bulk action failed — network error."); }
     finally { setBulkLoading(false); }
+  }
+
+  // Go to a specific page directly
+  function jumpToPage() {
+    const num = parseInt(pageInput, 10);
+    if (!num || num < 1 || num > pagination.totalPages) {
+      toast.error(`Enter a page between 1 and ${pagination.totalPages}`);
+      return;
+    }
+    setPage(num);
+    setPageInput("");
   }
 
   function statusStyle(status: string) {
@@ -414,9 +460,9 @@ export default function LeadsTable({ salespersons }: Props) {
         )}
 
         {/* PAGINATION */}
-        <div className="flex items-center justify-between border-t border-white/10 p-4 sm:p-5">
+        <div className="flex flex-col items-center gap-3 border-t border-white/10 p-4 sm:flex-row sm:justify-between sm:p-5">
           <p className="text-sm text-white/40">Page {pagination.page} of {pagination.totalPages}</p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
             <button
               disabled={page === 1}
               onClick={() => setPage((p) => p - 1)}
@@ -424,6 +470,29 @@ export default function LeadsTable({ salespersons }: Props) {
             >
               <ChevronLeft size={16} /> Previous
             </button>
+
+            {getPageNumbers(page, pagination.totalPages).map((p, idx) =>
+              p === "..." ? (
+                <span key={`ellipsis-${idx}`} className="px-1.5 text-sm text-white/30">
+                  …
+                </span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  disabled={p === page}
+                  aria-current={p === page ? "page" : undefined}
+                  className={`min-w-[36px] rounded-xl border px-3 py-2 text-sm font-medium transition-colors disabled:pointer-events-none ${
+                    p === page
+                      ? "border-[#D4AF37]/50 bg-[#D4AF37]/[0.12] text-[#D4AF37]"
+                      : "border-white/10 text-white hover:border-[#D4AF37]/40 hover:bg-[#D4AF37]/[0.06]"
+                  }`}
+                >
+                  {p}
+                </button>
+              ),
+            )}
+
             <button
               disabled={page >= pagination.totalPages}
               onClick={() => setPage((p) => p + 1)}
@@ -431,6 +500,26 @@ export default function LeadsTable({ salespersons }: Props) {
             >
               Next <ChevronRight size={16} />
             </button>
+
+            {/* Go to page */}
+            <div className="ml-1 flex items-center gap-1.5">
+              <input
+                type="number"
+                min={1}
+                max={pagination.totalPages}
+                value={pageInput}
+                onChange={(e) => setPageInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") jumpToPage(); }}
+                placeholder="Page #"
+                className="w-20 rounded-xl border border-white/10 bg-black/30 px-2.5 py-2 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#D4AF37]/60 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <button
+                onClick={jumpToPage}
+                className="rounded-xl border border-[#D4AF37]/30 bg-[#D4AF37]/[0.08] px-3 py-2 text-sm font-medium text-[#D4AF37] transition-colors hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/10"
+              >
+                Go
+              </button>
+            </div>
           </div>
         </div>
       </div>
