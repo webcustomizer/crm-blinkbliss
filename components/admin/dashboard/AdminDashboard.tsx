@@ -7,7 +7,6 @@ import StatsCards from "./StatsCards";
 import TodayStats from "./TodayStats";
 import FollowUpCards from "./FollowUpCards";
 import LeadAnalytics from "./LeadAnalytics";
-import FunnelChart from "./FunnelChart";
 
 const fetcher = (url: string) => fetch(url, { cache: "no-store" }).then((r) => r.json());
 
