@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       where: { id: user.id },
       data: { twoFactorSecret: null, otpExpiresAt: null, failedLoginAttempts: 0 },
     });
-    const token = await createToken({ id: user.id, name: user.name, email: user.email, role: user.role });
+    const token = await createToken({ id: user.id, name: user.name, email: user.email, role: user.role }, `${hours}h`);
     const ck = await cookies();
     ck.set("token", token, {
       httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: hours * 3600,
