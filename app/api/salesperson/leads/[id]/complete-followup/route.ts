@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 import { logActivity } from "@/lib/activity";
 import { ActivityAction } from "@/app/generated/prisma/client";
 import { updateResponseTimeAverage } from "@/lib/update-response-time";
+import { getPKTFutureDate } from "@/lib/format-date";
 
 // Pakistan Standard Time = UTC+5 (no daylight saving)
 const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
@@ -32,26 +33,6 @@ async function getCachedCRMSettings() {
   const value = await prisma.cRMSetting.findFirst();
   settingsCache = { value, fetchedAt: Date.now() };
   return value;
-}
-
-/**
- * Returns a Date representing "today + daysToAdd" in PKT, fixed at
- * 12:00 PM PKT (noon). Storing at noon (instead of midnight or "now")
- * guarantees the calendar date never shifts when the value is later
- * converted to/from UTC anywhere in the stack — regardless of the
- * server's system timezone (fixes local-vs-production UTC mismatch).
- */
-function getPKTFutureDate(daysToAdd: number): Date {
-  const pktNow = new Date(Date.now() + PKT_OFFSET_MS);
-
-  const year = pktNow.getUTCFullYear();
-  const month = pktNow.getUTCMonth();
-  const day = pktNow.getUTCDate() + daysToAdd;
-
-  const noonPKT = new Date(Date.UTC(year, month, day, 12, 0, 0, 0));
-
-  // Convert back to the real UTC instant to store in DB
-  return new Date(noonPKT.getTime() - PKT_OFFSET_MS);
 }
 
 /**

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCachedCRMSettings } from "@/lib/settings-cache";
 import { requireAuth } from "@/lib/require-auth";
 import { checkLeadCompletion } from "@/lib/lead-completion";
+import { getPKTFutureDate } from "@/lib/format-date";
 
 export const dynamic = "force-dynamic";
 
@@ -80,8 +81,7 @@ export async function PATCH(
 
       let nextFollowUp: Date | null = null;
       if (newCount < maxFollowUps) {
-        nextFollowUp = new Date();
-        nextFollowUp.setDate(nextFollowUp.getDate() + days);
+        nextFollowUp = getPKTFutureDate(days);
       }
 
       await prisma.followUp.create({

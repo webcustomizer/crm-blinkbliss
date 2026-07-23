@@ -59,3 +59,19 @@ export function getPKTDayBoundaryUTC(daysOffset: number, endOfDay: boolean): Dat
 
   return new Date(boundaryInPKT.getTime() - PKT_OFFSET_MS);
 }
+
+/**
+ * Returns a Date representing "today + daysToAdd" in PKT, fixed at
+ * 12:00 PM PKT (noon). Storing at noon (instead of midnight or "now")
+ * guarantees the calendar date never shifts when the value is later
+ * converted to/from UTC anywhere in the stack — regardless of the
+ * server's system timezone.
+ */
+export function getPKTFutureDate(daysToAdd: number): Date {
+  const pktNow = new Date(Date.now() + PKT_OFFSET_MS);
+  const year = pktNow.getUTCFullYear();
+  const month = pktNow.getUTCMonth();
+  const day = pktNow.getUTCDate() + daysToAdd;
+  const noonPKT = new Date(Date.UTC(year, month, day, 12, 0, 0, 0));
+  return new Date(noonPKT.getTime() - PKT_OFFSET_MS);
+}

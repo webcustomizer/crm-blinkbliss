@@ -182,7 +182,7 @@ export default function SalesDashboard() {
         {
           event: "INSERT",
           schema: "public",
-          table: "LeadStatusHistory",
+          table: "StatusHistory",
         },
         () => {
           scheduleRefresh();
