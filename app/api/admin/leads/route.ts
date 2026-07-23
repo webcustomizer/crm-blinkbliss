@@ -64,7 +64,10 @@ export async function GET(req: NextRequest) {
       where,
       skip,
       take: limit,
-      orderBy: { createdAt: "desc" },
+      // Complete leads first (enum declares COMPLETE before INCOMPLETE),
+      // newest-first within each group. Filters/search/pagination above
+      // are unaffected — this only changes ordering of the results.
+      orderBy: [{ completion: "asc" }, { createdAt: "desc" }],
       include: { assignedTo: { select: { id: true, name: true } } },
     });
 
