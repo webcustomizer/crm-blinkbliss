@@ -454,6 +454,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
   async function updateLeadStatus(newStatus: string) {
     if (!form.remarks.trim()) {
       setRemarksError(true);
+      toast.error("Please add remarks before changing status");
       remarksRef.current?.focus();
       return;
     }
