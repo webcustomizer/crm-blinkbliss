@@ -8,6 +8,9 @@ interface LeadFiltersProps {
 
   status: string;
   setStatus: (value: string) => void;
+
+  completion: string;
+  setCompletion: (value: string) => void;
 }
 
 const statuses = [
@@ -43,6 +46,22 @@ const statuses = [
     label: "Dead",
     value: "DEAD",
   },
+  
+];
+
+const completions = [
+  {
+    label: "All Leads",
+    value: "",
+  },
+  {
+    label: "Complete",
+    value: "COMPLETE",
+  },
+  {
+    label: "Incomplete",
+    value: "INCOMPLETE",
+  },
 ];
 
 export default function LeadFilters({
@@ -50,6 +69,8 @@ export default function LeadFilters({
   setSearch,
   status,
   setStatus,
+   completion,
+  setCompletion,
 }: LeadFiltersProps) {
   return (
     <div
@@ -180,6 +201,65 @@ export default function LeadFilters({
           ))}
         </select>
       </div>
+      <div
+  className="
+  relative
+  sm:w-64
+  "
+>
+  <Filter
+    size={17}
+    className="
+    pointer-events-none
+    absolute
+    left-3
+    top-1/2
+    -translate-y-1/2
+    text-[#D4AF37]
+    "
+  />
+
+  <select
+    value={completion}
+    onChange={(e) => setCompletion(e.target.value)}
+    className="
+    h-11
+    w-full
+
+    appearance-none
+
+    rounded-xl
+
+    border
+    border-[#D4AF37]/20
+
+    bg-[#111111]
+
+    pl-10
+    pr-4
+
+    text-sm
+    text-white
+
+    outline-none
+
+    focus:border-[#D4AF37]
+    "
+  >
+    {completions.map((item) => (
+      <option
+        key={item.value}
+        value={item.value}
+        className="
+        bg-[#161616]
+        text-white
+        "
+      >
+        {item.label}
+      </option>
+    ))}
+  </select>
+</div>
     </div>
   );
 }

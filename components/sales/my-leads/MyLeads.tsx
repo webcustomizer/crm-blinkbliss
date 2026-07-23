@@ -52,6 +52,9 @@ export default function MyLeads({ userId }: { userId?: string }) {
   const [search, setSearch] = useState("");
 
   const [status, setStatus] = useState("");
+  const [completion, setCompletion] = useState("");
+const completionRef = useRef("");
+
   const searchRef = useRef("");
   const statusRef = useRef("");
 
@@ -72,6 +75,9 @@ export default function MyLeads({ userId }: { userId?: string }) {
   useEffect(() => {
     statusRef.current = status;
   }, [status]);
+  useEffect(() => {
+  completionRef.current = completion;
+}, [completion]);
 
   async function getLeads(showLoader = false, page = currentPage) {
     try {
@@ -88,6 +94,10 @@ export default function MyLeads({ userId }: { userId?: string }) {
       if (statusRef.current) {
         params.append("status", statusRef.current);
       }
+
+      if (completionRef.current) {
+  params.append("completion", completionRef.current);
+}
 
       params.append("page", String(page));
       params.append("limit", String(PAGE_SIZE));
@@ -157,7 +167,7 @@ export default function MyLeads({ userId }: { userId?: string }) {
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, status]);
+  }, [search, status, completion]);
 
   // Deep-link support: /sales/my-leads?leadId=xyz auto-opens that lead's
   // detail panel. This is what notification clicks (lead assigned, etc.)
@@ -254,11 +264,13 @@ export default function MyLeads({ userId }: { userId?: string }) {
       </div>
 
       <LeadFilters
-        search={search}
-        setSearch={setSearch}
-        status={status}
-        setStatus={setStatus}
-      />
+  search={search}
+  setSearch={setSearch}
+  status={status}
+  setStatus={setStatus}
+  completion={completion}
+  setCompletion={setCompletion}
+/>
 
       {/* Responsive: table on desktop, cards on mobile — server-side pagination */}
       <LeadsTable

@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search") || "";
 
     const status = searchParams.get("status") || "ALL";
+    const completion = searchParams.get("completion") || "ALL";
 
     // Pagination params — default page 1, 10 per page (LeadsTable ka default pageSize)
     const page = Math.max(1, Number(searchParams.get("page")) || 1);
@@ -28,37 +29,41 @@ export async function GET(req: NextRequest) {
     const limit = Math.max(1, Number(searchParams.get("limit")) || 10);
 
     const where = {
-      isDeleted: false,
-      assignedToId: salespersonId,
+  isDeleted: false,
+  assignedToId: salespersonId,
 
-      ...(status !== "ALL" && {
-        status: status as any,
-      }),
+  ...(status !== "ALL" && {
+    status: status as any,
+  }),
 
-      ...(search && {
-        OR: [
-          {
-            name: {
-              contains: search,
-              mode: "insensitive" as const,
-            },
-          },
+  ...(completion !== "ALL" && {
+    completion: completion as any,
+  }),
 
-          {
-            phone: {
-              contains: search,
-            },
-          },
+  ...(search && {
+    OR: [
+      {
+        name: {
+          contains: search,
+          mode: "insensitive" as const,
+        },
+      },
 
-          {
-            city: {
-              contains: search,
-              mode: "insensitive" as const,
-            },
-          },
-        ],
-      }),
-    };
+      {
+        phone: {
+          contains: search,
+        },
+      },
+
+      {
+        city: {
+          contains: search,
+          mode: "insensitive" as const,
+        },
+      },
+    ],
+  }),
+};
 
     // Total count aur current page ka data dono ek sath (parallel) fetch karte hain
     const [total, leads] = await Promise.all([
@@ -67,9 +72,14 @@ export async function GET(req: NextRequest) {
       prisma.lead.findMany({
         where,
 
-        orderBy: {
-          createdAt: "desc",
-        },
+        orderBy: [
+  {
+    completion: "asc",
+  },
+  {
+    createdAt: "desc",
+  },
+],
 
         skip: (page - 1) * limit,
 
@@ -91,6 +101,8 @@ export async function GET(req: NextRequest) {
           purpose: true,
 
           status: true,
+
+          completion: true,
 
           remarks: true,
 
