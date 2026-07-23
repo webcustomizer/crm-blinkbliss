@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
       const otp = generateOTP();
       await prisma.user.update({
         where: { id: user.id },
-        data: { twoFactorSecret: otp, otpExpiresAt: new Date() },
+        data: { twoFactorSecret: otp, otpExpiresAt: new Date(Date.now() + 5 * 60 * 1000) },
       });
 
       const html = getOTPEmailTemplate(otp, user.name);
@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
       name: user.name,
       email: user.email,
       role: user.role,
-    });
+    }, `${sessionHours}h`);
 
     const cookieStore = await cookies();
     const maxAgeSeconds = sessionHours * 3600;

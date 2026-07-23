@@ -15,7 +15,7 @@ export type TokenPayload = {
   role: "ADMIN" | "SALESPERSON";
 };
 
-export async function createToken(payload: TokenPayload) {
+export async function createToken(payload: TokenPayload, expiresIn = "7d") {
   return await new SignJWT(payload)
 
     .setProtectedHeader({
@@ -24,7 +24,7 @@ export async function createToken(payload: TokenPayload) {
 
     .setIssuedAt()
 
-    .setExpirationTime("7d")
+    .setExpirationTime(expiresIn)
 
     .sign(secret);
 }

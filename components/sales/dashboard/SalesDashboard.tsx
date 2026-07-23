@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 import StatsCards from "./StatsCards";
 import TodayFollowUps from "./TodayFollowUps";
@@ -70,7 +71,7 @@ export default function SalesDashboard() {
         setUserId(data.user.id);
       }
     } catch {
-
+      toast.error("Failed to load user session");
     }
   }, []);
 

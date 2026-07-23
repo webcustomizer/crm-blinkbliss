@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
       orderBy: { name: "asc" },
     });
 
-    return NextResponse.json(salespeople);
+    return NextResponse.json({ success: true, data: salespeople });
   } catch (err) {
     console.error("Fetch salespeople error:", err);
     return NextResponse.json(

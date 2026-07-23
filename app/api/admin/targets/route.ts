@@ -33,23 +33,24 @@ export async function GET(req: NextRequest) {
 
     const targetMap = new Map(targets.map((t) => [t.userId, t]));
 
-    // Count achieved (joined) leads for this month
+    // Count achieved (joined) leads for this month via StatusHistory
     const startOfMonth = new Date(year, month - 1, 1);
     const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
 
-    const achievedCounts = await prisma.lead.groupBy({
-      by: ["assignedToId"],
+    const joinedRecords = await prisma.statusHistory.findMany({
       where: {
-        status: "JOINED",
-        updatedAt: { gte: startOfMonth, lte: endOfMonth },
-        assignedToId: { not: null },
+        newStatus: "JOINED",
+        changedAt: { gte: startOfMonth, lte: endOfMonth },
+        lead: { assignedToId: { not: null } },
       },
-      _count: { id: true },
+      select: { lead: { select: { assignedToId: true } } },
     });
 
-    const achievedMap = new Map(
-      achievedCounts.map((a) => [a.assignedToId!, a._count.id]),
-    );
+    const achievedMap = new Map<string, number>();
+    for (const r of joinedRecords) {
+      const id = r.lead.assignedToId as string;
+      achievedMap.set(id, (achievedMap.get(id) || 0) + 1);
+    }
 
     const data = salespeople.map((sp) => {
       const t = targetMap.get(sp.id);
