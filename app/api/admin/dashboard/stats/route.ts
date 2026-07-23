@@ -37,8 +37,12 @@ export async function GET(req: NextRequest) {
         where: { ...whereActive, createdAt: { gte: todayStart, lte: todayEnd } },
       }),
 
-      prisma.lead.count({
-        where: { ...whereActive, status: "JOINED", updatedAt: { gte: todayStart, lte: todayEnd } },
+      prisma.statusHistory.count({
+        where: {
+          newStatus: "JOINED",
+          changedAt: { gte: todayStart, lte: todayEnd },
+          lead: { isDeleted: false },
+        },
       }),
 
       prisma.lead.count({
