@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, memo } from "react";
+import { useCallback, useEffect, useRef, useState, memo } from "react";
 import { createPortal } from "react-dom";
 
 import {
@@ -345,6 +345,9 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
   // Same idea, but for completing a follow up.
   const [followUpSaving, setFollowUpSaving] = useState(false);
 
+  const remarksRef = useRef<HTMLTextAreaElement>(null);
+  const [remarksError, setRemarksError] = useState(false);
+
   const [showAllFollowups, setShowAllFollowups] = useState(false);
   const [showAllStatusHistory, setShowAllStatusHistory] = useState(false);
   const [maxFollowUps, setMaxFollowUps] = useState(4);
@@ -450,9 +453,11 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
 
   async function updateLeadStatus(newStatus: string) {
     if (!form.remarks.trim()) {
-      toast.error("Please add remarks before changing status");
+      setRemarksError(true);
+      remarksRef.current?.focus();
       return;
     }
+    setRemarksError(false);
 
     try {
       setSaving(true);
@@ -1245,16 +1250,19 @@ hover:bg-[#25D366]/20
                       )}
 
                       <textarea
+                        ref={remarksRef}
                         rows={4}
                         disabled={remarksDisabled}
                         value={form.remarks}
-                        onChange={(e) => updateField("remarks", e.target.value)}
+                        onChange={(e) => {
+                          updateField("remarks", e.target.value);
+                          if (remarksError) setRemarksError(false);
+                        }}
                         placeholder="Write remarks or notes..."
-                        className="
+                        className={`
     w-full
     rounded-xl
     border
-    border-white/[0.06]
     bg-black/25
     p-3
     text-sm
@@ -1266,7 +1274,11 @@ hover:bg-[#25D366]/20
     focus:border-[#D4AF37]/40
     disabled:cursor-not-allowed
     disabled:opacity-50
-  "
+    ${remarksError
+      ? "border-red-500/60 focus:border-red-500/80"
+      : "border-white/[0.06]"
+    }
+  `}
                       />
 
                       <div className="mt-2 flex items-center justify-between gap-3">
