@@ -449,6 +449,11 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
   }, [leadId]);
 
   async function updateLeadStatus(newStatus: string) {
+    if (!form.remarks.trim()) {
+      toast.error("Please add remarks before changing status");
+      return;
+    }
+
     try {
       setSaving(true);
       setStatusSaving(true);
@@ -460,6 +465,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
         },
         body: JSON.stringify({
           status: newStatus,
+          remarks: form.remarks.trim(),
         }),
       });
 
@@ -473,6 +479,7 @@ export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
       invalidateLead(leadId); // status changed server-side — old cache entry is stale
       await getLeadDetails();
 
+      setForm((prev) => ({ ...prev, remarks: "" }));
       toast.success("Status updated successfully");
     } catch (error) {
       toast.error("Something went wrong");
@@ -1335,6 +1342,12 @@ hover:bg-[#25D366]/20
                         <option value="JOINED">JOINED</option>
                         <option value="DEAD">DEAD</option>
                       </select>
+
+                      {!isClosed && !form.remarks.trim() && !saving && (
+                        <p className="mt-1.5 text-[11px] text-amber-400/70">
+                          Add remarks below before changing status
+                        </p>
+                      )}
 
                       {statusSaving && (
                         <div

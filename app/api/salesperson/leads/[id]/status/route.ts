@@ -10,17 +10,6 @@ export const dynamic = "force-dynamic";
 
 const VALID_STATUSES = ["NEW", "CALLED", "TRAINING_ATTENDED", "SEAT_RESERVED", "NEED_MORE_FOLLOW_UP", "JOINED", "DEAD"];
 
-// Pakistan Standard Time = UTC+5 (no daylight saving)
-const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
-
-function isFollowUpDuePKT(nextFollowUp: Date): boolean {
-  const followUpPKT = new Date(nextFollowUp.getTime() + PKT_OFFSET_MS);
-  const nowPKT = new Date(Date.now() + PKT_OFFSET_MS);
-  const followUpDateStr = followUpPKT.toISOString().split("T")[0];
-  const nowDateStr = nowPKT.toISOString().split("T")[0];
-  return followUpDateStr <= nowDateStr;
-}
-
 export async function PATCH(
   req: NextRequest,
   context: {
@@ -36,7 +25,7 @@ export async function PATCH(
 
     const { id } = await context.params;
 
-    const { status } = await req.json();
+    const { status, remarks } = await req.json();
 
     const lead = await prisma.lead.findFirst({
       where: {
@@ -84,12 +73,9 @@ export async function PATCH(
       );
     }
 
-    // Enforce follow-up due-date lock: don't allow status changes before
-    // the scheduled follow-up date, same as complete-followup route.
-    // DEAD is always allowed (admin/system can mark dead anytime).
-    if (status !== "DEAD" && lead.nextFollowUp && !isFollowUpDuePKT(new Date(lead.nextFollowUp))) {
+    if (!remarks?.trim()) {
       return NextResponse.json(
-        { message: "Follow up is not due yet. Please wait for the scheduled date." },
+        { message: "Remarks are required before changing status." },
         { status: 400 },
       );
     }
@@ -106,6 +92,15 @@ export async function PATCH(
           status,
           isPriority: false,
           ...(!lead.firstResponseAt && { firstResponseAt: new Date() }),
+        },
+      });
+
+      await tx.followUp.create({
+        data: {
+          leadId: id,
+          userId: user.id,
+          remarks: remarks.trim(),
+          followUpNumber: 0,
         },
       });
 
