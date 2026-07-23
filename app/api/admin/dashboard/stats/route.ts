@@ -3,14 +3,29 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/require-auth";
 import { getPKTDayBoundaryUTC } from "@/lib/format-date";
 
+// Derived straight from the Prisma client's own method signature, so this
+// always matches whatever the generator produces — no separate import of
+// `Prisma`/enum types needed (those export names can vary by generator).
+type LeadWhereInput = NonNullable<Parameters<typeof prisma.lead.count>[0]>["where"];
+
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req, ["ADMIN"]);
   if ("error" in auth) return auth.error;
 
   try {
+    const { searchParams } = new URL(req.url);
+    const completionParam = searchParams.get("completion");
+    const completionFilter: "COMPLETE" | "INCOMPLETE" | null =
+      completionParam === "COMPLETE" || completionParam === "INCOMPLETE"
+        ? completionParam
+        : null;
+
     const todayStart = getPKTDayBoundaryUTC(0, false);
     const todayEnd = getPKTDayBoundaryUTC(0, true);
-    const whereActive = { isDeleted: false };
+    const whereActive: LeadWhereInput = {
+      isDeleted: false,
+      ...(completionFilter && { completion: completionFilter }),
+    };
 
     const [
       totalLeads,
@@ -61,13 +76,27 @@ export async function GET(req: NextRequest) {
         },
       }),
 
-      prisma.lead.groupBy({
-        by: ["city"],
-        where: { ...whereActive, city: { not: null } },
-        _count: true,
-        orderBy: { _count: { city: "desc" } },
-        take: 4,
-      }),
+      // Grouped via SQL with INITCAP(TRIM(city)) so "Lahore", "lahore",
+      // "LAHORE", " Lahore " etc. (free-text field, no dropdown) all merge
+      // into one entry instead of showing as separate duplicate rows.
+      completionFilter
+        ? prisma.$queryRaw<{ name: string; count: bigint }[]>`
+            SELECT INITCAP(TRIM(city)) as name, COUNT(*) as count
+            FROM "Lead"
+            WHERE "isDeleted" = false AND city IS NOT NULL AND TRIM(city) <> ''
+              AND "completion" = ${completionFilter}::"LeadCompletion"
+            GROUP BY INITCAP(TRIM(city))
+            ORDER BY count DESC
+            LIMIT 4
+          `
+        : prisma.$queryRaw<{ name: string; count: bigint }[]>`
+            SELECT INITCAP(TRIM(city)) as name, COUNT(*) as count
+            FROM "Lead"
+            WHERE "isDeleted" = false AND city IS NOT NULL AND TRIM(city) <> ''
+            GROUP BY INITCAP(TRIM(city))
+            ORDER BY count DESC
+            LIMIT 4
+          `,
 
       prisma.lead.groupBy({
         by: ["purpose"],
@@ -78,18 +107,32 @@ export async function GET(req: NextRequest) {
       }),
 
       // Age bucketing via SQL — avoids fetching every lead row into Node
-      prisma.$queryRaw<{ bucket: string; count: bigint }[]>`
-        SELECT
-          CASE
-            WHEN age >= 18 AND age <= 25 THEN '18-25'
-            WHEN age >= 26 AND age <= 35 THEN '26-35'
-            WHEN age > 35 THEN '36+'
-          END as bucket,
-          COUNT(*) as count
-        FROM "Lead"
-        WHERE "isDeleted" = false AND age IS NOT NULL
-        GROUP BY bucket
-      `,
+      completionFilter
+        ? prisma.$queryRaw<{ bucket: string; count: bigint }[]>`
+            SELECT
+              CASE
+                WHEN age >= 18 AND age <= 25 THEN '18-25'
+                WHEN age >= 26 AND age <= 35 THEN '26-35'
+                WHEN age > 35 THEN '36+'
+              END as bucket,
+              COUNT(*) as count
+            FROM "Lead"
+            WHERE "isDeleted" = false AND age IS NOT NULL
+              AND "completion" = ${completionFilter}::"LeadCompletion"
+            GROUP BY bucket
+          `
+        : prisma.$queryRaw<{ bucket: string; count: bigint }[]>`
+            SELECT
+              CASE
+                WHEN age >= 18 AND age <= 25 THEN '18-25'
+                WHEN age >= 26 AND age <= 35 THEN '26-35'
+                WHEN age > 35 THEN '36+'
+              END as bucket,
+              COUNT(*) as count
+            FROM "Lead"
+            WHERE "isDeleted" = false AND age IS NOT NULL
+            GROUP BY bucket
+          `,
 
       prisma.lead.groupBy({
         by: ["bestTimeToReach"],
@@ -138,7 +181,7 @@ export async function GET(req: NextRequest) {
         todayJoined,
         todayFollowUps,
         overdueFollowUps,
-        topCities: topCities.map((c) => ({ name: c.city || "Other", count: c._count })),
+        topCities: topCities.map((c) => ({ name: c.name, count: Number(c.count) })),
         topPurposes: topPurposes.map((p) => ({ name: p.purpose || "Other", count: p._count })),
         ageGroups: ageBuckets,
         timeSlots: timeSlotMap,

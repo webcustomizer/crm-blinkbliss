@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import useSWR from "swr";
 import {
   MapPin,
   Target,
@@ -25,11 +27,32 @@ type DashboardStats = {
   trainingInterest: Record<string, number>;
 };
 
+type CompletionFilter = "ALL" | "COMPLETE" | "INCOMPLETE";
+
 type Props = {
   stats: DashboardStats;
 };
 
-export default function LeadAnalytics({ stats }: Props) {
+const fetcher = (url: string) =>
+  fetch(url, { cache: "no-store" }).then((r) => r.json());
+
+export default function LeadAnalytics({ stats: initialStats }: Props) {
+  const [filter, setFilter] = useState<CompletionFilter>("ALL");
+
+  const queryUrl =
+    filter === "ALL"
+      ? "/api/admin/dashboard/stats"
+      : `/api/admin/dashboard/stats?completion=${filter}`;
+
+  // Only re-fetches when the filter changes (initial "ALL" load reuses
+  // the stats already fetched by AdminDashboard, no duplicate request).
+  const { data, isLoading } = useSWR(queryUrl, fetcher, {
+    revalidateOnFocus: false,
+    fallbackData: filter === "ALL" ? { success: true, data: initialStats } : undefined,
+  });
+
+  const stats: DashboardStats = data?.success ? data.data : initialStats;
+
   function getPercentage(value: number, total: number) {
     if (!total) return 0;
     return Math.round((value / total) * 100);
@@ -159,33 +182,78 @@ const sections = [
           </p>
         </div>
 
-        <div
-          className="
-          hidden
-          shrink-0
-          rounded-2xl
-          border
-          border-[#D4AF37]/20
-          bg-[#D4AF37]/[0.06]
-          px-4
-          py-2.5
-          text-right
-          sm:block
-          "
-        >
-          <div
-            style={{ fontFamily: "var(--font-display)" }}
-            className="text-xl font-semibold text-[#D4AF37]"
-          >
-            {totalLeads}
+        <div className="flex shrink-0 items-center gap-3">
+          {/* Complete / Incomplete filter */}
+          <div className="flex rounded-xl border border-white/10 bg-[#111111] p-1">
+            {(
+              [
+                { key: "ALL", label: "All" },
+                { key: "COMPLETE", label: "Complete" },
+                { key: "INCOMPLETE", label: "Incomplete" },
+              ] as { key: CompletionFilter; label: string }[]
+            ).map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setFilter(opt.key)}
+                className={`
+                rounded-lg
+                px-3
+                py-1.5
+                text-xs
+                font-medium
+                transition-colors
+                ${
+                  filter === opt.key
+                    ? "bg-[#D4AF37]/15 text-[#D4AF37]"
+                    : "text-white/40 hover:text-white/70"
+                }
+                `}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
-          <div className="text-[11px] uppercase tracking-wide text-white/40">
-            Total leads
+
+          <div
+            className="
+            hidden
+            shrink-0
+            rounded-2xl
+            border
+            border-[#D4AF37]/20
+            bg-[#D4AF37]/[0.06]
+            px-4
+            py-2.5
+            text-right
+            sm:block
+            "
+          >
+            <div
+              style={{ fontFamily: "var(--font-display)" }}
+              className="text-xl font-semibold text-[#D4AF37]"
+            >
+              {isLoading ? "…" : totalLeads}
+            </div>
+            <div className="text-[11px] uppercase tracking-wide text-white/40">
+              Total leads
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="relative grid grid-cols-1 gap-5 md:grid-cols-2">
+      <div
+        className={`
+        relative
+        grid
+        grid-cols-1
+        gap-5
+        transition-opacity
+        duration-200
+        md:grid-cols-2
+        ${isLoading ? "opacity-50" : "opacity-100"}
+        `}
+      >
         {sections.map((section) => (
           <div
   key={section.title}
