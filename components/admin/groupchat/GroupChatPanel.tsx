@@ -276,7 +276,7 @@ export default function GroupChatPanel({
       mentionTimerRef.current = setTimeout(async () => {
         try {
           const r = await fetch(
-            `/api/admin/messages?query=${encodeURIComponent(
+            `/api/admin/group-chat?query=${encodeURIComponent(
               val.slice(atIdx + 1),
             )}`,
             { cache: "no-store" },
@@ -757,8 +757,10 @@ export default function GroupChatPanel({
             <button
               type="button"
               onClick={() => {
-                setNewMsg((p) => p + "@");
+                const newVal = newMsg + "@";
+                setNewMsg(newVal);
                 setShowMentionSearch(true);
+                onInputChange(newVal);
                 inputRef.current?.focus();
               }}
               className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg text-white/40 hover:text-blue-400"

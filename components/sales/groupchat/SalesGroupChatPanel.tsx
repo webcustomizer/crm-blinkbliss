@@ -39,6 +39,7 @@ export default function SalesGroupChatPanel({
   const [mentionedLead, setMentionedLead] = useState<MentionLead | null>(null);
   const [mentionResults, setMentionResults] = useState<MentionLead[]>([]);
   const [showMentionSearch, setShowMentionSearch] = useState(false);
+  const [mentionLoading, setMentionLoading] = useState(false);
   const [fileUploading, setFileUploading] = useState(false);
   const [previewFile, setPreviewFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -269,8 +270,9 @@ export default function SalesGroupChatPanel({
       if (mentionTimerRef.current) clearTimeout(mentionTimerRef.current);
       mentionTimerRef.current = setTimeout(async () => {
         try {
+          setMentionLoading(true);
           const r = await fetch(
-            `/api/salesperson/messages?query=${encodeURIComponent(
+            `/api/salesperson/group-chat?query=${encodeURIComponent(
               val.slice(atIdx + 1),
             )}`,
             { cache: "no-store" },
@@ -278,10 +280,13 @@ export default function SalesGroupChatPanel({
           const j = await r.json();
           if (j.leads) setMentionResults(j.leads.slice(0, 5));
         } catch (e) { console.error("Failed to search mentions:", e); }
+        finally { setMentionLoading(false); }
       }, 100);
       return;
     }
     setShowMentionSearch(false);
+    setMentionResults([]);
+    setMentionLoading(false);
   }
 
   function selectMentionLead(lead: MentionLead) {
@@ -628,23 +633,31 @@ export default function SalesGroupChatPanel({
           </button>
         </div>
       )}
-      {showMentionSearch && mentionResults.length > 0 && (
+      {showMentionSearch && (
         <div className="mx-3 sm:mx-4 mb-1 rounded-xl border border-white/10 bg-[#1a1a1a] max-h-32 overflow-y-auto shrink-0">
-          {mentionResults.map((lead) => (
-            <button
-              key={lead.id}
-              onClick={() => selectMentionLead(lead)}
-              className="w-full text-left px-3 py-2 hover:bg-[#D4AF37]/[0.08] flex items-center gap-2 text-xs border-b border-white/5 last:border-0"
-            >
-              <AtSign size={12} className="text-blue-400 shrink-0" />
-              <span className="text-white truncate">
-                {lead.name || "No Name"}
-              </span>
-              <span className="text-[10px] text-white/30 ml-auto">
-                {lead.phone}
-              </span>
-            </button>
-          ))}
+          {mentionResults.length > 0 ? (
+            mentionResults.map((lead) => (
+              <button
+                key={lead.id}
+                onClick={() => selectMentionLead(lead)}
+                className="w-full text-left px-3 py-2 hover:bg-[#D4AF37]/[0.08] flex items-center gap-2 text-xs border-b border-white/5 last:border-0"
+              >
+                <AtSign size={12} className="text-blue-400 shrink-0" />
+                <span className="text-white truncate">
+                  {lead.name || "No Name"}
+                </span>
+                <span className="text-[10px] text-white/30 ml-auto">
+                  {lead.phone}
+                </span>
+              </button>
+            ))
+          ) : (
+            <div className="px-3 py-2 text-[11px] text-white/40 text-center">
+              {mentionLoading
+                ? "Searching..."
+                : "No matching leads found"}
+            </div>
+          )}
         </div>
       )}
       <div className="p-2 sm:p-4 border-t border-white/10 shrink-0 bg-gradient-to-t from-black/30 to-transparent">
@@ -666,8 +679,11 @@ export default function SalesGroupChatPanel({
             <button
               type="button"
               onClick={() => {
-                setNewMsg((p) => p + "@");
+                const newVal = newMsg + "@";
+                setNewMsg(newVal);
                 setShowMentionSearch(true);
+                onInputChange(newVal);
+                setTimeout(() => inputRef.current?.focus(), 0);
               }}
               className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 text-white/40 hover:text-blue-400"
             >

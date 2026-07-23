@@ -21,8 +21,25 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
+    const query = searchParams.get("query") || "";
     const cursor = searchParams.get("cursor"); // oldest message id currently loaded
     const PAGE_SIZE = 30;
+
+    if (query && query.length >= 2) {
+      const leads = await prisma.lead.findMany({
+        where: {
+          assignedToId: auth.user.id,
+          OR: [
+            { name: { contains: query, mode: "insensitive" } },
+            { phone: { contains: query } },
+          ],
+        },
+        select: { id: true, name: true, phone: true },
+        take: 10,
+        orderBy: { createdAt: "desc" },
+      });
+      return NextResponse.json({ success: true, leads });
+    }
 
     const currentUser = await prisma.user.findUnique({
       where: { id: auth.user.id },

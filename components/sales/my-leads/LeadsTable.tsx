@@ -1,6 +1,6 @@
 "use client";
 
-import { Phone, CalendarClock, ChevronLeft, ChevronRight } from "lucide-react";
+import { Phone, CalendarClock, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 
 import LeadStatusBadge from "./LeadStatusBadge";
 import { prefetchLead } from "@/lib/leadCache";
@@ -75,6 +75,9 @@ export default function LeadsTable({
               <th className="px-5 py-4 text-left text-xs font-medium text-zinc-400">
                 Follow Up
               </th>
+              <th className="px-5 py-4 text-left text-xs font-medium text-zinc-400">
+                Created
+              </th>
               <th className="px-5 py-4 text-right text-xs font-medium text-zinc-400">
                 Action
               </th>
@@ -85,7 +88,7 @@ export default function LeadsTable({
             {leads.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-5 py-10 text-center text-sm text-zinc-500"
                 >
                   No leads found
@@ -128,6 +131,13 @@ export default function LeadsTable({
                     ) : (
                       <span className="text-sm text-zinc-500">-</span>
                     )}
+                  </td>
+
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-2 text-sm text-zinc-400">
+                      <Calendar size={14} />
+                      {formatDateShort(lead.createdAt)}
+                    </div>
                   </td>
 
                   <td className="px-5 py-4 text-right">
@@ -176,7 +186,11 @@ export default function LeadsTable({
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-white">
+                  <p className="flex items-center gap-1 text-[10px] text-zinc-500">
+                    <Calendar size={10} />
+                    {formatDateShort(lead.createdAt)}
+                  </p>
+                  <p className="mt-0.5 text-sm font-semibold text-white">
                     {lead.name || "Unknown"}
                   </p>
                   <div className="mt-1 flex items-center gap-2 text-sm text-zinc-300">
@@ -187,17 +201,19 @@ export default function LeadsTable({
                 <LeadStatusBadge status={lead.status} />
               </div>
 
-              <div className="mt-3 flex items-center justify-between border-t border-[#D4AF37]/10 pt-3">
-                <div className="text-xs text-zinc-400">{lead.city || "-"}</div>
+              <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-[#D4AF37]/10 pt-2.5">
+                <span className="truncate text-xs text-zinc-400">{lead.city || "-"}</span>
 
-                {lead.nextFollowUp ? (
-                  <div className="flex items-center gap-1.5 text-xs text-zinc-400">
-                    <CalendarClock size={13} />
-                    {formatDate(lead.nextFollowUp)}
-                  </div>
-                ) : (
-                  <span className="text-xs text-zinc-500">No follow up</span>
-                )}
+                <span className="flex shrink-0 items-center gap-1 text-[11px] text-zinc-400">
+                  <CalendarClock size={12} className={lead.nextFollowUp ? "text-[#D4AF37]/70" : "text-zinc-600"} />
+                  {lead.nextFollowUp ? (
+                    <>
+                      <span className="text-zinc-500">Next Follow Up:</span> {formatDate(lead.nextFollowUp)}
+                    </>
+                  ) : (
+                    <span className="text-zinc-500">No Follow Up</span>
+                  )}
+                </span>
               </div>
 
               <button
