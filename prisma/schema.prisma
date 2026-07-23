@@ -116,6 +116,7 @@ model Lead {
   deletedAt DateTime?
   deletedById String?
   mergedIntoId String?
+  isPriority Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -137,6 +138,7 @@ model Lead {
   @@index([source])
   @@index([isDeleted])
   @@index([mergedIntoId])
+  @@index([isPriority])
 }
 
 model FollowUp {

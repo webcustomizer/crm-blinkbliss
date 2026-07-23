@@ -22,6 +22,7 @@ type EditLeadForm = {
   purpose: string;
   status: string;
   remarks: string;
+  isPriority: boolean;
 };
 
 type Props = {
@@ -48,6 +49,7 @@ export default function EditLeadDialog({
       purpose: lead?.purpose ?? "",
       status: lead?.status ?? "NEW",
       remarks: lead?.remarks ?? "",
+      isPriority: lead?.isPriority ?? false,
     }),
     [lead],
   );
@@ -97,6 +99,7 @@ export default function EditLeadDialog({
           remarks: form.remarks,
           source: form.source || null,
           assignedToId: lead.assignedTo?.id ?? null,
+          isPriority: form.isPriority,
         }),
       });
 
@@ -272,6 +275,47 @@ export default function EditLeadDialog({
             text-white
             "
           />
+
+          <button
+            type="button"
+            onClick={() => setForm((prev) => ({ ...prev, isPriority: !prev.isPriority }))}
+            className={`
+            flex
+            w-full
+            items-center
+            gap-3
+            rounded-xl
+            border
+            p-3
+            text-sm
+            font-medium
+            transition
+            ${form.isPriority
+              ? "border-red-500/40 bg-red-500/10 text-red-400"
+              : "border-[#D4AF37]/20 bg-black/30 text-zinc-400 hover:border-[#D4AF37]/40"
+            }
+            `}
+          >
+            <span
+              className={`
+              flex
+              h-5
+              w-5
+              items-center
+              justify-center
+              rounded
+              border
+              text-xs
+              ${form.isPriority
+                ? "border-red-500 bg-red-500 text-white"
+                : "border-zinc-600 bg-transparent"
+              }
+              `}
+            >
+              {form.isPriority && "✓"}
+            </span>
+            Mark as Priority
+          </button>
 
           <Button
             onClick={updateLead}

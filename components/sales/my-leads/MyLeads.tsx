@@ -24,6 +24,8 @@ interface Lead {
 
   status: string;
 
+  isPriority: boolean;
+
   nextFollowUp: string | null;
 
   createdAt: string;

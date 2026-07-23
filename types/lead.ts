@@ -65,6 +65,7 @@ export interface LeadDetails {
   nextFollowUp?: string | null;
   firstResponseAt?: string | null;
   isDeleted?: boolean;
+  isPriority?: boolean;
   deletedAt?: string | null;
   mergedIntoId?: string | null;
   assignedTo?: LeadAssignedTo | null;

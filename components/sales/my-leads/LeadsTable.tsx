@@ -12,6 +12,7 @@ interface Lead {
   phone: string;
   city: string | null;
   status: string;
+  isPriority: boolean;
   nextFollowUp: string | null;
   createdAt: string;
   remarks: string | null;
@@ -25,6 +26,14 @@ interface LeadsTableProps {
   currentPage: number;
   onPageChange: (page: number) => void;
   pageSize: number;
+}
+
+function PriorityBadge() {
+  return (
+    <span className="inline-flex shrink-0 items-center rounded-md border border-red-500/20 bg-red-500/15 px-2 py-0.5 text-[11px] font-medium leading-none text-red-400">
+      Priority
+    </span>
+  );
 }
 
 export default function LeadsTable({
@@ -102,9 +111,12 @@ export default function LeadsTable({
                   className="border-b border-[#D4AF37]/10 transition hover:bg-[#D4AF37]/5"
                 >
                   <td className="px-5 py-4">
-                    <p className="text-sm font-semibold text-white">
-                      {lead.name || "Unknown"}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-semibold text-white">
+                        {lead.name || "Unknown"}
+                      </p>
+                      {lead.isPriority && <PriorityBadge />}
+                    </div>
                   </td>
 
                   <td className="px-5 py-4">
@@ -190,9 +202,12 @@ export default function LeadsTable({
                     <Calendar size={10} />
                     {formatDateShort(lead.createdAt)}
                   </p>
-                  <p className="mt-0.5 text-sm font-semibold text-white">
-                    {lead.name || "Unknown"}
-                  </p>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                    <p className="text-sm font-semibold text-white">
+                      {lead.name || "Unknown"}
+                    </p>
+                    {lead.isPriority && <PriorityBadge />}
+                  </div>
                   <div className="mt-1 flex items-center gap-2 text-sm text-zinc-300">
                     <Phone size={13} />
                     {lead.phone}

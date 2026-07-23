@@ -24,6 +24,7 @@ type Lead = {
   source: string | null;
   status: string;
   completion: string;
+  isPriority: boolean;
   createdAt: string;
   assignedTo?: { id: string; name: string } | null;
 };
@@ -226,6 +227,7 @@ export default function LeadsTable({ salespersons }: Props) {
                 city: newRow.city ?? l.city, currentStatus: newRow.currentStatus ?? l.currentStatus,
                 purpose: newRow.purpose ?? l.purpose, source: newRow.source ?? l.source,
                 status: newRow.status ?? l.status, completion: newRow.completion ?? l.completion,
+                isPriority: newRow.isPriority ?? l.isPriority,
                 assignedTo: newRow.assignedToId ? (resolvedAssignedTo ? { id: resolvedAssignedTo.id, name: resolvedAssignedTo.name } : l.assignedTo) : null,
               };
             });
@@ -556,6 +558,11 @@ export default function LeadsTable({ salespersons }: Props) {
                               Incomplete
                             </span>
                           )}
+                          {lead.isPriority && (
+                            <span className="inline-flex items-center rounded-full border border-red-500/30 bg-red-500/15 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
+                              Priority
+                            </span>
+                          )}
                           {isUpdating && <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-[#D4AF37]" />}
                         </div>
                         <p className="mt-0.5 truncate text-xs text-white/50">{lead.phone}{lead.city ? ` · ${lead.city}` : ""}</p>
@@ -640,6 +647,11 @@ export default function LeadsTable({ salespersons }: Props) {
                                 className="inline-flex items-center rounded-full border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-400"
                               >
                                 Incomplete
+                              </span>
+                            )}
+                            {lead.isPriority && (
+                              <span className="inline-flex items-center rounded-full border border-red-500/30 bg-red-500/15 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
+                                Priority
                               </span>
                             )}
                             {isUpdating && <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-[#D4AF37]" title="Updating…" />}

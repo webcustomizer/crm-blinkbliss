@@ -257,6 +257,8 @@ export async function POST(
 
           nextFollowUp: formattedNextFollowUp,
 
+          isPriority: false,
+
           ...(!lead.firstResponseAt && { firstResponseAt: new Date() }),
         },
       });

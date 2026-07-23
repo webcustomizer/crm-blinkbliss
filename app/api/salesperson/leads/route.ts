@@ -74,6 +74,9 @@ export async function GET(req: NextRequest) {
 
         orderBy: [
   {
+    isPriority: "desc",
+  },
+  {
     completion: "asc",
   },
   {
@@ -103,6 +106,8 @@ export async function GET(req: NextRequest) {
           status: true,
 
           completion: true,
+
+          isPriority: true,
 
           remarks: true,
 

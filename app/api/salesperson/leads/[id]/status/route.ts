@@ -104,6 +104,7 @@ export async function PATCH(
 
         data: {
           status,
+          isPriority: false,
           ...(!lead.firstResponseAt && { firstResponseAt: new Date() }),
         },
       });

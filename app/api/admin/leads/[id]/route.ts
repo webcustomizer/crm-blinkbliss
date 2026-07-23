@@ -99,6 +99,7 @@ export async function PATCH(
         lastFollowUp: new Date(),
         status: nextStatus,
         nextFollowUp,
+        isPriority: false,
       };
     }
 
@@ -140,6 +141,7 @@ export async function PATCH(
             ...(body.status !== undefined && { status: body.status }),
             ...(body.remarks !== undefined && { remarks: body.remarks }),
             ...(body.assignedToId !== undefined && { assignedToId: body.assignedToId || null }),
+            ...(body.isPriority !== undefined && { isPriority: body.isPriority }),
             ...(body.nextFollowUp !== undefined && { nextFollowUp: body.nextFollowUp ? new Date(body.nextFollowUp) : null }),
             ...followUpUpdate,
             ...slaUpdate,
