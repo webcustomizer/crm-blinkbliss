@@ -159,8 +159,9 @@ export async function POST(req: NextRequest) {
 
     // Track device session with expiry
     const ua = req.headers.get("user-agent") || "";
-    const browser = ua.includes("Chrome") ? "Chrome" : ua.includes("Firefox") ? "Firefox" : ua.includes("Safari") ? "Safari" : "Unknown";
-    const os = ua.includes("Windows") ? "Windows" : ua.includes("Mac") ? "Mac" : ua.includes("Linux") ? "Linux" : ua.includes("Android") ? "Android" : ua.includes("iPhone") ? "iOS" : "Unknown";
+    const isCapacitor = ua.includes("Capacitor");
+    const browser = isCapacitor ? "App" : ua.includes("Chrome") ? "Chrome" : ua.includes("Firefox") ? "Firefox" : ua.includes("Safari") ? "Safari" : "Unknown";
+    const os = ua.includes("Android") ? "Android" : ua.includes("iPhone") || ua.includes("iPad") ? "iOS" : ua.includes("Windows") ? "Windows" : ua.includes("Mac") ? "Mac" : ua.includes("Linux") ? "Linux" : "Unknown";
     const deviceType = ua.includes("Mobile") ? "mobile" : "desktop";
 
     await prisma.loginSession.create({

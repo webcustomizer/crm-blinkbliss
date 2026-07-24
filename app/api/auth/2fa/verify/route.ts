@@ -35,11 +35,11 @@ export async function POST(req: NextRequest) {
     if (!user || !user.isActive) {
       return NextResponse.json({ success: false, message: "Account not found." }, { status: 401 });
     }
-    if (!user.twoFactorSecret || !safeStringCompare(user.twoFactorSecret, otp)) {
+    if (user.otpExpiresAt && isOTPExpired(user.otpExpiresAt)) {
       return NextResponse.json({ success: false, message: "Invalid code." }, { status: 401 });
     }
-    if (user.otpExpiresAt && isOTPExpired(user.otpExpiresAt)) {
-      return NextResponse.json({ success: false, message: "Code expired." }, { status: 410 });
+    if (!user.twoFactorSecret || !safeStringCompare(user.twoFactorSecret, otp)) {
+      return NextResponse.json({ success: false, message: "Invalid code." }, { status: 401 });
     }
     const settings = await getCachedCRMSettings();
     const hours = settings?.sessionMaxHours || 168;
@@ -52,11 +52,19 @@ export async function POST(req: NextRequest) {
     ck.set("token", token, {
       httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: hours * 3600,
     });
+    const ua = req.headers.get("user-agent") || "";
+    const isCapacitor = ua.includes("Capacitor");
+    const browser = isCapacitor ? "App" : ua.includes("Chrome") ? "Chrome" : ua.includes("Firefox") ? "Firefox" : ua.includes("Safari") ? "Safari" : "Unknown";
+    const os = ua.includes("Android") ? "Android" : ua.includes("iPhone") || ua.includes("iPad") ? "iOS" : ua.includes("Windows") ? "Windows" : ua.includes("Mac") ? "Mac" : ua.includes("Linux") ? "Linux" : "Unknown";
+    const deviceType = ua.includes("Mobile") ? "mobile" : "desktop";
+
     await prisma.loginSession.create({
       data: {
         userId: user.id, token,
-        deviceName: "2FA Verified Device", deviceType: "unknown",
-        browser: "Unknown", os: "Unknown",
+        deviceName: `${browser} on ${os}`,
+        deviceType,
+        browser,
+        os,
         ipAddress: ip,
         expiresAt: new Date(Date.now() + hours * 3600 * 1000),
       },
