@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   Search, Users, UserCheck, UserX, Phone,
@@ -8,6 +8,7 @@ import {
   X, Briefcase, Activity, BarChart3, PhoneCall,
 } from "lucide-react";
 import { formatDateShort, formatDateTime } from "@/lib/format-date";
+import { supabase } from "@/lib/supabase";
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string; dot: string }> = {
   NEW: { label: "New", color: "text-blue-400", bg: "bg-blue-500/15", dot: "bg-blue-400" },
@@ -41,17 +42,33 @@ export default function TeamOverview() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchMembers = useCallback(async () => {
     try {
-      const r = await fetch("/api/team-leader/team");
+      const r = await fetch("/api/team-leader/team", { cache: "no-store" });
       const j = await r.json();
       if (j.success) setMembers(j.data);
     } catch { /* silent */ }
     finally { setLoading(false); }
   }, []);
 
+  const scheduleRefresh = useCallback(() => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current = setTimeout(() => { void fetchMembers(); }, 600);
+  }, [fetchMembers]);
+
   useEffect(() => { void fetchMembers(); }, [fetchMembers]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("tl-team-overview-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "StatusHistory" }, () => scheduleRefresh())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "Lead" }, () => scheduleRefresh())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "FollowUp" }, () => scheduleRefresh())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [scheduleRefresh]);
 
   const filtered = members.filter((m) =>
     m.name.toLowerCase().includes(search.toLowerCase()) ||

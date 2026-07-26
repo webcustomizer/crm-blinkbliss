@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   TrendingUp, Users, UserCheck, UserX,
@@ -9,6 +9,7 @@ import {
   CheckCircle, XCircle,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/format-date";
+import { supabase } from "@/lib/supabase";
 
 const FILTERS = [
   { key: "TODAY", label: "Today" },
@@ -45,18 +46,33 @@ export default function TeamReports() {
   const [filter, setFilter] = useState<string>("ALL");
   const [data, setData] = useState<ReportsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchData = useCallback(async (f: string) => {
     setLoading(true);
     try {
-      const r = await fetch(`/api/team-leader/reports?filter=${f}`);
+      const r = await fetch(`/api/team-leader/reports?filter=${f}`, { cache: "no-store" });
       const j = await r.json();
       if (j.success) setData(j.data);
     } catch { /* silent */ }
     finally { setLoading(false); }
   }, []);
 
+  const scheduleRefresh = useCallback(() => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current = setTimeout(() => { void fetchData(filter); }, 600);
+  }, [filter, fetchData]);
+
   useEffect(() => { void fetchData(filter); }, [filter, fetchData]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("tl-reports-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "StatusHistory" }, () => scheduleRefresh())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "Lead" }, () => scheduleRefresh())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [scheduleRefresh]);
 
   return (
     <div className="space-y-5">
