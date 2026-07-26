@@ -107,9 +107,10 @@ export async function PATCH(req: NextRequest) {
       updateData.automationWeights = weights;
     }
 
-    // Reset round-robin pointer when mode or weights change
+    // Reset round-robin state when mode or weights change
     if (mode !== undefined || weights !== undefined) {
       updateData.lastAssignedSalespersonId = null;
+      updateData.automationCurrentWeights = null;
     }
 
     const updated = await prisma.cRMSetting.update({

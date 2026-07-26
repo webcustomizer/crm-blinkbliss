@@ -13,6 +13,9 @@ import { prisma } from "@/lib/prisma";
  * every round, and the candidate with the highest currentWeight is chosen,
  * then their currentWeight is decreased by the total weight sum.
  *
+ * The full currentWeights state is persisted in automationCurrentWeights
+ * so the algorithm works correctly with any number of candidates.
+ *
  * Uses $transaction so concurrent CSV imports serialize correctly.
  */
 export async function getNextAutoAssignee(): Promise<string | null> {
@@ -24,13 +27,14 @@ export async function getNextAutoAssignee(): Promise<string | null> {
     if (mode === "DISABLED") return null;
 
     const weights = (settings.automationWeights as Record<string, number>) || {};
+    const currentWeights = (settings.automationCurrentWeights as Record<string, number>) || {};
 
     if (mode === "TL_WEIGHTED" || mode === "TL_TEAM_AUTO") {
-      return pickFromWeightedPool(tx, weights, ["TEAM_LEAD"], settings.id, settings.lastAssignedSalespersonId, mode === "TL_TEAM_AUTO" ? tx : null);
+      return pickFromWeightedPool(tx, weights, currentWeights, ["TEAM_LEAD"], settings.id, mode === "TL_TEAM_AUTO" ? tx : null);
     }
 
     if (mode === "DIRECT_WEIGHTED") {
-      return pickFromWeightedPool(tx, weights, ["SALESPERSON", "TEAM_LEAD"], settings.id, settings.lastAssignedSalespersonId, null);
+      return pickFromWeightedPool(tx, weights, currentWeights, ["SALESPERSON", "TEAM_LEAD"], settings.id, null);
     }
 
     return null;
@@ -40,9 +44,9 @@ export async function getNextAutoAssignee(): Promise<string | null> {
 async function pickFromWeightedPool(
   tx: any,
   weights: Record<string, number>,
+  currentWeights: Record<string, number>,
   allowedRoles: string[],
   settingsId: string,
-  lastAssignedId: string | null,
   teamAutoTx: any,
 ): Promise<string | null> {
   const candidates = await tx.user.findMany({
@@ -61,39 +65,37 @@ async function pickFromWeightedPool(
     weight: Math.max(weights[c.id] || 1, 1),
   }));
 
-  // Build currentWeight state: default 0 for each candidate
-  const currentWeights: Record<string, number> = {};
-  weightedCandidates.forEach((c: any) => { currentWeights[c.id] = 0; });
+  const totalWeight = weightedCandidates.reduce((s: number, c: any) => s + c.weight, 0);
 
-  // Find which candidate was last assigned and restore relative state
-  if (lastAssignedId) {
-    const lastIdx = weightedCandidates.findIndex((c: any) => c.id === lastAssignedId);
-    if (lastIdx !== -1) {
-      // Simulate: add weight to everyone, subtract from last chosen
-      weightedCandidates.forEach((c: any) => { currentWeights[c.id] += c.weight; });
-      currentWeights[lastAssignedId] -= weightedCandidates.reduce((s: number, c: any) => s + c.weight, 0);
-    }
-  }
+  // Restore currentWeights from persisted state, or initialize to 0
+  const state: Record<string, number> = {};
+  weightedCandidates.forEach((c: any) => {
+    state[c.id] = currentWeights[c.id] ?? 0;
+  });
 
-  // Add weight to all candidates for this round
-  weightedCandidates.forEach((c: any) => { currentWeights[c.id] += c.weight; });
+  // Add each candidate's weight for THIS round
+  weightedCandidates.forEach((c: any) => {
+    state[c.id] += c.weight;
+  });
 
-  // Pick the candidate with the highest currentWeight
+  // Pick the candidate with the HIGHEST currentWeight
   let chosen = weightedCandidates[0];
   for (const c of weightedCandidates) {
-    if (currentWeights[c.id] > currentWeights[chosen.id]) {
+    if (state[c.id] > state[chosen.id]) {
       chosen = c;
     }
   }
 
   // Subtract total weight from chosen
-  const totalWeight = weightedCandidates.reduce((s: number, c: any) => s + c.weight, 0);
-  currentWeights[chosen.id] -= totalWeight;
+  state[chosen.id] -= totalWeight;
 
-  // Advance the pointer
+  // Persist the updated currentWeights state
   await tx.cRMSetting.update({
     where: { id: settingsId },
-    data: { lastAssignedSalespersonId: chosen.id },
+    data: {
+      lastAssignedSalespersonId: chosen.id,
+      automationCurrentWeights: state,
+    },
   });
 
   // If TL_TEAM_AUTO mode, pick a team member from the chosen TL's team

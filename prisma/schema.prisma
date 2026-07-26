@@ -211,6 +211,7 @@ model CRMSetting {
   autoAssignEnabled Boolean @default(false)
   automationMode String @default("DISABLED")
   automationWeights Json?
+  automationCurrentWeights Json?
   lastAssignedSalespersonId String?
   groupChatEnabled Boolean @default(false)
   messageEnabled Boolean @default(true)
