@@ -23,7 +23,9 @@ export async function getNextAutoAssignee(): Promise<string | null> {
     if (mode === "DISABLED") return null;
 
     const weights = (settings.automationWeights as Record<string, number>) || {};
-    const counter = (settings.automationCurrentWeights as number) || 0;
+    // Handle both old format (Record<string,number>) and new format (number)
+    const raw = settings.automationCurrentWeights;
+    const counter = typeof raw === "number" ? raw : 0;
 
     if (mode === "TL_WEIGHTED" || mode === "TL_TEAM_AUTO") {
       return pickFromWeightedPool(tx, weights, counter, ["TEAM_LEAD"], settings.id, mode === "TL_TEAM_AUTO" ? true : false);
