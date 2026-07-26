@@ -28,14 +28,35 @@ function ResetFormInner() {
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
 
+  const [minLength, setMinLength] = useState(8);
+  const [requireSpecial, setRequireSpecial] = useState(false);
+
   useEffect(() => {
     if (!token || !email) setError("Invalid or missing reset link.");
   }, [token, email]);
 
+  useEffect(() => {
+    fetch("/api/auth/password-policy", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.data) {
+          setMinLength(j.data.passwordMinLength || 8);
+          setRequireSpecial(j.data.passwordRequireSpecial || false);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (password !== confirmPassword) { setError("Passwords do not match."); return; }
-    if (password.length < 8) { setError("Password must be at least 8 characters."); return; }
+    if (password.length < minLength) { setError(`Password must be at least ${minLength} characters.`); return; }
+    if (requireSpecial) {
+      if (!/[A-Z]/.test(password)) { setError("Password must contain at least one uppercase letter."); return; }
+      if (!/[a-z]/.test(password)) { setError("Password must contain at least one lowercase letter."); return; }
+      if (!/[0-9]/.test(password)) { setError("Password must contain at least one number."); return; }
+      if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) { setError("Password must contain at least one special character."); return; }
+    }
     setLoading(true);
     setError("");
     try {
@@ -90,7 +111,7 @@ function ResetFormInner() {
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#D4AF37]" />
             <Input type={showPw ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
-              className="h-12 border-[#D4AF37]/30 bg-[#111] pl-10 pr-12 text-white" placeholder="Min 8 characters" autoFocus />
+              className="h-12 border-[#D4AF37]/30 bg-[#111] pl-10 pr-12 text-white" placeholder={`Min ${minLength} characters`} autoFocus />
             <button type="button" aria-label="Toggle password visibility" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#D4AF37]">
               {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>

@@ -261,31 +261,27 @@ export default function AutomationSettings() {
               </p>
             </div>
           )}
+        </div>
+      )}
 
-          {/* Save / Reset Buttons */}
-          <div className="mt-5 flex items-center justify-end gap-3">
-            {hasChanges && (
-              <button
-                onClick={handleReset}
-                className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-zinc-400 transition hover:border-white/20 hover:text-white"
-              >
-                <RotateCcw size={12} />
-                Reset
-              </button>
-            )}
-            <button
-              onClick={handleSave}
-              disabled={saving || !hasChanges}
-              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all ${
-                hasChanges
-                  ? "bg-[#D4AF37] text-black hover:bg-[#c9a430]"
-                  : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
-              }`}
-            >
-              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              {saving ? "Saving..." : "Save Changes"}
-            </button>
-          </div>
+      {/* Save / Reset Buttons (always visible when there are changes) */}
+      {hasChanges && (
+        <div className="rounded-2xl border border-white/10 bg-transparent p-4 flex items-center justify-end gap-3">
+          <button
+            onClick={handleReset}
+            className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-zinc-400 transition hover:border-white/20 hover:text-white"
+          >
+            <RotateCcw size={12} />
+            Reset
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 rounded-lg bg-[#D4AF37] px-4 py-2 text-xs font-semibold text-black transition-all hover:bg-[#c9a430]"
+          >
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {saving ? "Saving..." : "Save Changes"}
+          </button>
         </div>
       )}
 

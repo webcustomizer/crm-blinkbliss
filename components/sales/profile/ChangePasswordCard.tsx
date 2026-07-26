@@ -30,11 +30,13 @@ export default function ChangePasswordCard({ forceChange = false }: { forceChang
 
   function validatePassword(pw: string): string | null {
     if (pw.length < minLength) return `Password must be at least ${minLength} characters`;
-    if (!/[A-Z]/.test(pw)) return "Password must contain at least one uppercase letter";
-    if (!/[a-z]/.test(pw)) return "Password must contain at least one lowercase letter";
-    if (!/[0-9]/.test(pw)) return "Password must contain at least one number";
-    if (requireSpecial && !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pw))
-      return "Password must contain at least one special character";
+    if (requireSpecial) {
+      if (!/[A-Z]/.test(pw)) return "Password must contain at least one uppercase letter";
+      if (!/[a-z]/.test(pw)) return "Password must contain at least one lowercase letter";
+      if (!/[0-9]/.test(pw)) return "Password must contain at least one number";
+      if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pw))
+        return "Password must contain at least one special character";
+    }
     return null;
   }
 
@@ -101,7 +103,7 @@ export default function ChangePasswordCard({ forceChange = false }: { forceChang
       </div>
 
       <div className="space-y-1 mb-3 text-[11px] text-gray-500">
-        <p>Min {minLength} characters, uppercase, lowercase, number{requireSpecial ? ", special character" : ""}</p>
+        <p>Min {minLength} characters{requireSpecial ? ", uppercase, lowercase, number, special character" : ""}</p>
       </div>
 
       <div className="space-y-4">
