@@ -98,9 +98,9 @@ export default function TeamLeadsPage() {
       if (f.memberFilter) base.set("memberId", f.memberFilter);
 
       const [allRes, selfRes, teamRes] = await Promise.all([
-        fetch(`/api/team-leader/team-leads?scope=all&${base}`).then((r) => r.json()),
-        fetch(`/api/team-leader/team-leads?scope=self&${base}`).then((r) => r.json()),
-        fetch(`/api/team-leader/team-leads?scope=team&${base}`).then((r) => r.json()),
+        fetch(`/api/team-leader/team-leads?scope=all&${base}`, { cache: "no-store" }).then((r) => r.json()),
+        fetch(`/api/team-leader/team-leads?scope=self&${base}`, { cache: "no-store" }).then((r) => r.json()),
+        fetch(`/api/team-leader/team-leads?scope=team&${base}`, { cache: "no-store" }).then((r) => r.json()),
       ]);
       setScopeCounts({
         all: allRes.pagination?.total || 0,
@@ -124,8 +124,8 @@ export default function TeamLeadsPage() {
       if (memberFilter) params.set("memberId", memberFilter);
 
       const [leadsRes, teamRes] = await Promise.all([
-        fetch(`/api/team-leader/team-leads?${params}`).then((r) => r.json()),
-        fetch("/api/team-leader/team").then((r) => r.json()),
+        fetch(`/api/team-leader/team-leads?${params}`, { cache: "no-store" }).then((r) => r.json()),
+        fetch("/api/team-leader/team", { cache: "no-store" }).then((r) => r.json()),
       ]);
       if (leadsRes.success) {
         setLeads(leadsRes.data);
@@ -140,6 +140,17 @@ export default function TeamLeadsPage() {
   }, [page, search, statusFilter, completionFilter, scope, memberFilter]);
 
   useEffect(() => { void fetchData(true); void fetchScopeCounts(); }, []);
+
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.visibilityState === "visible") {
+        void fetchData(false);
+        void fetchScopeCounts();
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [fetchData, fetchScopeCounts]);
 
   useEffect(() => {
     pageRef.current = page;
@@ -652,13 +663,13 @@ export default function TeamLeadsPage() {
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-[11px] text-white/35 mt-0.5">
-                      <span className="flex items-center gap-1"><Phone size={9} />{lead.phone}</span>
-                      {lead.assignedTo && <span className="flex items-center gap-1 text-blue-400/50"><User size={9} />{lead.assignedTo.name}</span>}
-                      {!lead.assignedTo && <span className="flex items-center gap-1 text-[#D4AF37]/40"><User size={9} />Self</span>}
-                      {lead.city && <span className="flex items-center gap-1"><MapPin size={9} />{lead.city}</span>}
-                      {lead.followUpCount > 0 && <span className="flex items-center gap-1 text-orange-400/50"><Clock size={9} />{lead.followUpCount}</span>}
-                      <span className="flex items-center gap-1"><Calendar size={9} />{formatDateShort(lead.createdAt)}</span>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-white/35 mt-0.5">
+                      <span className="flex items-center gap-1 shrink-0"><Phone size={9} />{lead.phone}</span>
+                      {lead.assignedTo && <span className="flex items-center gap-1 text-blue-400/50 shrink-0"><User size={9} />{lead.assignedTo.name}</span>}
+                      {!lead.assignedTo && <span className="flex items-center gap-1 text-[#D4AF37]/40 shrink-0"><User size={9} />Self</span>}
+                      {lead.city && <span className="flex items-center gap-1 shrink-0"><MapPin size={9} />{lead.city}</span>}
+                      {lead.followUpCount > 0 && <span className="flex items-center gap-1 text-orange-400/50 shrink-0"><Clock size={9} />{lead.followUpCount}</span>}
+                      <span className="flex items-center gap-1 shrink-0"><Calendar size={9} />{formatDateShort(lead.createdAt)}</span>
                     </div>
                   </div>
 
