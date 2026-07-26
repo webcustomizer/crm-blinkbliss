@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
           { id: auth.user.id },
           ...(chatType === "TL_TEAM" && teamLeaderId
             ? [{ id: teamLeaderId }, { teamLeaderId }, { role: "ADMIN" as const }]
-            : [{ role: "ADMIN" as const }]),
+            : [{ role: "ADMIN" as const }, { role: "SALESPERSON" as const, teamLeaderId: null }]),
         ],
       },
       select: { id: true, name: true, role: true },
