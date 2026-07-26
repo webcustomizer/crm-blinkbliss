@@ -280,7 +280,7 @@ export default function TrashTable() {
                     className={`border-b border-white/5 text-white/70 transition-colors duration-500 hover:bg-[#D4AF37]/[0.04] ${isSelected ? "bg-[#D4AF37]/[0.12]" : ""}`}
                   >
                     <td className="p-3">
-                      <button onClick={() => toggleSelect(lead.id)} className="text-white/40 hover:text-[#D4AF37] transition-colors">
+                      <button onClick={() => toggleSelect(lead.id)} aria-label={isSelected ? "Deselect lead" : "Select lead"} className="text-white/40 hover:text-[#D4AF37] transition-colors">
                         {isSelected ? <CheckSquare size={16} className="text-[#D4AF37]" /> : <Square size={16} />}
                       </button>
                     </td>

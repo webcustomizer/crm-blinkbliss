@@ -20,8 +20,8 @@ export default function AnimatedLaunchScreen({
       SplashScreen.hide();
     }
 
-    const exitTimer = setTimeout(() => setPhase("exiting"), 1100);
-    const doneTimer = setTimeout(() => setPhase("done"), 1500);
+    const exitTimer = setTimeout(() => setPhase("exiting"), 400);
+    const doneTimer = setTimeout(() => setPhase("done"), 500);
 
     return () => {
       clearTimeout(exitTimer);

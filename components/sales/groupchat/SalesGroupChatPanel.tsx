@@ -165,6 +165,8 @@ export default function SalesGroupChatPanel({
         return;
       }
       if (incoming.senderId === currentUserId) return;
+      const expectedChatType = hasTeamLeaderRef.current ? "TL_TEAM" : "GENERAL";
+      if (incoming.chatType && incoming.chatType !== expectedChatType) return;
       setMessages((prev) => {
         if (prev.some((m) => m.id === incoming.id)) return prev;
         shouldAutoScrollRef.current = true;
@@ -227,11 +229,37 @@ export default function SalesGroupChatPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Continuous mark-as-read for incoming realtime messages
+  useEffect(() => {
+    if (messages.length === 0 || !currentUserId) return;
+    const unread = messages
+      .filter(
+        (m) =>
+          m.senderId !== currentUserId &&
+          !m.reads?.some((r) => r.userId === currentUserId),
+      )
+      .map((m) => m.id);
+    if (unread.length === 0) return;
+    fetch("/api/salesperson/group-chat", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messageIds: unread }),
+    })
+      .then(() => refetch())
+      .catch(() => {});
+  }, [messages, currentUserId]);
+
   // Realtime: listen for group chat toggle changes from admin
+  const hasTeamLeaderRef = useRef(false);
   useEffect(() => {
     const unsub = subscribeToSettingsChanges((payload) => {
-      if (payload.groupChatEnabled === false) setDisabled(true);
-      else if (payload.groupChatEnabled === true) setDisabled(false);
+      if (hasTeamLeaderRef.current) {
+        if (payload.tlGroupChatEnabled === false) setDisabled(true);
+        else if (payload.tlGroupChatEnabled === true) setDisabled(false);
+      } else {
+        if (payload.groupChatEnabled === false) setDisabled(true);
+        else if (payload.groupChatEnabled === true) setDisabled(false);
+      }
     });
     return () => unsub();
   }, []);
@@ -241,7 +269,11 @@ export default function SalesGroupChatPanel({
     fetch("/api/salesperson/settings")
       .then((r) => r.json())
       .then((j) => {
-        if (j.data?.groupChatEnabled === false) setDisabled(true);
+        hasTeamLeaderRef.current = !!j.data?.hasTeamLeader;
+        const chatDisabled = j.data?.hasTeamLeader
+          ? j.data?.tlGroupChatEnabled === false
+          : j.data?.groupChatEnabled === false;
+        if (chatDisabled) setDisabled(true);
       })
       .catch(() => {});
   }, []);
@@ -474,7 +506,7 @@ export default function SalesGroupChatPanel({
             Team Chat
           </h2>
           <p className="text-[10px] sm:text-xs text-gray-400">
-            {users.length} members
+            {users.filter((u) => u.role !== "ADMIN").length} members
           </p>
         </div>
       </div>
@@ -529,6 +561,8 @@ export default function SalesGroupChatPanel({
                 idx > 0 && messages[idx - 1].senderId === msg.senderId;
               const isAdmin =
                 users.find((u) => u.id === msg.senderId)?.role === "ADMIN";
+              const isTeamLeader =
+                !isMine && users.find((u) => u.id === msg.senderId)?.role === "TEAM_LEAD";
               return (
                 <div
                   key={msg.id}
@@ -544,6 +578,11 @@ export default function SalesGroupChatPanel({
                         {isAdmin && (
                           <span className="text-[9px] text-red-400 bg-red-400/10 rounded-full px-1.5 py-px font-bold border border-red-400/20">
                             Admin
+                          </span>
+                        )}
+                        {isTeamLeader && (
+                          <span className="text-[9px] text-blue-400 bg-blue-400/10 rounded-full px-1.5 py-px font-bold border border-blue-400/20">
+                            Team Leader
                           </span>
                         )}
                       </p>

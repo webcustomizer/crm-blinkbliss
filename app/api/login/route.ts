@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
       const otp = generateOTP();
       await prisma.user.update({
         where: { id: user.id },
-        data: { twoFactorSecret: otp, otpExpiresAt: new Date(Date.now() + 5 * 60 * 1000) },
+        data: { twoFactorSecret: otp, otpExpiresAt: new Date() },
       });
 
       const html = getOTPEmailTemplate(otp, user.name);
@@ -121,7 +121,6 @@ export async function POST(req: NextRequest) {
 
       const masked = user.email.replace(/(.{3}).*(@.*)/, "$1***$2");
       const tempToken = createTempToken(user.id, user.email);
-      console.log("2FA: tempToken created for user", user.id, "token length:", tempToken.length);
 
       return NextResponse.json({
         success: true,
@@ -186,7 +185,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      token,
+      ...(isCapacitor ? { token } : {}),
+      forcePasswordChange: user.forcePasswordChange,
       user: { id: user.id, name: user.name, role: user.role },
     });
   } catch (error) {

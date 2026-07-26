@@ -12,6 +12,8 @@ let _formLimiter: Ratelimit | null = null;
 let _apiLimiter: Ratelimit | null = null;
 let _initialized = false;
 
+let _warnedFallback = false;
+
 function ensureUpstash() {
   if (_initialized) return;
   _initialized = true;
@@ -46,6 +48,7 @@ function ensureUpstash() {
 }
 
 const fallbackStore = new Map<string, { count: number; resetAt: number }>();
+const FALLBACK_MAX_ENTRIES = 10_000;
 
 setInterval(() => {
   const now = Date.now();
@@ -58,18 +61,27 @@ export async function rateLimit(ip: string, type: "api" | "login" | "form" = "ap
   ensureUpstash();
 
   if (_redis) {
-    const limiter = type === "login" ? _loginLimiter! : type === "form" ? _formLimiter! : _apiLimiter!;
-    const { success } = await limiter.limit(ip);
-    return success;
+    try {
+      const limiter = type === "login" ? _loginLimiter! : type === "form" ? _formLimiter! : _apiLimiter!;
+      const { success } = await limiter.limit(ip);
+      return success;
+    } catch {
+      // Redis unreachable — fall through to in-memory fallback
+    }
   }
 
   // Fallback to in-memory (local dev / build time)
+  if (!_warnedFallback && process.env.NODE_ENV === "production") {
+    console.warn("[rate-limit] WARNING: Upstash Redis not configured — using in-memory fallback. Rate limits will NOT work across serverless instances.");
+    _warnedFallback = true;
+  }
   const now = Date.now();
   const key = `${type}:${ip}`;
   const entry = fallbackStore.get(key);
   const max = type === "login" ? LOGIN_MAX : type === "form" ? FORM_MAX : API_MAX;
 
   if (!entry || now > entry.resetAt) {
+    if (fallbackStore.size >= FALLBACK_MAX_ENTRIES) fallbackStore.clear();
     fallbackStore.set(key, { count: 1, resetAt: now + WINDOW_MS });
     return true;
   }

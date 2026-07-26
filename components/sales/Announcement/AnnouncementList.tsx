@@ -119,18 +119,26 @@ export default function AnnouncementList() {
 
   if (loading) {
     return (
-      <div
-        className="
-        rounded-2xl
-        border
-        border-[#D4AF37]/20
-        bg-[#111111]
-        p-8
-        text-center
-        text-gray-400
-        "
-      >
-        Loading announcements...
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="animate-pulse rounded-2xl border border-white/10 bg-[#111111] p-4 sm:p-5"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 shrink-0 rounded-lg bg-white/[0.06]" />
+              <div className="h-4 w-48 rounded-lg bg-white/[0.06]" />
+            </div>
+            <div className="mt-3 space-y-2">
+              <div className="h-3 w-full rounded-lg bg-white/[0.04]" />
+              <div className="h-3 w-3/4 rounded-lg bg-white/[0.04]" />
+            </div>
+            <div className="mt-4 flex justify-between">
+              <div className="h-3 w-20 rounded-lg bg-white/[0.04]" />
+              <div className="h-3 w-24 rounded-lg bg-white/[0.04]" />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }

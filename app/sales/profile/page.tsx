@@ -7,8 +7,10 @@ import { verifyToken } from "@/lib/auth";
 import ProfileHeader from "@/components/sales/profile/ProfileHeader";
 import PersonalInformationCard from "@/components/sales/profile/PersonalInformationCard";
 import ChangePasswordCard from "@/components/sales/profile/ChangePasswordCard";
+import GoalProgressCard from "@/components/sales/profile/GoalProgressCard";
 
-export default async function SalespersonProfilePage() {
+export default async function SalespersonProfilePage(props: { searchParams: Promise<{ forceChange?: string }> }) {
+  const { forceChange } = await props.searchParams;
   const cookieStore = await cookies();
 
   const token = cookieStore.get("token")?.value;
@@ -78,6 +80,8 @@ export default async function SalespersonProfilePage() {
 
         <ProfileHeader profile={formattedProfile} />
 
+        <GoalProgressCard />
+
         <div
           className="
           grid
@@ -92,7 +96,7 @@ export default async function SalespersonProfilePage() {
 
           {/* CHANGE PASSWORD */}
 
-          <ChangePasswordCard />
+          <ChangePasswordCard forceChange={forceChange === "true"} />
         </div>
       </div>
     </main>

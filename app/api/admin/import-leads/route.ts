@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCachedCRMSettings } from "@/lib/settings-cache";
 import { requireAuth } from "@/lib/require-auth";
 import { checkLeadCompletion } from "@/lib/lead-completion";
 import { getNextAutoAssignee } from "@/lib/auto-assign";
+import { notifyLeadAssigned } from "@/lib/notify-lead-assigned";
 
 type CSVRow = {
   Name?: string;
@@ -183,6 +185,41 @@ export async function POST(req: NextRequest) {
       data: dataToInsert,
       skipDuplicates: true,
     });
+
+    // Step 6: Send notifications for auto-assigned leads (fire-and-forget)
+    if (autoAssignedCount > 0) {
+      const assignedRows = newRows
+        .map((row, i) => ({
+          phone: row.Phone!.trim(),
+          name: row.Name?.trim() || null,
+          assigneeId: assignedToIds[i],
+        }))
+        .filter((x) => x.assigneeId !== null) as {
+        phone: string;
+        name: string | null;
+        assigneeId: string;
+      }[];
+
+      after(async () => {
+        for (const { phone, assigneeId } of assignedRows) {
+          try {
+            const lead = await prisma.lead.findFirst({
+              where: { phone },
+              select: { id: true, name: true },
+            });
+            if (lead) {
+              await notifyLeadAssigned({
+                userId: assigneeId,
+                leadId: lead.id,
+                leadName: lead.name,
+              });
+            }
+          } catch (err) {
+            console.error("Import lead notification error:", err);
+          }
+        }
+      });
+    }
 
     return NextResponse.json({
       totalRows: rows.length,

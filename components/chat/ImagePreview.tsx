@@ -37,6 +37,7 @@ export default function ImagePreview({ file, previewUrl, onSend, onCancel, sendi
         <button
           onClick={onCancel}
           disabled={sending}
+          aria-label="Cancel"
           className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition"
         >
           <X size={20} />

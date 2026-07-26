@@ -1,11 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
 import { randomInt, randomBytes, timingSafeEqual } from "crypto";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
 
 const OTP_EXPIRY_MINUTES = 5;
 
@@ -24,31 +17,6 @@ export function isOTPExpired(createdAt: Date): boolean {
 
 export function generateResetToken(): string {
   return randomBytes(36).toString("base64url");
-}
-
-// Send email via Supabase's built-in auth email system
-export async function sendEmailViaSupabase(
-  email: string,
-  subject: string,
-  htmlBody: string,
-): Promise<boolean> {
-  try {
-    // Supabase doesn't have a direct "send custom email" API,
-    // but we can use the auth admin invite or password reset flow
-    // For custom emails (OTP, reset links), we store the template
-    // and Supabase handles the delivery via their configured SMTP
-    const { error } = await supabaseAdmin.auth.admin.generateLink({
-      type: "magiclink",
-      email,
-      options: { redirectTo: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000" },
-    } as any);
-
-    // For true custom emails, store the intent and we'll use
-    // Supabase's REST API to trigger email sending
-    return !error;
-  } catch {
-    return false;
-  }
 }
 
 // ============================================

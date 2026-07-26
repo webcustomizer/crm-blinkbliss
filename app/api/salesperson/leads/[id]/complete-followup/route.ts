@@ -273,6 +273,88 @@ export async function POST(
       }
     });
 
+    if (statusChanged && finalStatus === "JOINED") {
+      const now = new Date();
+      const month = now.getMonth() + 1;
+      const year = now.getFullYear();
+
+      const joinedCount = await prisma.statusHistory.count({
+        where: {
+          newStatus: "JOINED",
+          changedAt: { gte: new Date(year, month - 1, 1), lte: new Date(year, month, 0, 23, 59, 59, 999) },
+          lead: { assignedToId: user.id },
+        },
+      });
+
+      const salesTarget = await prisma.salesTarget.findUnique({
+        where: { userId_month_year: { userId: user.id, month, year } },
+      });
+
+      if (salesTarget && joinedCount >= salesTarget.target && !salesTarget.achieved) {
+        await prisma.salesTarget.update({
+          where: { id: salesTarget.id },
+          data: { achieved: 1 },
+        });
+      }
+
+      if (!salesTarget && joinedCount > 0) {
+        const user_ = await prisma.user.findUnique({ where: { id: user.id }, select: { monthlyTarget: true } });
+        if (user_ && joinedCount >= user_.monthlyTarget) {
+          await prisma.salesTarget.upsert({
+            where: { userId_month_year: { userId: user.id, month, year } },
+            create: { userId: user.id, month, year, target: user_.monthlyTarget, achieved: 1 },
+            update: { achieved: 1 },
+          });
+        }
+      }
+
+      const fullUser = await prisma.user.findUnique({ where: { id: user.id }, select: { teamLeaderId: true } });
+
+      if (fullUser?.teamLeaderId) {
+        const myTeam = await prisma.team.findFirst({ where: { leaderId: fullUser.teamLeaderId } });
+        if (myTeam) {
+          const allTeamMemberIds = (
+            await prisma.user.findMany({ where: { teamLeaderId: fullUser.teamLeaderId }, select: { id: true } })
+          ).map((u) => u.id);
+
+          const teamJoinedCount = await prisma.statusHistory.count({
+            where: {
+              newStatus: "JOINED",
+              changedAt: { gte: new Date(year, month - 1, 1), lte: new Date(year, month, 0, 23, 59, 59, 999) },
+              lead: { assignedToId: { in: allTeamMemberIds } },
+            },
+          });
+
+          const teamTarget = await prisma.teamTarget.findUnique({
+            where: { teamId_month_year: { teamId: myTeam.id, month, year } },
+          });
+
+          if (teamTarget && teamJoinedCount >= teamTarget.target && !teamTarget.achieved) {
+            await prisma.teamTarget.update({ where: { id: teamTarget.id }, data: { achieved: 1 } });
+          }
+        }
+      }
+
+      const userData = await prisma.user.findUnique({ where: { id: user.id }, select: { monthlyTarget: true, targetMonths: true, eligibleForTeamLeader: true } });
+      if (userData && userData.targetMonths > 0 && !userData.eligibleForTeamLeader) {
+        const evaluationStart = new Date(year, month - userData.targetMonths, 1);
+        const evalCount = await prisma.statusHistory.count({
+          where: {
+            newStatus: "JOINED",
+            changedAt: { gte: evaluationStart, lte: new Date(year, month, 0, 23, 59, 59, 999) },
+            lead: { assignedToId: user.id },
+          },
+        });
+        const evalSalesTarget = await prisma.salesTarget.findUnique({
+          where: { userId_month_year: { userId: user.id, month, year } },
+        });
+        const totalGoal = (evalSalesTarget?.target ?? userData.monthlyTarget) * userData.targetMonths;
+        if (evalCount >= totalGoal && totalGoal > 0) {
+          await prisma.user.update({ where: { id: user.id }, data: { eligibleForTeamLeader: true, eligibleSince: new Date() } });
+        }
+      }
+    }
+
     // Fire-and-forget: these are audit logs, not core state, so they
     // run after the transaction commits without the client waiting on
     // them. Errors are swallowed here (and should be surfaced via

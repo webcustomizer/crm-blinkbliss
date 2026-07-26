@@ -22,23 +22,29 @@ export async function isSessionActive(token: string): Promise<boolean> {
     return cached.valid;
   }
 
-  const { prisma } = await import("@/lib/prisma");
-  const session = await prisma.loginSession.findFirst({
-    where: { token, isExpired: false },
-    select: { id: true },
-  });
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    const session = await prisma.loginSession.findFirst({
+      where: { token, isExpired: false },
+      select: { id: true },
+    });
 
-  sessionCache.set(token, { valid: !!session, ts: Date.now() });
+    sessionCache.set(token, { valid: !!session, ts: Date.now() });
 
-  // Evict stale entries periodically (every ~100 sessions)
-  if (sessionCache.size > 100) {
-    const now = Date.now();
-    for (const [key, val] of sessionCache) {
-      if (now - val.ts > SESSION_CACHE_TTL * 2) sessionCache.delete(key);
+    // Evict stale entries periodically (every ~100 sessions)
+    if (sessionCache.size > 100) {
+      const now = Date.now();
+      for (const [key, val] of sessionCache) {
+        if (now - val.ts > SESSION_CACHE_TTL * 2) sessionCache.delete(key);
+      }
     }
-  }
 
-  return !!session;
+    return !!session;
+  } catch {
+    // DB unreachable — fail closed so force-logged-out sessions can't
+    // persist during outages. Users will need to re-login after DB recovers.
+    return false;
+  }
 }
 
 /**
@@ -52,7 +58,7 @@ export async function isSessionActive(token: string): Promise<boolean> {
  */
 export async function requireAuth(
   req: NextRequest,
-  allowedRoles: Array<"ADMIN" | "SALESPERSON">,
+  allowedRoles: Array<"ADMIN" | "SALESPERSON" | "TEAM_LEAD">,
 ): Promise<{ user: TokenPayload } | { error: NextResponse }> {
   const cookieToken = req.cookies.get("token")?.value;
 

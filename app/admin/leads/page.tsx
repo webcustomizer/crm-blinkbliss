@@ -8,13 +8,14 @@ export const dynamic = "force-dynamic";
 export default async function LeadsPage() {
   const salespersons = await prisma.user.findMany({
     where: {
-      role: "SALESPERSON",
+      role: { in: ["SALESPERSON", "TEAM_LEAD"] },
       isActive: true,
     },
 
     select: {
       id: true,
       name: true,
+      role: true,
     },
 
     orderBy: {

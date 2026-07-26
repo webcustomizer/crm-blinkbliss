@@ -3,18 +3,19 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
 
-type UnreadCounts = { messages: number; groupChat: number; announcements: number };
+type UnreadCounts = { messages: number; groupChat: number; announcements: number; notifications: number };
 type UnreadContextType = UnreadCounts & { refetch: () => void };
 
 const UnreadContext = createContext<UnreadContextType>({
   messages: 0,
   groupChat: 0,
   announcements: 0,
+  notifications: 0,
   refetch: () => {},
 });
 
 export function UnreadProvider({ children, userId }: { children: ReactNode; userId?: string }) {
-  const [unread, setUnread] = useState<UnreadCounts>({ messages: 0, groupChat: 0, announcements: 0 });
+  const [unread, setUnread] = useState<UnreadCounts>({ messages: 0, groupChat: 0, announcements: 0, notifications: 0 });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -77,10 +78,10 @@ export function UnreadProvider({ children, userId }: { children: ReactNode; user
         () => { debouncedFetch(); },
       )
       .on(
-        // Group chat is shared by everyone, but we only need to refetch when
-        // someone ELSE posts — our own sends don't add to our unread count.
+        // Group chat is shared — refetch on any insert; the API scopes
+        // the count per role / chatType / teamLeaderId.
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "GroupMessage", filter: `senderId=neq.${userId}` },
+        { event: "INSERT", schema: "public", table: "GroupMessage" },
         () => { debouncedFetch(); },
       )
       .subscribe();

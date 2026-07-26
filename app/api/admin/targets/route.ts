@@ -14,15 +14,23 @@ export async function GET(req: NextRequest) {
 
     const salespeople = await prisma.user.findMany({
       where: {
-        role: "SALESPERSON",
+        role: { in: ["SALESPERSON", "TEAM_LEAD"] },
       },
       select: {
         id: true,
         name: true,
         email: true,
         monthlyTarget: true,
+        targetMonths: true,
+        eligibleForTeamLeader: true,
+        eligibleSince: true,
         responseTimeAvg: true,
         isActive: true,
+        role: true,
+        teamLeaderId: true,
+        teamLeader: { select: { id: true, name: true } },
+        ledTeam: { select: { id: true, name: true } },
+        _count: { select: { leads: { where: { isDeleted: false } } } },
       },
       orderBy: [{ isActive: "desc" }, { name: "asc" }],
     });
@@ -52,6 +60,21 @@ export async function GET(req: NextRequest) {
       achievedMap.set(id, (achievedMap.get(id) || 0) + 1);
     }
 
+    // Count total JOINED leads (all time) for eligibility
+    const allJoinedRecords = await prisma.statusHistory.findMany({
+      where: {
+        newStatus: "JOINED",
+        lead: { assignedToId: { not: null } },
+      },
+      select: { lead: { select: { assignedToId: true } } },
+    });
+
+    const totalJoinedMap = new Map<string, number>();
+    for (const r of allJoinedRecords) {
+      const id = r.lead.assignedToId as string;
+      totalJoinedMap.set(id, (totalJoinedMap.get(id) || 0) + 1);
+    }
+
     const data = salespeople.map((sp) => {
       const t = targetMap.get(sp.id);
       return {
@@ -59,11 +82,20 @@ export async function GET(req: NextRequest) {
         name: sp.name,
         email: sp.email,
         monthlyTarget: sp.monthlyTarget,
+        targetMonths: sp.targetMonths,
+        eligibleForTeamLeader: sp.eligibleForTeamLeader,
+        eligibleSince: sp.eligibleSince?.toISOString() ?? null,
         responseTimeAvg: sp.responseTimeAvg,
         isActive: sp.isActive,
+        role: sp.role,
+        teamLeaderId: sp.teamLeaderId,
+        teamLeader: sp.teamLeader,
+        ledTeam: sp.ledTeam,
         currentMonthTarget: t?.target ?? sp.monthlyTarget,
         currentMonthAchieved: achievedMap.get(sp.id) ?? 0,
+        totalJoinedLeads: totalJoinedMap.get(sp.id) ?? 0,
         targetId: t?.id ?? null,
+        totalLeads: sp._count.leads,
       };
     });
 
@@ -81,7 +113,7 @@ export async function PATCH(req: NextRequest) {
   if ("error" in auth) return auth.error;
 
   try {
-    const { userId, month, year, target } = await req.json();
+    const { userId, month, year, target, achieved } = await req.json();
     if (!userId || !month || !year || target == null) {
       return NextResponse.json(
         { success: false, message: "Missing fields." },
@@ -96,11 +128,11 @@ export async function PATCH(req: NextRequest) {
     if (existing) {
       await prisma.salesTarget.update({
         where: { id: existing.id },
-        data: { target },
+        data: { target, ...(achieved !== undefined ? { achieved } : {}) },
       });
     } else {
       await prisma.salesTarget.create({
-        data: { userId, month, year, target },
+        data: { userId, month, year, target, ...(achieved !== undefined ? { achieved } : {}) },
       });
     }
 

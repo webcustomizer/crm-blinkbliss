@@ -1,0 +1,1443 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState, memo } from "react";
+import { createPortal } from "react-dom";
+
+import {
+  X,
+  Phone,
+  MapPin,
+  CalendarClock,
+  History,
+  Edit3,
+  AlertCircle,
+} from "lucide-react";
+
+import LeadStatusBadge from "@/components/sales/my-leads/LeadStatusBadge";
+import { toast } from "sonner";
+import {
+  getTlLeadCached,
+  invalidateTlLead,
+  getTlLeadFromCacheSync,
+} from "@/lib/tlLeadCache";
+import { formatDateTime, formatDateShort } from "@/lib/format-date";
+
+interface LeadDetailsProps {
+  leadId: string;
+  onClose: () => void;
+}
+
+// Simple inline WhatsApp glyph
+function WhatsAppIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="M20.52 3.48A11.94 11.94 0 0 0 12.06 0C5.5 0 .18 5.32.18 11.88c0 2.09.55 4.13 1.6 5.93L0 24l6.35-1.66a11.86 11.86 0 0 0 5.7 1.45h.01c6.56 0 11.88-5.32 11.88-11.88 0-3.17-1.24-6.15-3.42-8.43ZM12.06 21.6a9.7 9.7 0 0 1-4.95-1.36l-.35-.21-3.77.99 1-3.67-.23-.38a9.72 9.72 0 0 1-1.49-5.09c0-5.38 4.38-9.76 9.8-9.76a9.7 9.7 0 0 1 6.9 2.87 9.7 9.7 0 0 1 2.87 6.9c0 5.39-4.38 9.71-9.78 9.71Zm5.36-7.29c-.29-.15-1.73-.86-2-.95-.27-.1-.46-.15-.66.14-.2.29-.76.95-.93 1.15-.17.19-.34.22-.63.07-.29-.15-1.23-.45-2.34-1.44-.87-.77-1.45-1.72-1.62-2.01-.17-.29-.02-.45.13-.6.13-.13.29-.34.44-.5.15-.17.19-.29.29-.48.1-.19.05-.36-.02-.5-.07-.15-.66-1.58-.9-2.17-.24-.57-.48-.49-.66-.5h-.56c-.19 0-.5.07-.76.36-.26.29-1 1-1 2.42 0 1.43 1.02 2.81 1.17 3 .15.19 2 3.05 4.85 4.28.68.29 1.21.47 1.62.6.68.22 1.3.19 1.79.11.55-.08 1.73-.71 1.98-1.39.24-.68.24-1.27.17-1.39-.07-.12-.26-.19-.55-.34Z" />
+    </svg>
+  );
+}
+
+function smartCall(phone: string) {
+  const cleaned = phone.replace(/\D/g, "");
+  const waUrl = `https://wa.me/${cleaned}`;
+  const telUrl = `tel:${phone}`;
+
+  let appOpened = false;
+  const markOpened = () => { appOpened = true; };
+
+  window.addEventListener("blur", markOpened, { once: true });
+  document.addEventListener(
+    "visibilitychange",
+    () => { if (document.hidden) markOpened(); },
+    { once: true },
+  );
+
+  window.location.href = waUrl;
+
+  window.setTimeout(() => {
+    window.removeEventListener("blur", markOpened);
+    if (!appOpened) window.location.href = telUrl;
+  }, 1200);
+}
+
+interface LeadFieldProps {
+  label: string;
+  value: string | number | undefined;
+  field: string;
+  formValue: string;
+  editingFields: string[];
+  toggleEdit: (field: string) => void;
+  updateField: (field: string, value: string) => void;
+  disabled: boolean;
+  type?: string;
+  options?: string[];
+  placeholder?: string;
+}
+
+function SectionTitle({
+  icon,
+  title,
+  trailing,
+}: {
+  icon?: React.ReactNode;
+  title: string;
+  trailing?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-4 flex items-center justify-between">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-[#D4AF37]">
+        {icon}
+        {title}
+      </h3>
+      {trailing}
+    </div>
+  );
+}
+
+function SkeletonBlock({ className = "" }: { className?: string }) {
+  return (
+    <div
+      className={`animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.03] ${className}`}
+    />
+  );
+}
+
+const LeadField = memo(function LeadField({
+  label,
+  value,
+  field,
+  formValue,
+  editingFields,
+  toggleEdit,
+  updateField,
+  disabled,
+  type = "text",
+  options,
+  placeholder,
+}: LeadFieldProps) {
+  const editing = editingFields.includes(field);
+
+  return (
+    <div
+      className="
+      group
+      rounded-2xl
+      border
+      border-white/[0.06]
+      bg-gradient-to-br
+      from-[#181818]
+      to-[#111111]
+      p-4
+      transition-colors
+      duration-150
+      active:border-[#D4AF37]/25
+      sm:hover:border-[#D4AF37]/25
+      "
+    >
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-white/35">
+          {label}
+        </p>
+
+        {!disabled && !value && (
+          <button
+            onClick={() => toggleEdit(field)}
+            className="
+            min-h-[32px]
+            rounded-full
+            border
+            border-[#D4AF37]/20
+            bg-[#D4AF37]/10
+            px-3
+            py-1
+            text-xs
+            font-medium
+            text-[#D4AF37]
+            transition
+            duration-150
+            active:bg-[#D4AF37]
+            active:text-black
+            "
+          >
+            {editing ? "Cancel" : "Add"}
+          </button>
+        )}
+      </div>
+
+      {editing ? (
+        options ? (
+          <select
+            value={formValue}
+            onChange={(e) => updateField(field, e.target.value)}
+            className="
+            mt-3
+            w-full
+            rounded-xl
+            border
+            border-[#D4AF37]/25
+            bg-black/40
+            px-4
+            py-3
+            text-sm
+            text-white
+            outline-none
+            transition
+            duration-150
+            focus:border-[#D4AF37]
+            "
+          >
+            <option value="">{placeholder || "Select an option"}</option>
+            {options.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            type={type}
+            value={formValue}
+            onChange={(e) => updateField(field, e.target.value)}
+            className="
+          mt-3
+          w-full
+          rounded-xl
+          border
+          border-[#D4AF37]/25
+          bg-black/40
+          px-4
+          py-3
+          text-sm
+          text-white
+          outline-none
+          transition
+          duration-150
+          focus:border-[#D4AF37]
+          "
+          />
+        )
+      ) : (
+        <p className="mt-2 text-sm font-medium text-white">
+          {value || <span className="text-white/25">Not added</span>}
+        </p>
+      )}
+    </div>
+  );
+});
+
+interface FollowupItem {
+  id: string;
+  remarks: string;
+  followUpNumber: number;
+  createdAt: string;
+  user?: { id: string; name: string };
+}
+
+const PURPOSE_OPTIONS = [
+  "To earn extra income",
+  "To learn new skills",
+  "To start an online business",
+  "Looking for better career opportunities",
+];
+
+const CURRENT_STATUS_OPTIONS = [
+  "Student",
+  "Job Holder",
+  "Business Owner",
+  "Housewife",
+  "Freelancer",
+  "Unemployed",
+];
+
+const BEST_TIME_OPTIONS = [
+  "9:00 AM - 12:00 PM",
+  "12:00 PM - 3:00 PM",
+  "3:00 PM - 6:00 PM",
+  "6:00 PM - 9:00 PM",
+  "9:00 PM - 11:00 PM",
+];
+
+const TRAINING_OPTIONS = ["YES", "NO"];
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildFormFromLead(leadData: any, prevRemarks: string) {
+  return {
+    name: leadData.name || "",
+    email: leadData.email || "",
+    city: leadData.city || "",
+    age: leadData.age?.toString() || "",
+    purpose: leadData.purpose || "",
+    currentStatus: leadData.currentStatus || "",
+    bestTimeToReach: leadData.bestTimeToReach || "",
+    willingToAttendTraining:
+      leadData.willingToAttendTraining === true
+        ? "YES"
+        : leadData.willingToAttendTraining === false
+        ? "NO"
+        : "",
+    remarks: prevRemarks,
+    status: leadData.status,
+  };
+}
+
+const EMPTY_FORM = {
+  name: "",
+  email: "",
+  city: "",
+  age: "",
+  purpose: "",
+  currentStatus: "",
+  bestTimeToReach: "",
+  willingToAttendTraining: "",
+  remarks: "",
+  status: "NEW",
+};
+
+export default function LeadDetails({ leadId, onClose }: LeadDetailsProps) {
+  const cachedOnMount = getTlLeadFromCacheSync(leadId);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [lead, setLead] = useState<any | null>(() => {
+    if (cachedOnMount?.data) return cachedOnMount.data;
+    if (cachedOnMount?.lead) return cachedOnMount.lead;
+    return null;
+  });
+  const [loading, setLoading] = useState(() => !cachedOnMount);
+  const [saving, setSaving] = useState(false);
+  const [noteSaving, setNoteSaving] = useState(false);
+  const [statusSaving, setStatusSaving] = useState(false);
+  const [infoSaving, setInfoSaving] = useState(false);
+  const [followUpSaving, setFollowUpSaving] = useState(false);
+
+  const remarksRef = useRef<HTMLTextAreaElement>(null);
+  const [remarksError, setRemarksError] = useState(false);
+
+  const [showAllFollowups, setShowAllFollowups] = useState(false);
+  const [showAllStatusHistory, setShowAllStatusHistory] = useState(false);
+  const [maxFollowUps, setMaxFollowUps] = useState(4);
+
+  useEffect(() => {
+    fetch("/api/salesperson/settings", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.data?.maxFollowUps) setMaxFollowUps(j.data.maxFollowUps);
+      })
+      .catch(() => {});
+  }, []);
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isClosed = lead?.status === "JOINED" || lead?.status === "DEAD";
+
+  const maxFollowUpsReached = (lead?.followUpCount || 0) >= maxFollowUps;
+
+  const nextFollowUpReached = (() => {
+    if (!lead?.nextFollowUp) return true;
+
+    const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
+
+    const followUpPKT = new Date(
+      new Date(lead.nextFollowUp).getTime() + PKT_OFFSET_MS,
+    );
+    const nowPKT = new Date(Date.now() + PKT_OFFSET_MS);
+
+    const followUpDateStr = followUpPKT.toISOString().split("T")[0];
+    const nowDateStr = nowPKT.toISOString().split("T")[0];
+
+    return followUpDateStr <= nowDateStr;
+  })();
+
+  const [form, setForm] = useState(() =>
+    cachedOnMount
+      ? buildFormFromLead(cachedOnMount.data || cachedOnMount.lead || {}, "")
+      : EMPTY_FORM,
+  );
+
+  const remarksDisabled = saving || noteSaving || isClosed;
+
+  const remarksMissing = !form.remarks.trim();
+
+  const followUpDisabled =
+    saving ||
+    isClosed ||
+    maxFollowUpsReached ||
+    !nextFollowUpReached ||
+    remarksMissing;
+
+  const [editingFields, setEditingFields] = useState<string[]>([]);
+
+  const hasUnsavedLeadInfo = editingFields.length > 0;
+
+  const updateField = useCallback((name: string, value: string) => {
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  }, []);
+
+  const toggleEdit = useCallback((field: string) => {
+    setEditingFields((prev) =>
+      prev.includes(field)
+        ? prev.filter((item) => item !== field)
+        : [...prev, field],
+    );
+  }, []);
+
+  const getLeadDetails = useCallback(async () => {
+    try {
+      const data = await getTlLeadCached(leadId);
+      const leadData = data?.data || data?.lead;
+      if (leadData) {
+        setLead(leadData);
+        setForm((prev) => buildFormFromLead(leadData, prev.remarks));
+      }
+    } catch (error) {
+      // silent
+    } finally {
+      setLoading(false);
+    }
+  }, [leadId]);
+
+  async function updateLeadStatus(newStatus: string) {
+    if (!form.remarks.trim()) {
+      setRemarksError(true);
+      toast.error("Please add remarks before changing status");
+      remarksRef.current?.focus();
+      return;
+    }
+    setRemarksError(false);
+
+    try {
+      setSaving(true);
+      setStatusSaving(true);
+
+      const res = await fetch(`/api/team-leader/leads/${leadId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: newStatus,
+          remarks: form.remarks.trim(),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.message || "Status update failed");
+        return;
+      }
+
+      invalidateTlLead(leadId);
+      await getLeadDetails();
+
+      setForm((prev) => ({ ...prev, remarks: "" }));
+      toast.success("Status updated successfully");
+    } catch (error) {
+      toast.error("Something went wrong");
+    } finally {
+      setSaving(false);
+      setStatusSaving(false);
+    }
+  }
+
+  async function saveRemarksOnly() {
+    const remarksText = form.remarks.trim();
+
+    if (!remarksText) {
+      toast.error("Please write something before saving");
+      return;
+    }
+
+    try {
+      setNoteSaving(true);
+
+      const res = await fetch(`/api/team-leader/leads/${leadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ remarks: remarksText, isNote: true }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.message || "Failed to save note");
+        return;
+      }
+
+      setLead((prev: any) => ({
+        ...prev,
+        followups: [data.note, ...(prev?.followups || [])],
+      }));
+
+      invalidateTlLead(leadId);
+
+      setForm((prev) => ({ ...prev, remarks: "" }));
+
+      toast.success("Note saved successfully");
+    } catch (error) {
+      toast.error("Something went wrong");
+    } finally {
+      setNoteSaving(false);
+    }
+  }
+
+  async function completeFollowUp() {
+    if (!form.remarks.trim()) {
+      toast.error("Please add remarks before completing the follow up");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setFollowUpSaving(true);
+
+      const res = await fetch(
+        `/api/team-leader/leads/${leadId}/complete-followup`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        },
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.message || "Something went wrong");
+        return;
+      }
+
+      invalidateTlLead(leadId);
+      await getLeadDetails();
+
+      setForm((prev) => ({ ...prev, remarks: "" }));
+
+      toast.success("Follow up completed successfully");
+    } catch (error) {
+      toast.error("Something went wrong");
+    } finally {
+      setSaving(false);
+      setFollowUpSaving(false);
+    }
+  }
+
+  async function saveLeadInformation() {
+    try {
+      setSaving(true);
+      setInfoSaving(true);
+
+      const res = await fetch(`/api/team-leader/leads/${leadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.message || "Failed to update lead");
+        return;
+      }
+
+      setEditingFields([]);
+
+      invalidateTlLead(leadId);
+      await getLeadDetails();
+
+      toast.success("Lead information updated successfully.");
+    } catch (error) {
+      toast.error("Something went wrong.");
+    } finally {
+      setSaving(false);
+      setInfoSaving(false);
+    }
+  }
+
+  useEffect(() => {
+    async function loadLeadDetails() {
+      await getLeadDetails();
+    }
+
+    loadLeadDetails();
+  }, [leadId, getLeadDetails]);
+
+  if (!mounted) {
+    return null;
+  }
+
+  const notFound = !loading && !lead;
+
+  const followups: FollowupItem[] = lead?.followups || [];
+  const visibleFollowups = showAllFollowups ? followups : followups.slice(0, 3);
+
+  const statusHistory = lead?.statusHistory || [];
+  const visibleStatusHistory = showAllStatusHistory
+    ? statusHistory
+    : statusHistory.slice(0, 3);
+
+  const followUpButtonLabel = saving
+    ? "Saving..."
+    : maxFollowUpsReached
+    ? "Max Follow Ups Completed"
+    : isClosed
+    ? "Lead Closed"
+    : !nextFollowUpReached
+    ? "Waiting For Next Follow Up"
+    : remarksMissing
+    ? "Add Remarks To Continue"
+    : "Complete Follow Up";
+
+  const trainingDisplayValue =
+    lead?.willingToAttendTraining === true
+      ? "YES"
+      : lead?.willingToAttendTraining === false
+      ? "NO"
+      : undefined;
+
+  return createPortal(
+    <div data-no-ptr className="fixed inset-0 z-50 flex h-[100dvh]">
+      <div
+        onClick={onClose}
+        className="flex-1 bg-black/60 backdrop-blur-[2px] animate-in fade-in duration-200"
+      />
+
+      {/* Sidebar */}
+      <div
+        className="
+  relative
+  flex
+  h-full
+  w-full
+  max-w-2xl
+  flex-col
+  border-l
+  border-white/10
+  bg-[#080808]
+  shadow-[0_0_60px_rgba(212,175,55,0.10)]
+  animate-in
+  slide-in-from-right
+  duration-300
+  ease-out
+  fill-mode-both
+  "
+      >
+        {statusSaving && (
+          <div
+            className="
+            absolute
+            inset-0
+            z-40
+            flex
+            items-center
+            justify-center
+            bg-black/50
+            backdrop-blur-[2px]
+            "
+          >
+            <div
+              className="
+              flex
+              items-center
+              gap-3
+              rounded-2xl
+              border
+              border-[#D4AF37]/25
+              bg-[#111]/95
+              px-6
+              py-4
+              shadow-xl
+              "
+            >
+              <span
+                className="
+                h-5
+                w-5
+                animate-spin
+                rounded-full
+                border-2
+                border-[#D4AF37]/25
+                border-t-[#D4AF37]
+                "
+              />
+              <span className="text-sm font-medium text-[#D4AF37]">
+                Updating status…
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Sticky header */}
+        <div
+          style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 8px)" }}
+          className="
+          sticky
+          top-0
+          z-10
+          flex
+          shrink-0
+          items-center
+          justify-between
+          border-b
+          border-white/10
+          bg-[#080808]
+          px-6
+          pb-4
+          sm:bg-[#080808]/90
+          sm:px-8
+          sm:pt-4
+          sm:backdrop-blur-md
+          "
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className="
+        flex
+        h-11
+        w-11
+        shrink-0
+        items-center
+        justify-center
+        rounded-2xl
+        border
+        border-[#D4AF37]/20
+        bg-[#D4AF37]/[0.08]
+        text-[#D4AF37]
+        "
+            >
+              <History size={20} strokeWidth={1.75} />
+            </div>
+
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
+                Lead Details
+              </h2>
+
+              <p className="mt-0.5 text-xs text-white/35 sm:text-sm">
+                Manage lead information and follow ups
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="
+    min-h-[44px]
+    min-w-[44px]
+    rounded-2xl
+    border
+    border-white/10
+    bg-white/5
+    p-2.5
+    text-white/50
+    transition
+    duration-150
+    active:scale-95
+    active:border-[#D4AF37]/40
+    active:text-[#D4AF37]
+    "
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Scrollable content */}
+        <div
+          className="
+          min-h-0
+          flex-1
+          overflow-y-auto
+          overscroll-contain
+          [-webkit-overflow-scrolling:touch]
+          "
+        >
+          <div className="p-4 pb-6 sm:p-6">
+            {loading ? (
+              <div className="space-y-5">
+                <SkeletonBlock className="h-44" />
+                <SkeletonBlock className="h-72" />
+                <SkeletonBlock className="h-40" />
+              </div>
+            ) : notFound ? (
+              <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] px-6 py-16 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.08] text-[#D4AF37]">
+                  <AlertCircle size={22} strokeWidth={1.75} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">
+                    Lead not found
+                  </p>
+                  <p className="mt-1 text-xs text-white/35">
+                    It may have been reassigned or no longer exists.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Basic Information */}
+                <div
+                  className="
+relative
+overflow-hidden
+rounded-3xl
+border
+border-[#D4AF37]/15
+bg-gradient-to-br
+from-[#171717]
+to-[#0d0d0d]
+p-6
+shadow-xl
+"
+                >
+                  <div
+                    aria-hidden
+                    className="
+                    pointer-events-none
+                    absolute
+                    -right-16
+                    -top-16
+                    h-48
+                    w-48
+                    rounded-full
+                    bg-[#D4AF37]/10
+                    blur-[80px]
+                    "
+                  />
+
+                  <div className="relative flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <h3
+                        className="
+text-2xl
+font-bold
+tracking-tight
+text-white
+break-words
+"
+                      >
+                        {lead.name || "Unknown Lead"}
+                      </h3>
+
+                      <div className="mt-5 space-y-3.5 text-sm text-white/50">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <span className="shrink-0 rounded-xl border border-white/10 bg-white/[0.04] p-2 text-white/40">
+                            <Phone size={15} />
+                          </span>
+
+                          <span className="min-w-0 break-all text-sm text-white/70">
+                            {lead.phone}
+                          </span>
+                        </div>
+
+                        <p className="flex min-w-0 items-center gap-3">
+                          <span className="shrink-0 rounded-xl border border-white/10 bg-white/[0.04] p-2 text-white/40">
+                            <MapPin size={15} />
+                          </span>
+
+                          <span className="break-words">
+                            {lead.city || "-"}
+                          </span>
+                        </p>
+
+                        <p className="flex min-w-0 items-center gap-3">
+                          <span className="shrink-0 rounded-xl border border-white/10 bg-white/[0.04] p-2 text-white/40">
+                            <CalendarClock size={15} />
+                          </span>
+
+                          <span className="break-words">
+                            {lead.nextFollowUp
+                              ? formatDateTime(lead.nextFollowUp)
+                              : "No Follow Up"}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 flex-col items-end gap-3">
+                      <div className="mb-4 flex justify-center">
+                        <LeadStatusBadge status={lead.status} />
+                      </div>
+
+                      {lead.phone && (
+                        <button
+                          onClick={() => smartCall(lead.phone)}
+                          className="
+                          inline-flex
+                          items-center
+                          gap-1.5
+                          rounded-full
+                          border
+                          border-[#25D366]/25
+                          bg-[#25D366]/10
+                          px-3
+                          py-1.5
+                          text-[10px]
+                          font-semibold
+                          uppercase
+                          tracking-wider
+                          text-[#25D366]
+                          transition-all
+                          hover:bg-[#25D366]/20
+                          "
+                        >
+                          <WhatsAppIcon size={11} />
+                          Call
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lead Information */}
+                <div className="relative mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+                  {infoSaving && (
+                    <div
+                      className="
+                      absolute
+                      inset-0
+                      z-10
+                      flex
+                      items-center
+                      justify-center
+                      gap-3
+                      rounded-2xl
+                      bg-black/70
+                      backdrop-blur-sm
+                      "
+                    >
+                      <span
+                        className="
+                        h-5
+                        w-5
+                        animate-spin
+                        rounded-full
+                        border-2
+                        border-[#D4AF37]/25
+                        border-t-[#D4AF37]
+                        "
+                      />
+                      <span className="text-sm font-medium text-[#D4AF37]">
+                        Saving lead information…
+                      </span>
+                    </div>
+                  )}
+
+                  <SectionTitle
+                    icon={<Edit3 size={15} strokeWidth={1.75} />}
+                    title="Lead Information"
+                  />
+
+                  <div className="space-y-3">
+                    <LeadField
+                      label="Name"
+                      value={lead.name}
+                      field="name"
+                      formValue={form.name}
+                      editingFields={editingFields}
+                      toggleEdit={toggleEdit}
+                      updateField={updateField}
+                      disabled={isClosed}
+                    />
+
+                    <LeadField
+                      label="Email"
+                      value={lead.email}
+                      field="email"
+                      formValue={form.email}
+                      editingFields={editingFields}
+                      toggleEdit={toggleEdit}
+                      updateField={updateField}
+                      disabled={isClosed}
+                    />
+
+                    <LeadField
+                      label="City"
+                      value={lead.city}
+                      field="city"
+                      formValue={form.city}
+                      editingFields={editingFields}
+                      toggleEdit={toggleEdit}
+                      updateField={updateField}
+                      disabled={isClosed}
+                    />
+
+                    <LeadField
+                      label="Age"
+                      value={lead.age}
+                      field="age"
+                      formValue={form.age}
+                      editingFields={editingFields}
+                      toggleEdit={toggleEdit}
+                      updateField={updateField}
+                      disabled={isClosed}
+                      type="number"
+                    />
+
+                    <LeadField
+                      label="Purpose"
+                      value={lead.purpose}
+                      field="purpose"
+                      formValue={form.purpose}
+                      editingFields={editingFields}
+                      toggleEdit={toggleEdit}
+                      updateField={updateField}
+                      disabled={isClosed}
+                      options={PURPOSE_OPTIONS}
+                      placeholder="Select Purpose"
+                    />
+
+                    <LeadField
+                      label="Current Status"
+                      value={lead.currentStatus}
+                      field="currentStatus"
+                      formValue={form.currentStatus}
+                      editingFields={editingFields}
+                      toggleEdit={toggleEdit}
+                      updateField={updateField}
+                      disabled={isClosed}
+                      options={CURRENT_STATUS_OPTIONS}
+                      placeholder="Select Status"
+                    />
+
+                    <LeadField
+                      label="Best Time To Reach"
+                      value={lead.bestTimeToReach}
+                      field="bestTimeToReach"
+                      formValue={form.bestTimeToReach}
+                      editingFields={editingFields}
+                      toggleEdit={toggleEdit}
+                      updateField={updateField}
+                      disabled={isClosed}
+                      options={BEST_TIME_OPTIONS}
+                      placeholder="Select Time"
+                    />
+
+                    <LeadField
+                      label="Willing To Attend Training"
+                      value={trainingDisplayValue}
+                      field="willingToAttendTraining"
+                      formValue={form.willingToAttendTraining}
+                      editingFields={editingFields}
+                      toggleEdit={toggleEdit}
+                      updateField={updateField}
+                      disabled={isClosed}
+                      options={TRAINING_OPTIONS}
+                      placeholder="Select an option"
+                    />
+
+                    {editingFields.length > 0 && (
+                      <button
+                        onClick={saveLeadInformation}
+                        disabled={saving}
+                        className="mt-5 hidden min-h-[48px] w-full rounded-xl bg-[#D4AF37] py-3 font-semibold text-black transition duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 md:block"
+                      >
+                        {saving ? "Saving..." : "Save Lead Information"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Follow Up History */}
+                <div className="mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+                  <SectionTitle
+                    icon={<History size={15} strokeWidth={1.75} />}
+                    title="Follow Up History"
+                  />
+                  <div className="space-y-2.5">
+                    {followups.length > 0 ? (
+                      <>
+                        {visibleFollowups.map((item) => (
+                          <div
+                            key={item.id}
+                            className="rounded-xl border border-white/[0.05] bg-black/25 p-3.5 transition-colors hover:border-[#D4AF37]/20"
+                          >
+                            <p className="text-sm text-white/85">
+                              {item.remarks}
+                            </p>
+                            <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-white/30">
+                              <span>
+                                {item.followUpNumber === 0
+                                  ? "Note"
+                                  : `Follow Up #${item.followUpNumber}`}
+                                {item.user?.name ? ` • ${item.user.name}` : ""}
+                              </span>
+                              <span>
+                                {formatDateTime(item.createdAt)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+
+                        {followups.length > 3 && (
+                          <button
+                            onClick={() => setShowAllFollowups((prev) => !prev)}
+                            className="min-h-[40px] w-full rounded-lg border border-white/10 text-xs font-medium text-white/40 transition duration-150 active:border-[#D4AF37]/30 active:text-[#D4AF37]"
+                          >
+                            {showAllFollowups
+                              ? "Show Less"
+                              : `Show ${followups.length - 3} More`}
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-sm text-white/30">No follow ups yet</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Complete Follow Up */}
+                <div className="relative mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+                  {followUpSaving && (
+                    <div
+                      className="
+                      absolute
+                      inset-0
+                      z-10
+                      flex
+                      items-center
+                      justify-center
+                      gap-3
+                      rounded-2xl
+                      bg-black/70
+                      backdrop-blur-sm
+                      "
+                    >
+                      <span
+                        className="
+                        h-5
+                        w-5
+                        animate-spin
+                        rounded-full
+                        border-2
+                        border-[#D4AF37]/25
+                        border-t-[#D4AF37]
+                        "
+                      />
+                      <span className="text-sm font-medium text-[#D4AF37]">
+                        Completing follow up…
+                      </span>
+                    </div>
+                  )}
+
+                  <SectionTitle
+                    title="Complete Follow Up"
+                    trailing={
+                      <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-white/40">
+                        Total: {lead.followUpCount || 0}
+                      </span>
+                    }
+                  />
+
+                  <div className="space-y-4">
+                    <div className="relative">
+                      {noteSaving && (
+                        <div
+                          className="
+                          absolute
+                          inset-0
+                          z-10
+                          flex
+                          items-center
+                          justify-center
+                          gap-2
+                          rounded-xl
+                          bg-black/70
+                          backdrop-blur-sm
+                          "
+                        >
+                          <span
+                            className="
+                            h-4
+                            w-4
+                            animate-spin
+                            rounded-full
+                            border-2
+                            border-[#D4AF37]/25
+                            border-t-[#D4AF37]
+                            "
+                          />
+                          <span className="text-xs font-medium text-[#D4AF37]">
+                            Saving note…
+                          </span>
+                        </div>
+                      )}
+
+                      <textarea
+                        ref={remarksRef}
+                        rows={4}
+                        disabled={remarksDisabled}
+                        value={form.remarks}
+                        onChange={(e) => {
+                          updateField("remarks", e.target.value);
+                          if (remarksError) setRemarksError(false);
+                        }}
+                        placeholder="Write remarks or notes..."
+                        className={`
+    w-full
+    rounded-xl
+    border
+    bg-black/25
+    p-3
+    text-sm
+    text-white
+    outline-none
+    transition
+    duration-150
+    placeholder:text-white/25
+    focus:border-[#D4AF37]/40
+    disabled:cursor-not-allowed
+    disabled:opacity-50
+    ${remarksError
+      ? "border-red-500/60 focus:border-red-500/80"
+      : "border-white/[0.06]"
+    }
+  `}
+                      />
+
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        {remarksMissing && !remarksDisabled ? (
+                          <p className="text-xs text-white/30">
+                            Required to complete a follow up
+                          </p>
+                        ) : (
+                          <span />
+                        )}
+
+                        <button
+                          onClick={saveRemarksOnly}
+                          disabled={remarksDisabled || remarksMissing}
+                          className="
+                      min-h-[40px]
+                      shrink-0
+                      rounded-lg
+                      border
+                      border-[#D4AF37]/30
+                      px-4
+                      py-2
+                      text-xs
+                      font-semibold
+                      text-[#D4AF37]
+                      transition
+                      duration-150
+                      active:scale-[0.97]
+                      active:bg-[#D4AF37]/10
+                      disabled:cursor-not-allowed
+                      disabled:opacity-40
+                      "
+                        >
+                          {noteSaving ? "Saving..." : "Save Note"}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="relative">
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/35">
+  Lead Status
+</p>
+                      <select
+                        value={lead.status}
+                        disabled={isClosed || saving}
+                        onChange={(e) => updateLeadStatus(e.target.value)}
+                        className="
+  min-h-[48px]
+  w-full
+  rounded-xl
+  border
+  border-white/[0.06]
+  bg-black/25
+  p-3
+  text-sm
+  text-white
+  outline-none
+  transition
+  duration-150
+  focus:border-[#D4AF37]/40
+  disabled:opacity-50
+  "
+                      >
+                        <option value="NEW">NEW</option>
+                        <option value="CALLED">CALLED</option>
+                        <option value="SEAT_RESERVED">SEAT RESERVED</option>
+                        <option value="TRAINING_ATTENDED">
+                          TRAINING ATTENDED
+                        </option>
+                        <option value="NEED_MORE_FOLLOW_UP">
+                          NEED MORE FOLLOW UP
+                        </option>
+                        <option value="JOINED">JOINED</option>
+                        <option value="DEAD">DEAD</option>
+                      </select>
+
+                      {!isClosed && !form.remarks.trim() && !saving && (
+                        <p className="mt-1.5 text-[11px] text-amber-400/70">
+                          Add remarks below before changing status
+                        </p>
+                      )}
+
+                      {statusSaving && (
+                        <div
+                          className="
+                          absolute
+                          inset-0
+                          z-10
+                          flex
+                          items-center
+                          justify-center
+                          gap-2
+                          rounded-xl
+                          border
+                          border-[#D4AF37]/20
+                          bg-black/70
+                          backdrop-blur-sm
+                          "
+                        >
+                          <span
+                            className="
+                            h-4
+                            w-4
+                            animate-spin
+                            rounded-full
+                            border-2
+                            border-[#D4AF37]/25
+                            border-t-[#D4AF37]
+                            "
+                          />
+                          <span className="text-xs font-medium text-[#D4AF37]">
+                            Updating status…
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Desktop / inline button */}
+                    <button
+                      onClick={completeFollowUp}
+                      disabled={followUpDisabled}
+                      className={`hidden min-h-[48px] w-full rounded-xl py-3 font-semibold transition duration-150 active:scale-[0.98] md:block ${
+                        followUpDisabled
+                          ? "cursor-not-allowed bg-white/10 text-white/30"
+                          : "bg-[#D4AF37] text-black active:opacity-90"
+                      }`}
+                    >
+                      {followUpButtonLabel}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Status History */}
+                <div className="mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+                  <SectionTitle
+                    icon={<History size={15} strokeWidth={1.75} />}
+                    title="Status History"
+                  />
+                  <div className="space-y-2.5">
+                    {statusHistory.length > 0 ? (
+                      <>
+                        {visibleStatusHistory.map(
+                          (item: {
+                            id: string;
+                            oldStatus: string;
+                            newStatus: string;
+                            changedBy?: { name: string };
+                            changedAt: string;
+                          }) => (
+                            <div
+                              key={item.id}
+                              className="rounded-xl border border-white/[0.05] bg-black/25 p-3.5 transition-colors hover:border-[#D4AF37]/20"
+                            >
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white">
+                                <span className="break-words text-white/60">
+                                  {item.oldStatus}
+                                </span>
+                                <span className="shrink-0 text-[#D4AF37]">
+                                  →
+                                </span>
+                                <span className="break-words">
+                                  {item.newStatus}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-xs text-white/30">
+                                By {item.changedBy?.name || "Unknown"} •{" "}
+                                {formatDateTime(item.changedAt)}
+                              </p>
+                            </div>
+                          ),
+                        )}
+
+                        {statusHistory.length > 3 && (
+                          <button
+                            onClick={() =>
+                              setShowAllStatusHistory((prev) => !prev)
+                            }
+                            className="min-h-[40px] w-full rounded-lg border border-white/10 text-xs font-medium text-white/40 transition duration-150 active:border-[#D4AF37]/30 active:text-[#D4AF37]"
+                          >
+                            {showAllStatusHistory
+                              ? "Show Less"
+                              : `Show ${statusHistory.length - 3} More`}
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-sm text-white/30">No status history</p>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Sticky bottom action bar — mobile only */}
+        {!loading && lead && (
+          <div
+            className="
+          shrink-0
+          border-t
+          border-white/10
+          bg-[#080808]/95
+          p-4
+          pb-[calc(1rem+env(safe-area-inset-bottom))]
+          backdrop-blur-md
+          md:hidden
+          "
+          >
+            {hasUnsavedLeadInfo ? (
+              <button
+                onClick={saveLeadInformation}
+                disabled={saving}
+                className={`min-h-[48px] w-full rounded-xl py-3 font-semibold transition duration-150 active:scale-[0.98] ${
+                  saving
+                    ? "cursor-not-allowed bg-white/10 text-white/30"
+                    : "bg-[#D4AF37] text-black active:opacity-90"
+                }`}
+              >
+                {infoSaving ? "Saving..." : "Save Lead Information"}
+              </button>
+            ) : (
+              <button
+                onClick={completeFollowUp}
+                disabled={followUpDisabled}
+                className={`min-h-[48px] w-full rounded-xl py-3 font-semibold transition duration-150 active:scale-[0.98] ${
+                  followUpDisabled
+                    ? "cursor-not-allowed bg-white/10 text-white/30"
+                    : "bg-[#D4AF37] text-black active:opacity-90"
+                }`}
+              >
+                {followUpButtonLabel}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body,
+  );
+}

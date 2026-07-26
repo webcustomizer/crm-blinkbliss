@@ -39,6 +39,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Invalid code." }, { status: 401 });
     }
     if (!user.twoFactorSecret || !safeStringCompare(user.twoFactorSecret, otp)) {
+      const attempts = (user.failedLoginAttempts || 0) + 1;
+      if (attempts >= 3) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { twoFactorSecret: null, otpExpiresAt: null, failedLoginAttempts: 0 },
+        });
+        return NextResponse.json({ success: false, message: "Too many failed attempts. Please login again." }, { status: 401 });
+      }
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginAttempts: attempts },
+      });
       return NextResponse.json({ success: false, message: "Invalid code." }, { status: 401 });
     }
     const settings = await getCachedCRMSettings();
@@ -69,7 +81,7 @@ export async function POST(req: NextRequest) {
         expiresAt: new Date(Date.now() + hours * 3600 * 1000),
       },
     });
-    return NextResponse.json({ success: true, token, user: { id: user.id, name: user.name, role: user.role } });
+    return NextResponse.json({ success: true, ...(isCapacitor ? { token } : {}), forcePasswordChange: user.forcePasswordChange, user: { id: user.id, name: user.name, role: user.role } });
   } catch {
     return NextResponse.json({ success: false, message: "Verification failed." }, { status: 500 });
   }

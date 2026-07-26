@@ -18,7 +18,7 @@ export default function ActivitySettings() {
     try {
       setLoading(true);
 
-      const res = await fetch("/api/admin/activity/clear", {
+      const res = await fetch("/api/admin/activity/clear?confirm=true", {
         method: "DELETE",
       });
 

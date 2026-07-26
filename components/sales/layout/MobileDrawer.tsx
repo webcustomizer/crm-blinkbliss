@@ -6,7 +6,7 @@ import { X, LogOut, User } from "lucide-react";
 import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { useSalesSettings } from "@/hooks/useSalesSettings";
 
-export default function MobileDrawer({ open, onClose, user }: { open: boolean; onClose: () => void; user?: any }) {
+export default function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const unread = useUnreadCounts();
   const { navItems } = useSalesSettings();
@@ -29,7 +29,7 @@ export default function MobileDrawer({ open, onClose, user }: { open: boolean; o
       <div className={`fixed top-0 left-0 z-50 h-full w-64 bg-[#161616] border-r border-[#D4AF37]/20 transform transition-transform ${open ? "translate-x-0" : "-translate-x-full"}`}>
         <div style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 8px)" }} className="flex items-center justify-between p-4 border-b border-white/10">
           <span className="text-lg font-bold text-[#D4AF37]">Menu</span>
-          <button onClick={onClose} className="p-2 rounded-lg text-white/60 hover:text-white"><X size={20} /></button>
+          <button onClick={onClose} aria-label="Close menu" className="p-2 rounded-lg text-white/60 hover:text-white"><X size={20} /></button>
         </div>
         <nav className="flex flex-col h-[calc(100%-64px-max(env(safe-area-inset-top,0px),8px))]">
           <div className="flex-1 p-4 space-y-1.5 overflow-y-auto">

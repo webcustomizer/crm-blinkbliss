@@ -14,12 +14,26 @@ import {
   CheckCheck,
   ChevronUp,
   Trash2,
+  ArrowLeft,
+  Search,
 } from "lucide-react";
 import type { GroupChatMessage, MentionLead } from "@/types/lead";
 import { subscribeToGroupMessages, subscribeToTyping } from "@/lib/realtime";
 import ChatImage, { isImageFile } from "@/components/chat/ChatImage";
 import { handleAPIError } from "@/lib/client-error";
 import ImagePreview from "@/components/chat/ImagePreview";
+
+interface Conversation {
+  teamLeader: { id: string; name: string };
+  lastMessage: {
+    id: string;
+    content: string;
+    createdAt: string;
+    sender: { id: string; name: string };
+  } | null;
+  unreadCount: number;
+  memberCount: number;
+}
 
 function formatDateLabel(dateStr: string) {
   const d = new Date(dateStr);
@@ -41,11 +55,31 @@ function formatDateLabel(dateStr: string) {
   });
 }
 
+function formatConversationTime(dateStr: string) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return "now";
+  if (diffMins < 60) return `${diffMins}m`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d`;
+  return d.toLocaleDateString([], { day: "2-digit", month: "short" });
+}
+
 export default function GroupChatPanel({
   currentUserId,
 }: {
   currentUserId: string;
 }) {
+  const [tab, setTab] = useState<"GENERAL" | "TL_TEAM">("GENERAL");
+  const [selectedTeamLeader, setSelectedTeamLeader] = useState<Conversation["teamLeader"] | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversationsLoading, setConversationsLoading] = useState(false);
+  const [conversationSearch, setConversationSearch] = useState("");
+
   const [messages, setMessages] = useState<GroupChatMessage[]>([]);
   const [users, setUsers] = useState<
     { id: string; name: string; role: string }[]
@@ -61,7 +95,6 @@ export default function GroupChatPanel({
   const [previewFile, setPreviewFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  // Pagination state
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -81,9 +114,12 @@ export default function GroupChatPanel({
 
   const isFetchingRef = useRef(false);
   const initialLoadDoneRef = useRef(false);
-  // Distinguish "just sent/received a message → autoscroll" from
-  // "loaded older messages → do NOT autoscroll, preserve position"
   const shouldAutoScrollRef = useRef(true);
+  const selectedTeamLeaderRef = useRef(selectedTeamLeader);
+
+  useEffect(() => {
+    selectedTeamLeaderRef.current = selectedTeamLeader;
+  }, [selectedTeamLeader]);
 
   useEffect(() => {
     if (!initialLoadDoneRef.current) return;
@@ -94,12 +130,45 @@ export default function GroupChatPanel({
     }
   }, [messages]);
 
-  // ---- Initial load: only the latest page ----
+  // Fetch conversation list
+  const fetchConversations = useCallback(async () => {
+    setConversationsLoading(true);
+    try {
+      const res = await fetch("/api/admin/group-chat?conversations=true&chatType=TL_TEAM", { cache: "no-store" });
+      const json = await res.json();
+      if (json.success && json.conversations) {
+        setConversations(json.conversations);
+      }
+    } catch (e) {
+      console.error("Failed to load conversations:", e);
+    } finally {
+      setConversationsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tab === "TL_TEAM" && !selectedTeamLeader) {
+      fetchConversations();
+    }
+  }, [tab, selectedTeamLeader, fetchConversations]);
+
+  // Refresh conversations when a TL_TEAM message arrives while on conversation list
+  const refreshConversationsRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    refreshConversationsRef.current = () => {
+      if (tab === "TL_TEAM" && !selectedTeamLeader) {
+        fetchConversations();
+      }
+    };
+  }, [tab, selectedTeamLeader, fetchConversations]);
+
+  // Fetch messages for chat view
   const fetchMessages = useCallback(async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     try {
-      const res = await fetch("/api/admin/group-chat", { cache: "no-store" });
+      const tlParam = selectedTeamLeaderRef.current ? `&teamLeaderId=${selectedTeamLeaderRef.current.id}` : "";
+      const res = await fetch(`/api/admin/group-chat?chatType=${tab}${tlParam}`, { cache: "no-store" });
       const json = await res.json();
       if (!json.success) {
         setDisabled(true);
@@ -119,10 +188,8 @@ export default function GroupChatPanel({
     } finally {
       isFetchingRef.current = false;
     }
-  }, []);
+  }, [tab]);
 
-  // Load an older page when the user scrolls near the top.
-  // Preserves scroll position by measuring scrollHeight before/after prepend.
   const loadOlderMessages = useCallback(async () => {
     if (loadingMore || !hasMore || isFetchingRef.current) return;
     if (messages.length === 0) return;
@@ -133,17 +200,16 @@ export default function GroupChatPanel({
     const prevScrollHeight = container?.scrollHeight ?? 0;
 
     try {
+      const tlParam = selectedTeamLeaderRef.current ? `&teamLeaderId=${selectedTeamLeaderRef.current.id}` : "";
       const res = await fetch(
-        `/api/admin/group-chat?cursor=${encodeURIComponent(oldest.id)}`,
+        `/api/admin/group-chat?chatType=${tab}${tlParam}&cursor=${encodeURIComponent(oldest.id)}`,
         { cache: "no-store" },
       );
       const json = await res.json();
       if (json.success && json.data) {
-        shouldAutoScrollRef.current = false; // don't jump to bottom
+        shouldAutoScrollRef.current = false;
         setMessages((prev) => [...json.data, ...prev]);
         setHasMore(Boolean(json.hasMore));
-
-        // Restore scroll position so the view doesn't jump after prepending
         requestAnimationFrame(() => {
           if (container) {
             const newScrollHeight = container.scrollHeight;
@@ -164,20 +230,32 @@ export default function GroupChatPanel({
     }
   }
 
-  // ---- Supabase Realtime: subscribe to new group messages ----
-  // Appends the broadcasted message directly instead of refetching the
-  // whole list. broadcastNewGroupMessage() already sends the full message
-  // payload, so no round-trip is needed here.
-  // NOTE: We skip messages from currentUserId because the sender already
-  // handles them via the API response. Without this check, a race condition
-  // between the broadcast and the API response causes duplicate messages.
+  // Realtime: new group messages
   useEffect(() => {
     const unsub = subscribeToGroupMessages((incoming: GroupChatMessage) => {
       if (!incoming?.id) {
         fetchMessages();
+        refreshConversationsRef.current();
         return;
       }
       if (incoming.senderId === currentUserId) return;
+
+      // If we're in TL_TEAM chat view, filter by teamLeaderId
+      const tlRef = selectedTeamLeaderRef.current;
+      if (incoming.chatType === "TL_TEAM") {
+        if (tlRef && incoming.teamLeaderId !== tlRef.id) {
+          // Not for this team — refresh conversation list if visible
+          refreshConversationsRef.current();
+          return;
+        }
+        if (!tlRef) {
+          refreshConversationsRef.current();
+          return;
+        }
+      }
+
+      if (tab !== incoming.chatType) return;
+
       setMessages((prev) => {
         if (prev.some((m) => m.id === incoming.id)) return prev;
         shouldAutoScrollRef.current = true;
@@ -185,9 +263,9 @@ export default function GroupChatPanel({
       });
     });
     return () => unsub();
-  }, [fetchMessages, currentUserId]);
+  }, [fetchMessages, currentUserId, tab]);
 
-  // ---- Supabase Realtime: typing broadcast ----
+  // Typing
   useEffect(() => {
     const { unsubscribe, sendTyping } = subscribeToTyping(
       "group:chat",
@@ -198,12 +276,10 @@ export default function GroupChatPanel({
           clearTimeout(existing);
           timers.delete(payload.name);
         }
-
         if (payload.isTyping && Date.now() - payload.ts < 5000) {
           setTypingNames((prev) =>
             prev.includes(payload.name) ? prev : [...prev, payload.name],
           );
-
           const timer = setTimeout(() => {
             setTypingNames((prev) => prev.filter((n) => n !== payload.name));
             timers.delete(payload.name);
@@ -214,9 +290,7 @@ export default function GroupChatPanel({
         }
       },
     );
-
     typingRef.current = { sendTyping };
-
     return () => {
       unsubscribe();
       typingRemovalTimersRef.current.forEach((t) => clearTimeout(t));
@@ -224,18 +298,29 @@ export default function GroupChatPanel({
     };
   }, []);
 
+  // Tab/selection change: load messages and mark read
   useEffect(() => {
+    if (!selectedTeamLeader && tab === "TL_TEAM") {
+      // Conversation list view — no messages to load
+      setMessages([]);
+      setUsers([]);
+      setLoading(false);
+      initialLoadDoneRef.current = false;
+      return;
+    }
+    setLoading(true);
+    setMessages([]);
+    initialLoadDoneRef.current = false;
     fetchMessages();
-    // Mark ALL unread group messages as read on page open
-    fetch("/api/admin/group-chat", {
+    const tlParam = selectedTeamLeader ? `&teamLeaderId=${selectedTeamLeader.id}` : "";
+    fetch(`/api/admin/group-chat?chatType=${tab}${tlParam}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ markAll: true }),
-    }).catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    }).then(() => refreshConversationsRef.current()).catch(() => {});
+  }, [tab, selectedTeamLeader, fetchMessages]);
 
-  // Mark read — sirf woh messages jo current user ne khud read nahi kiye
+  // Mark read
   useEffect(() => {
     if (messages.length === 0 || !currentUserId) return;
     const unread = messages
@@ -246,12 +331,13 @@ export default function GroupChatPanel({
       )
       .map((m) => m.id);
     if (unread.length === 0) return;
-    fetch("/api/admin/group-chat", {
+    const tlParam = selectedTeamLeader ? `&teamLeaderId=${selectedTeamLeader.id}` : "";
+    fetch(`/api/admin/group-chat?chatType=${tab}${tlParam}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ messageIds: unread }),
-    }).catch(() => {});
-  }, [messages, currentUserId]);
+    }).then(() => refreshConversationsRef.current()).catch(() => {});
+  }, [messages, currentUserId, tab, selectedTeamLeader]);
 
   const myName = users.find((u) => u.id === currentUserId)?.name || "Admin";
 
@@ -264,12 +350,10 @@ export default function GroupChatPanel({
         typingRef.current?.sendTyping(false, myName);
       }, 3000);
     }
-
     const atIdx = val.lastIndexOf("@");
     const isValidMentionStart =
       atIdx !== -1 && (atIdx === 0 || /\s/.test(val[atIdx - 1]));
     const noSpaceAfterAt = atIdx !== -1 && !val.slice(atIdx + 1).includes(" ");
-
     if (isValidMentionStart && noSpaceAfterAt) {
       setShowMentionSearch(true);
       if (mentionTimerRef.current) clearTimeout(mentionTimerRef.current);
@@ -283,7 +367,9 @@ export default function GroupChatPanel({
           );
           const j = await r.json();
           if (j.leads) setMentionResults(j.leads.slice(0, 5));
-        } catch (e) { console.error("Failed to search mentions:", e); }
+        } catch (e) {
+          console.error("Failed to search mentions:", e);
+        }
       }, 100);
       return;
     }
@@ -302,15 +388,18 @@ export default function GroupChatPanel({
   }
 
   async function deleteAllMessages() {
-    if (!confirm("Delete all group chat messages? This cannot be undone.")) return;
+    const label = tab === "GENERAL" ? "General" : (selectedTeamLeader?.name || "this team");
+    if (!confirm(`Delete all messages in ${label}? This cannot be undone.`)) return;
     try {
-      const r = await fetch("/api/admin/group-chat", {
+      const tlParam = selectedTeamLeader ? `&teamLeaderId=${selectedTeamLeader.id}` : "";
+      const r = await fetch(`/api/admin/group-chat?chatType=${tab}${tlParam}`, {
         method: "DELETE",
       });
       const j = await r.json();
       if (j.success) {
         setMessages([]);
         toast.success("All messages cleared.");
+        refreshConversationsRef.current();
       } else {
         toast.error(j.message);
       }
@@ -337,7 +426,9 @@ export default function GroupChatPanel({
       createdAt: new Date().toISOString(),
       _sending: true,
       sender: users.find((u) => u.id === currentUserId),
-      lead: mentionedLead ? { id: mentionedLead.id, name: mentionedLead.name, phone: mentionedLead.phone } : undefined,
+      lead: mentionedLead
+        ? { id: mentionedLead.id, name: mentionedLead.name, phone: mentionedLead.phone }
+        : undefined,
     };
     setNewMsg("");
     setMentionedLead(null);
@@ -345,14 +436,21 @@ export default function GroupChatPanel({
     setMessages((prev) => [...prev, tempMsg]);
 
     try {
+      const body: Record<string, unknown> = { content, leadId, chatType: tab };
+      if (tab === "TL_TEAM" && selectedTeamLeader) {
+        body.teamLeaderId = selectedTeamLeader.id;
+      }
       const res = await fetch("/api/admin/group-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, leadId }),
+        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (json.success) {
-        setMessages((prev) => prev.map((m) => m.id === tempId ? { ...json.data } : m));
+        setMessages((prev) =>
+          prev.map((m) => (m.id === tempId ? { ...json.data } : m)),
+        );
+        refreshConversationsRef.current();
       } else {
         setMessages((prev) => prev.filter((m) => m.id !== tempId));
         toast.error(json.message);
@@ -380,7 +478,6 @@ export default function GroupChatPanel({
 
   async function doUploadAndSend(file: File, caption: string) {
     setFileUploading(true);
-
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     const blobUrl = URL.createObjectURL(file);
     const tempMsg: GroupChatMessage & { _sending?: boolean } = {
@@ -397,7 +494,6 @@ export default function GroupChatPanel({
     };
     shouldAutoScrollRef.current = true;
     setMessages((prev) => [...prev, tempMsg]);
-
     try {
       const fd = new FormData();
       fd.append("file", file);
@@ -405,21 +501,29 @@ export default function GroupChatPanel({
       const uj = await u.json();
       if (uj.success) {
         const content = caption || `📎 ${uj.data.fileName}`;
+        const body: Record<string, unknown> = {
+          content,
+          leadId: mentionedLead?.id || null,
+          fileUrl: uj.data.fileUrl,
+          fileName: uj.data.fileName,
+          fileSize: uj.data.fileSize,
+          chatType: tab,
+        };
+        if (tab === "TL_TEAM" && selectedTeamLeader) {
+          body.teamLeaderId = selectedTeamLeader.id;
+        }
         const m = await fetch("/api/admin/group-chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            content,
-            leadId: mentionedLead?.id || null,
-            fileUrl: uj.data.fileUrl,
-            fileName: uj.data.fileName,
-            fileSize: uj.data.fileSize,
-          }),
+          body: JSON.stringify(body),
         });
         const mj = await m.json();
         if (mj.success) {
           URL.revokeObjectURL(blobUrl);
-          setMessages((prev) => prev.map((msg) => msg.id === tempId ? { ...mj.data } : msg));
+          setMessages((prev) =>
+            prev.map((msg) => (msg.id === tempId ? { ...mj.data } : msg)),
+          );
+          refreshConversationsRef.current();
         } else {
           URL.revokeObjectURL(blobUrl);
           setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
@@ -458,10 +562,7 @@ export default function GroupChatPanel({
   if (disabled) {
     return (
       <div className="rounded-xl sm:rounded-[28px] border border-[#D4AF37]/20 bg-gradient-to-br from-[#171717] to-[#0d0d0d] p-6 sm:p-12 text-center">
-        <ShieldAlert
-          size={36}
-          className="mx-auto text-red-400/60 mb-3 sm:mb-4"
-        />
+        <ShieldAlert size={36} className="mx-auto text-red-400/60 mb-3 sm:mb-4" />
         <h2 className="text-lg sm:text-xl font-semibold text-white mb-2">
           Group Chat Disabled
         </h2>
@@ -471,6 +572,17 @@ export default function GroupChatPanel({
       </div>
     );
   }
+
+  // Show conversation list when TL_TEAM tab is active and no team leader selected
+  const showConversations = tab === "TL_TEAM" && !selectedTeamLeader;
+
+  const filteredConversations = conversationSearch
+    ? conversations.filter((c) =>
+        c.teamLeader.name.toLowerCase().includes(conversationSearch.toLowerCase()),
+      )
+    : conversations;
+
+  const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
 
   return (
     <div className="flex flex-col h-full min-h-0 rounded-xl sm:rounded-[28px] border border-[#D4AF37]/20 bg-[#0b0b0b] shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)] overflow-hidden">
@@ -492,292 +604,465 @@ export default function GroupChatPanel({
           }}
         />
       )}
+
       {/* Header */}
-      <div className="p-3 sm:p-4 border-b border-white/10 flex items-center gap-2 sm:gap-3 shrink-0 bg-gradient-to-r from-[#171717] to-[#111111] z-10">
-        <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
-          <Users size={16} className="sm:size-[18px]" />
+      <div className="shrink-0 bg-gradient-to-r from-[#171717] to-[#111111] z-10">
+        <div className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+          {showConversations ? (
+            <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-[#D4AF37]/15 text-[#D4AF37]">
+              <Users size={16} className="sm:size-[18px]" />
+            </div>
+          ) : selectedTeamLeader ? (
+            <button
+              onClick={() => {
+                setSelectedTeamLeader(null);
+                setConversationSearch("");
+              }}
+              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/15 hover:text-white transition-colors shrink-0"
+            >
+              <ArrowLeft size={16} className="sm:size-[18px]" />
+            </button>
+          ) : (
+            <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+              <Users size={16} className="sm:size-[18px]" />
+            </div>
+          )}
+          <div className="min-w-0">
+            <h2 className="font-semibold text-white text-xs sm:text-sm truncate">
+              {showConversations
+                ? "Team Chats"
+                : selectedTeamLeader
+                  ? selectedTeamLeader.name
+                  : tab === "GENERAL"
+                    ? "General Chat"
+                    : "Team Chats"}
+            </h2>
+            <p className="text-[10px] sm:text-xs text-gray-400 truncate">
+              {showConversations
+                ? `${conversations.length} teams${totalUnread > 0 ? ` · ${totalUnread} unread` : ""}`
+                : selectedTeamLeader
+                  ? `${users.length} members`
+                  : `${users.length} members`}
+            </p>
+          </div>
+          {!showConversations && (
+            <button
+              onClick={deleteAllMessages}
+              title="Clear all messages"
+              className="ml-auto shrink-0 rounded-lg border border-white/10 p-2 text-white/30 transition hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-400"
+            >
+              <Trash2 size={15} />
+            </button>
+          )}
         </div>
-        <div className="min-w-0">
-          <h2 className="font-semibold text-white text-xs sm:text-sm truncate">
-            Team Chat
-          </h2>
-          <p className="text-[10px] sm:text-xs text-gray-400 truncate">
-            {users.length} members
-          </p>
+
+        {/* Tab bar — always visible */}
+        <div className="flex border-t border-white/5">
+          <button
+            onClick={() => {
+              setTab("GENERAL");
+              setSelectedTeamLeader(null);
+              setConversationSearch("");
+            }}
+            className={`flex-1 py-2 text-[11px] sm:text-xs font-medium transition-colors relative ${
+              tab === "GENERAL"
+                ? "text-[#D4AF37]"
+                : "text-white/40 hover:text-white/60"
+            }`}
+          >
+            General
+            {tab === "GENERAL" && (
+              <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-[#D4AF37] rounded-full" />
+            )}
+          </button>
+          <button
+            onClick={() => {
+              setTab("TL_TEAM");
+              setSelectedTeamLeader(null);
+            }}
+            className={`flex-1 py-2 text-[11px] sm:text-xs font-medium transition-colors relative ${
+              tab === "TL_TEAM"
+                ? "text-[#D4AF37]"
+                : "text-white/40 hover:text-white/60"
+            }`}
+          >
+            Teams
+            {tab === "TL_TEAM" && (
+              <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-[#D4AF37] rounded-full" />
+            )}
+            {tab !== "TL_TEAM" && totalUnread > 0 && (
+              <span className="absolute top-1 right-[18%] min-w-[16px] h-4 flex items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white px-1">
+                {totalUnread > 99 ? "99+" : totalUnread}
+              </span>
+            )}
+          </button>
         </div>
-        <button
-          onClick={deleteAllMessages}
-          title="Clear all messages"
-          className="ml-auto shrink-0 rounded-lg border border-white/10 p-2 text-white/30 transition hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-400"
-        >
-          <Trash2 size={15} />
-        </button>
       </div>
 
-      {/* Messages */}
-      <div
-        ref={scrollContainerRef}
-        onScroll={onMessagesScroll}
-        onPaste={handlePaste}
-        className="flex-1 min-h-0 overflow-y-auto px-2 sm:px-4 py-3 sm:py-4 space-y-1"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 1px 1px, rgba(212,175,55,0.05) 1px, transparent 0)",
-          backgroundSize: "22px 22px",
-          backgroundColor: "#0b0b0b",
-        }}
-      >
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#D4AF37]/20 border-t-[#D4AF37]" />
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="flex items-start justify-center pt-8 h-full text-white/40 text-center">
-            <div>
-              <p className="text-base sm:text-lg">Welcome to Team Chat! 👋</p>
-              <p className="text-[11px] sm:text-sm mt-1">
-                Type @ to mention a lead
-              </p>
+      {/* Conversation list view */}
+      {showConversations && (
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          {/* Search */}
+          <div className="shrink-0 px-3 pt-3 pb-2">
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+              <input
+                value={conversationSearch}
+                onChange={(e) => setConversationSearch(e.target.value)}
+                placeholder="Search teams..."
+                className="w-full rounded-xl border border-white/10 bg-black/40 pl-9 pr-3 py-2 text-xs sm:text-sm text-white outline-none placeholder:text-white/30 focus:border-[#D4AF37]/50 transition-colors"
+              />
             </div>
           </div>
-        ) : (
-          <>
-            {hasMore && (
-              <div className="flex justify-center py-2">
-                {loadingMore ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#D4AF37]/20 border-t-[#D4AF37]" />
-                ) : (
-                  <button
-                    onClick={loadOlderMessages}
-                    className="flex items-center gap-1 text-[10px] sm:text-xs text-white/40 hover:text-[#D4AF37] px-3 py-1 rounded-full border border-white/10"
-                  >
-                    <ChevronUp size={12} />
-                    Load older messages
-                  </button>
-                )}
+
+          {/* List */}
+          <div
+            className="flex-1 min-h-0 overflow-y-auto"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 1px 1px, rgba(212,175,55,0.05) 1px, transparent 0)",
+              backgroundSize: "22px 22px",
+              backgroundColor: "#0b0b0b",
+            }}
+          >
+            {conversationsLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#D4AF37]/20 border-t-[#D4AF37]" />
               </div>
-            )}
-
-            {messages.map((msg, idx) => {
-              const isOwn = msg.senderId === currentUserId;
-              const prevSame =
-                idx > 0 &&
-                messages[idx - 1].senderId === msg.senderId &&
-                formatDateLabel(messages[idx - 1].createdAt) ===
-                  formatDateLabel(msg.createdAt);
-              const isAdmin =
-                users.find((u) => u.id === msg.senderId)?.role === "ADMIN";
-
-              const dateLabel = formatDateLabel(msg.createdAt);
-              const showDateSeparator =
-                idx === 0 ||
-                dateLabel !== formatDateLabel(messages[idx - 1].createdAt);
-
-              const isRead = (msg.reads?.length ?? 0) > 0;
-
-              return (
-                <div key={msg.id}>
-                  {showDateSeparator && (
-                    <div className="flex justify-center my-3">
-                      <span className="text-[10px] sm:text-[11px] text-white/50 bg-white/5 border border-white/10 rounded-full px-3 py-1">
-                        {dateLabel}
+            ) : filteredConversations.length === 0 ? (
+              <div className="flex items-center justify-center py-12 text-white/40 text-sm">
+                {conversationSearch ? "No matching teams" : "No teams found"}
+              </div>
+            ) : (
+              filteredConversations.map((conv) => (
+                <button
+                  key={conv.teamLeader.id}
+                  onClick={() => setSelectedTeamLeader(conv.teamLeader)}
+                  className="w-full flex items-center gap-3 px-3 sm:px-4 py-3 hover:bg-white/[0.04] border-b border-white/5 transition-colors text-left"
+                >
+                  {/* Avatar */}
+                  <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-[#D4AF37]/15 flex items-center justify-center text-[#D4AF37] font-bold text-sm shrink-0">
+                    {conv.teamLeader.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs sm:text-sm font-medium text-white truncate">
+                        {conv.teamLeader.name}
+                      </span>
+                      <span className="text-blue-400 bg-blue-400/10 border border-blue-400/20 rounded-full px-1.5 py-px text-[8px] sm:text-[9px] font-bold shrink-0">
+                        TL
                       </span>
                     </div>
-                  )}
-                  <div
-                    className={`flex ${
-                      isOwn ? "justify-end" : "justify-start"
-                    } ${prevSame ? "mt-0.5" : "mt-2"}`}
-                  >
-                    <div className="max-w-[82%] sm:max-w-[65%]">
-                      {!prevSame && !isOwn && (
-                        <p className="text-[10px] sm:text-xs mb-0.5 px-1 font-medium flex items-center gap-1.5">
-                          <span className="text-[#D4AF37]/70">
-                            {msg.sender?.name || "Unknown"}
+                    <p className="text-[10px] sm:text-xs text-white/40 truncate mt-0.5">
+                      {conv.memberCount} member{conv.memberCount !== 1 ? "s" : ""}
+                      {conv.lastMessage && (
+                        <>
+                          {" · "}
+                          <span className="text-white/50">
+                            {conv.lastMessage.sender.id === currentUserId
+                              ? "You"
+                              : conv.lastMessage.sender.name.split(" ")[0]}
+                            :{" "}
+                            {conv.lastMessage.content.length > 50
+                              ? conv.lastMessage.content.slice(0, 50) + "…"
+                              : conv.lastMessage.content}
                           </span>
-                          {isAdmin && (
-                            <span className="text-[9px] text-red-400 bg-red-400/10 rounded-full px-1.5 py-px font-bold border border-red-400/20">
-                              Admin
-                            </span>
-                          )}
-                        </p>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    {conv.lastMessage && (
+                      <span className="text-[9px] sm:text-[10px] text-white/30">
+                        {formatConversationTime(conv.lastMessage.createdAt)}
+                      </span>
+                    )}
+                    {conv.unreadCount > 0 && (
+                      <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-[#D4AF37] text-[9px] font-bold text-black px-1">
+                        {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Chat view — General or specific team */}
+      {!showConversations && (
+        <>
+          {/* Messages */}
+          <div
+            ref={scrollContainerRef}
+            onScroll={onMessagesScroll}
+            onPaste={handlePaste}
+            className="flex-1 min-h-0 overflow-y-auto px-2 sm:px-4 py-3 sm:py-4 space-y-1"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 1px 1px, rgba(212,175,55,0.05) 1px, transparent 0)",
+              backgroundSize: "22px 22px",
+              backgroundColor: "#0b0b0b",
+            }}
+          >
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#D4AF37]/20 border-t-[#D4AF37]" />
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="flex items-start justify-center pt-8 h-full text-white/40 text-center">
+                <div>
+                  <p className="text-base sm:text-lg">
+                    {tab === "GENERAL" ? "Welcome to Team Chat! 👋" : `Chat with ${selectedTeamLeader?.name || "team"}`}
+                  </p>
+                  <p className="text-[11px] sm:text-sm mt-1">
+                    Type @ to mention a lead
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {hasMore && (
+                  <div className="flex justify-center py-2">
+                    {loadingMore ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#D4AF37]/20 border-t-[#D4AF37]" />
+                    ) : (
+                      <button
+                        onClick={loadOlderMessages}
+                        className="flex items-center gap-1 text-[10px] sm:text-xs text-white/40 hover:text-[#D4AF37] px-3 py-1 rounded-full border border-white/10"
+                      >
+                        <ChevronUp size={12} />
+                        Load older messages
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {messages.map((msg, idx) => {
+                  const isOwn = msg.senderId === currentUserId;
+                  const prevSame =
+                    idx > 0 &&
+                    messages[idx - 1].senderId === msg.senderId &&
+                    formatDateLabel(messages[idx - 1].createdAt) ===
+                      formatDateLabel(msg.createdAt);
+                  const isAdmin =
+                    users.find((u) => u.id === msg.senderId)?.role === "ADMIN";
+
+                  const dateLabel = formatDateLabel(msg.createdAt);
+                  const showDateSeparator =
+                    idx === 0 ||
+                    dateLabel !== formatDateLabel(messages[idx - 1].createdAt);
+
+                  const isRead = (msg.reads?.length ?? 0) > 0;
+
+                  return (
+                    <div key={msg.id}>
+                      {showDateSeparator && (
+                        <div className="flex justify-center my-3">
+                          <span className="text-[10px] sm:text-[11px] text-white/50 bg-white/5 border border-white/10 rounded-full px-3 py-1">
+                            {dateLabel}
+                          </span>
+                        </div>
                       )}
                       <div
-                        className={`px-3 py-2 sm:px-3.5 sm:py-2 text-xs sm:text-sm shadow-sm overflow-hidden ${
-                          isOwn
-                            ? "bg-emerald-600/25 text-white border border-emerald-500/25 rounded-2xl rounded-br-sm"
-                            : "bg-white/[0.06] text-white/85 border border-white/10 rounded-2xl rounded-bl-sm"
-                        }`}
+                        className={`flex ${
+                          isOwn ? "justify-end" : "justify-start"
+                        } ${prevSame ? "mt-0.5" : "mt-2"}`}
                       >
-                        <p className="break-words whitespace-pre-wrap leading-relaxed">
-                          {msg.content}
-                        </p>
-
-                        {msg.fileUrl && isImageFile(msg.fileName) ? (
-                          <ChatImage src={msg.fileUrl} alt={msg.fileName || "Image"} fileName={msg.fileName} />
-                        ) : msg.fileUrl ? (
-                          <a
-                            href={msg.fileUrl}
-                            download={msg.fileName}
-                            target="_blank"
-                            rel="noopener"
-                            className="mt-1.5 sm:mt-2 flex items-center gap-1.5 rounded-lg bg-black/20 border border-white/10 px-2 py-1.5 text-[10px] sm:text-xs text-blue-300 hover:bg-black/30 w-fit"
-                          >
-                            <Paperclip size={12} />
-                            <span className="truncate max-w-[160px]">
-                              {msg.fileName || "Download"}
-                            </span>
-                          </a>
-                        ) : null}
-
-                        {msg.lead && (
-                          <a
-                            href={`/admin/leads?leadId=${msg.lead.id}`}
-                            target="_blank"
-                            rel="noopener"
-                            className="mt-1.5 sm:mt-2 inline-flex items-center gap-1 rounded-lg bg-blue-500/15 border border-blue-500/25 px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs text-blue-300 hover:bg-blue-500/25"
-                          >
-                            <ExternalLink size={10} />
-                            <span className="font-medium truncate">
-                              {msg.lead.name || msg.lead.phone}
-                            </span>
-                          </a>
-                        )}
-
-                        <div className="flex items-center justify-end gap-0.5 mt-1 -mb-0.5">
-                          {(msg as any)._sending && (
-                            <span className="h-2.5 w-2.5 block animate-spin rounded-full border border-white/40 border-t-white/80" />
+                        <div className="max-w-[82%] sm:max-w-[65%]">
+                          {!prevSame && !isOwn && (
+                            <p className="text-[10px] sm:text-xs mb-0.5 px-1 font-medium flex items-center gap-1.5">
+                              <span className="text-[#D4AF37]/70">
+                                {msg.sender?.name || "Unknown"}
+                              </span>
+                              {isAdmin && (
+                                <span className="text-[9px] text-red-400 bg-red-400/10 rounded-full px-1.5 py-px font-bold border border-red-400/20">
+                                  Admin
+                                </span>
+                              )}
+                            </p>
                           )}
-                          <span className="text-[9px] text-white/40 leading-none">
-                            {new Date(msg.createdAt).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </span>
-                          {isOwn &&
-                            (isRead ? (
-                              <CheckCheck size={12} className="text-sky-400" />
-                            ) : (
-                              <Check size={12} className="text-white/40" />
-                            ))}
+                          <div
+                            className={`px-3 py-2 sm:px-3.5 sm:py-2 text-xs sm:text-sm shadow-sm overflow-hidden ${
+                              isOwn
+                                ? "bg-emerald-600/25 text-white border border-emerald-500/25 rounded-2xl rounded-br-sm"
+                                : "bg-white/[0.06] text-white/85 border border-white/10 rounded-2xl rounded-bl-sm"
+                            }`}
+                          >
+                            <p className="break-words whitespace-pre-wrap leading-relaxed">
+                              {msg.content}
+                            </p>
+
+                            {msg.fileUrl && isImageFile(msg.fileName) ? (
+                              <ChatImage
+                                src={msg.fileUrl}
+                                alt={msg.fileName || "Image"}
+                                fileName={msg.fileName}
+                              />
+                            ) : msg.fileUrl ? (
+                              <a
+                                href={msg.fileUrl}
+                                download={msg.fileName}
+                                target="_blank"
+                                rel="noopener"
+                                className="mt-1.5 sm:mt-2 flex items-center gap-1.5 rounded-lg bg-black/20 border border-white/10 px-2 py-1.5 text-[10px] sm:text-xs text-blue-300 hover:bg-black/30 w-fit"
+                              >
+                                <Paperclip size={12} />
+                                <span className="truncate max-w-[160px]">
+                                  {msg.fileName || "Download"}
+                                </span>
+                              </a>
+                            ) : null}
+
+                            {msg.lead && (
+                              <a
+                                href={`/admin/leads?leadId=${msg.lead.id}`}
+                                target="_blank"
+                                rel="noopener"
+                                className="mt-1.5 sm:mt-2 inline-flex items-center gap-1 rounded-lg bg-blue-500/15 border border-blue-500/25 px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs text-blue-300 hover:bg-blue-500/25"
+                              >
+                                <ExternalLink size={10} />
+                                <span className="font-medium truncate">
+                                  {msg.lead.name || msg.lead.phone}
+                                </span>
+                              </a>
+                            )}
+
+                            <div className="flex items-center justify-end gap-0.5 mt-1 -mb-0.5">
+                              {(msg as any)._sending && (
+                                <span className="h-2.5 w-2.5 block animate-spin rounded-full border border-white/40 border-t-white/80" />
+                              )}
+                              <span className="text-[9px] text-white/40 leading-none">
+                                {new Date(msg.createdAt).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                              {isOwn &&
+                                (isRead ? (
+                                  <CheckCheck size={12} className="text-sky-400" />
+                                ) : (
+                                  <Check size={12} className="text-white/40" />
+                                ))}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
-          </>
-        )}
-        <div ref={chatEndRef} />
-      </div>
-
-      {typingNames.filter((n) => n !== myName).length > 0 && (
-        <div className="px-3 sm:px-4 py-1 shrink-0">
-          <p className="text-[10px] sm:text-xs text-emerald-400/70 italic animate-pulse">
-            {typingNames.filter((n) => n !== myName).slice(0, 3).join(", ")} typing...
-          </p>
-        </div>
-      )}
-
-      {/* Mention badge */}
-      {mentionedLead && (
-        <div className="mx-3 sm:mx-4 mt-1 flex items-center gap-1.5 rounded-xl bg-blue-500/10 border border-blue-500/25 px-2.5 py-1 shrink-0">
-          <AtSign size={12} className="text-blue-400" />
-          <span className="text-[11px] text-blue-300 font-medium truncate">
-            {mentionedLead.name || mentionedLead.phone}
-          </span>
-          <button
-            onClick={() => setMentionedLead(null)}
-            className="ml-auto text-blue-400/60"
-          >
-            <X size={12} />
-          </button>
-        </div>
-      )}
-
-      {/* Mention search results */}
-      {showMentionSearch && mentionResults.length > 0 && (
-        <div className="mx-3 sm:mx-4 mt-1 rounded-xl border border-white/10 bg-[#1a1a1a] max-h-32 overflow-y-auto shrink-0">
-          {mentionResults.map((lead) => (
-            <button
-              key={lead.id}
-              onClick={() => selectMentionLead(lead)}
-              className="w-full text-left px-3 py-2 hover:bg-[#D4AF37]/[0.08] flex items-center gap-2 text-xs border-b border-white/5 last:border-0"
-            >
-              <AtSign size={12} className="text-blue-400 shrink-0" />
-              <span className="text-white font-medium truncate">
-                {lead.name || "No Name"}
-              </span>
-              <span className="text-[10px] text-white/30 ml-auto shrink-0">
-                {lead.phone}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Input */}
-      <div className="shrink-0 p-2 sm:p-3 border-t border-white/10 bg-[#111111]/95 backdrop-blur-sm">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            sendMessage();
-          }}
-          className="flex gap-1.5 sm:gap-2 items-end min-w-0"
-        >
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            className="hidden"
-            accept="image/*,.pdf,.xlsx,.csv,.docx"
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={fileUploading}
-            className="rounded-full border border-white/10 bg-black/40 p-2.5 sm:p-3 text-white/40 hover:text-[#D4AF37] disabled:opacity-40 shrink-0 transition-colors"
-          >
-            {fileUploading ? (
-              <span className="h-3.5 w-3.5 block animate-spin rounded-full border-2 border-white/40 border-t-white" />
-            ) : (
-              <Paperclip size={16} className="sm:size-4" />
+                  );
+                })}
+              </>
             )}
-          </button>
-
-          <div className="flex-1 min-w-0 relative">
-            <input
-              ref={inputRef}
-              value={newMsg}
-              onChange={(e) => onInputChange(e.target.value)}
-              placeholder="Type a message... @ to mention"
-              className="w-full rounded-full border border-white/15 bg-black/40 pl-3.5 sm:pl-4 pr-9 sm:pr-10 py-2.5 sm:py-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#D4AF37]/50 transition-colors min-w-0"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                const newVal = newMsg + "@";
-                setNewMsg(newVal);
-                setShowMentionSearch(true);
-                onInputChange(newVal);
-                inputRef.current?.focus();
-              }}
-              className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg text-white/40 hover:text-blue-400"
-            >
-              <AtSign size={14} className="sm:size-4" />
-            </button>
+            <div ref={chatEndRef} />
           </div>
 
-          <button
-            type="submit"
-            disabled={!newMsg.trim()}
-            className="rounded-full bg-emerald-500 p-2.5 sm:p-3 text-white font-medium hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 transition-colors flex items-center justify-center"
-          >
-            <Send size={16} className="sm:size-4" />
-          </button>
-        </form>
-      </div>
+          {typingNames.filter((n) => n !== myName).length > 0 && (
+            <div className="px-3 sm:px-4 py-1 shrink-0">
+              <p className="text-[10px] sm:text-xs text-emerald-400/70 italic animate-pulse">
+                {typingNames.filter((n) => n !== myName).slice(0, 3).join(", ")} typing...
+              </p>
+            </div>
+          )}
+
+          {mentionedLead && (
+            <div className="mx-3 sm:mx-4 mt-1 flex items-center gap-1.5 rounded-xl bg-blue-500/10 border border-blue-500/25 px-2.5 py-1 shrink-0">
+              <AtSign size={12} className="text-blue-400" />
+              <span className="text-[11px] text-blue-300 font-medium truncate">
+                {mentionedLead.name || mentionedLead.phone}
+              </span>
+              <button
+                onClick={() => setMentionedLead(null)}
+                className="ml-auto text-blue-400/60"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          )}
+
+          {showMentionSearch && mentionResults.length > 0 && (
+            <div className="mx-3 sm:mx-4 mt-1 rounded-xl border border-white/10 bg-[#1a1a1a] max-h-32 overflow-y-auto shrink-0">
+              {mentionResults.map((lead) => (
+                <button
+                  key={lead.id}
+                  onClick={() => selectMentionLead(lead)}
+                  className="w-full text-left px-3 py-2 hover:bg-[#D4AF37]/[0.08] flex items-center gap-2 text-xs border-b border-white/5 last:border-0"
+                >
+                  <AtSign size={12} className="text-blue-400 shrink-0" />
+                  <span className="text-white font-medium truncate">
+                    {lead.name || "No Name"}
+                  </span>
+                  <span className="text-[10px] text-white/30 ml-auto shrink-0">
+                    {lead.phone}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Input */}
+          <div className="shrink-0 p-2 sm:p-3 border-t border-white/10 bg-[#111111]/95 backdrop-blur-sm">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                sendMessage();
+              }}
+              className="flex gap-1.5 sm:gap-2 items-end min-w-0"
+            >
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                className="hidden"
+                accept="image/*,.pdf,.xlsx,.csv,.docx"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={fileUploading}
+                className="rounded-full border border-white/10 bg-black/40 p-2.5 sm:p-3 text-white/40 hover:text-[#D4AF37] disabled:opacity-40 shrink-0 transition-colors"
+              >
+                {fileUploading ? (
+                  <span className="h-3.5 w-3.5 block animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                ) : (
+                  <Paperclip size={16} className="sm:size-4" />
+                )}
+              </button>
+
+              <div className="flex-1 min-w-0 relative">
+                <input
+                  ref={inputRef}
+                  value={newMsg}
+                  onChange={(e) => onInputChange(e.target.value)}
+                  placeholder="Type a message... @ to mention"
+                  className="w-full rounded-full border border-white/15 bg-black/40 pl-3.5 sm:pl-4 pr-9 sm:pr-10 py-2.5 sm:py-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#D4AF37]/50 transition-colors min-w-0"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newVal = newMsg + "@";
+                    setNewMsg(newVal);
+                    setShowMentionSearch(true);
+                    onInputChange(newVal);
+                    inputRef.current?.focus();
+                  }}
+                  className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg text-white/40 hover:text-blue-400"
+                >
+                  <AtSign size={14} className="sm:size-4" />
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                disabled={!newMsg.trim()}
+                className="rounded-full bg-emerald-500 p-2.5 sm:p-3 text-white font-medium hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 transition-colors flex items-center justify-center"
+              >
+                <Send size={16} className="sm:size-4" />
+              </button>
+            </form>
+          </div>
+        </>
+      )}
     </div>
   );
 }

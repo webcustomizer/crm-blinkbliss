@@ -76,10 +76,16 @@ export default function SalesMessagesPanel({
   }, []);
 
   // Realtime: listen for message toggle changes from admin
+  const hasTeamLeaderRef = useRef(false);
   useEffect(() => {
     const unsub = subscribeToSettingsChanges((payload) => {
-      if (payload.messageEnabled === false) setDisabled(true);
-      else if (payload.messageEnabled === true) setDisabled(false);
+      if (hasTeamLeaderRef.current) {
+        if (payload.tlMessageEnabled === false) setDisabled(true);
+        else if (payload.tlMessageEnabled === true) setDisabled(false);
+      } else {
+        if (payload.messageEnabled === false) setDisabled(true);
+        else if (payload.messageEnabled === true) setDisabled(false);
+      }
     });
     return () => unsub();
   }, []);
@@ -89,7 +95,11 @@ export default function SalesMessagesPanel({
     fetch("/api/salesperson/settings")
       .then((r) => r.json())
       .then((j) => {
-        if (j.data?.messageEnabled === false) setDisabled(true);
+        hasTeamLeaderRef.current = !!j.data?.hasTeamLeader;
+        const msgDisabled = j.data?.hasTeamLeader
+          ? j.data?.tlMessageEnabled === false
+          : j.data?.messageEnabled === false;
+        if (msgDisabled) setDisabled(true);
       })
       .catch(() => {});
   }, []);

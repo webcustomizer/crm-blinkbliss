@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Lock, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { Lock, Eye, EyeOff, ShieldCheck, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
-export default function ChangePasswordCard() {
+export default function ChangePasswordCard({ forceChange = false }: { forceChange?: boolean }) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -68,6 +68,10 @@ export default function ChangePasswordCard() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      if (forceChange) {
+        toast.info("Redirecting to dashboard...");
+        setTimeout(() => { window.location.href = "/sales/dashboard"; }, 1500);
+      }
     } catch (error: any) {
       toast.error(error.message || "Something went wrong");
     } finally {
@@ -77,6 +81,15 @@ export default function ChangePasswordCard() {
 
   return (
     <div className="rounded-3xl border border-[#D4AF37]/20 bg-[#111111] p-6 shadow-xl">
+      {forceChange && (
+        <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
+          <div>
+            <p className="text-sm font-medium text-amber-300">Password change required</p>
+            <p className="mt-1 text-xs text-amber-400/80">You must change your password before continuing. This is a one-time requirement.</p>
+          </div>
+        </div>
+      )}
       <div className="mb-6 flex items-center gap-3">
         <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#D4AF37]/10 text-[#D4AF37]">
           <ShieldCheck size={22} />
@@ -154,6 +167,7 @@ function PasswordInput({
         <button
           type="button"
           onClick={() => setShow(!show)}
+          aria-label="Toggle password visibility"
           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#D4AF37]"
         >
           {show ? <EyeOff size={18} /> : <Eye size={18} />}

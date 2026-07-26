@@ -10,6 +10,7 @@ datasource db {
 enum Role {
   ADMIN
   SALESPERSON
+  TEAM_LEAD
 }
 
 enum LeadStatus {
@@ -25,6 +26,11 @@ enum LeadStatus {
 enum LeadCompletion {
   COMPLETE
   INCOMPLETE
+}
+
+enum GroupChatType {
+  GENERAL
+  TL_TEAM
 }
 
 enum ActivityAction {
@@ -62,15 +68,24 @@ model User {
   role Role @default(SALESPERSON)
   isActive Boolean @default(true)
   monthlyTarget Int @default(50)
+  targetMonths Int @default(3)
+  eligibleForTeamLeader Boolean @default(false)
+  eligibleSince DateTime?
   responseTimeAvg Int @default(0)
   twoFactorEnabled Boolean @default(false)
   twoFactorSecret String?
   otpExpiresAt DateTime?
   failedLoginAttempts Int @default(0)
   lockedUntil DateTime?
+  forcePasswordChange Boolean @default(false)
   sessionTimeoutMinutes Int @default(10080)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  teamLeaderId String?
+  teamLeader   User?    @relation("TeamMembers", fields: [teamLeaderId], references: [id])
+  teamMembers  User[]   @relation("TeamMembers")
+  ledTeam      Team?    @relation("TeamLead")
 
   leads Lead[]
   followups FollowUp[]
@@ -86,10 +101,13 @@ model User {
   salesTargets SalesTarget[]
   deletedLeads Lead[] @relation("DeletedLeads")
   groupMessages GroupMessage[]
+  teamLeaderGroupMessages GroupMessage[] @relation("TeamLeaderGroupMessages")
   uploadedFiles UploadedFile[]
   readReceipts ReadReceipt[]
   groupReadReceipts GroupReadReceipt[]
   announcementReads AnnouncementRead[]
+
+  @@index([teamLeaderId])
 }
 
 model Lead {
@@ -152,6 +170,7 @@ model FollowUp {
   lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id])
   @@index([leadId, createdAt])
+  @@index([userId, createdAt])
 }
 
 model StatusHistory {
@@ -164,8 +183,8 @@ model StatusHistory {
   lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
   changedBy User @relation(fields: [changedById], references: [id])
   @@index([leadId, changedAt])
+  @@index([changedAt])
 }
-
 model Notification {
   id String @id @default(cuid())
   title String
@@ -190,9 +209,16 @@ model CRMSetting {
   autoDeadEnabled Boolean @default(true)
   deadAfterDays Int @default(30)
   autoAssignEnabled Boolean @default(false)
+  automationMode String @default("DISABLED")
+  automationWeights Json?
   lastAssignedSalespersonId String?
   groupChatEnabled Boolean @default(false)
   messageEnabled Boolean @default(true)
+  tlGroupChatEnabled Boolean @default(true)
+  tlMessageEnabled Boolean @default(true)
+  tlTeamLeadsEnabled Boolean @default(true)
+  tlDistributeEnabled Boolean @default(true)
+  tlMaxTeamSize Int @default(10)
   twoFactorRequired Boolean @default(false)
   passwordMinLength Int @default(8)
   passwordRequireSpecial Boolean @default(false)
@@ -294,6 +320,8 @@ model GroupMessage {
   id String @id @default(cuid())
   content String
   senderId String
+  chatType GroupChatType @default(GENERAL)
+  teamLeaderId String?
   leadId String?
   fileUrl String?
   fileName String?
@@ -304,9 +332,11 @@ model GroupMessage {
 
   sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
   lead Lead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  teamLeader User? @relation("TeamLeaderGroupMessages", fields: [teamLeaderId], references: [id], onDelete: SetNull)
   groupReads GroupReadReceipt[]
 
   @@index([createdAt])
+  @@index([chatType, teamLeaderId])
 }
 
 model GroupReadReceipt {
@@ -367,6 +397,33 @@ model SalesTarget {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@unique([userId, month, year])
   @@index([userId])
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  leaderId  String   @unique
+  leader    User     @relation("TeamLead", fields: [leaderId], references: [id], onDelete: Cascade)
+  targets   TeamTarget[]
+  createdAt DateTime @default(now())
+
+  @@index([leaderId])
+}
+
+model TeamTarget {
+  id        String   @id @default(cuid())
+  teamId    String
+  month     Int
+  year      Int
+  target    Int
+  achieved  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, month, year])
+  @@index([teamId])
 }
 
 model UploadedFile {

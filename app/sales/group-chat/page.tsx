@@ -17,11 +17,16 @@ export default async function SalesGroupChatPage() {
 
   return (
     <Suspense fallback={
-      <div className="flex h-[70vh] items-center justify-center">
-        <div className="space-y-4 text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#D4AF37]/20 border-t-[#D4AF37]" />
-          <p className="text-sm text-white/40">Loading group chat…</p>
-        </div>
+      <div className="h-[70vh] space-y-3 p-4">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+            <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-white/[0.06]" />
+            <div className="flex-1 space-y-2">
+              <div className="h-3.5 w-28 animate-pulse rounded-lg bg-white/[0.06]" />
+              <div className="h-3 w-40 animate-pulse rounded-lg bg-white/[0.04]" />
+            </div>
+          </div>
+        ))}
       </div>
     }>
       <SalesGroupChatWrapper currentUserId={user.id} />

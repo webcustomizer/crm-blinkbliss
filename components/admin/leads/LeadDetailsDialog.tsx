@@ -27,6 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import EditLeadDialog from "@/components/admin/leads/EditLeadDialog";
+import LeadTimeline from "@/components/admin/leads/LeadTimeline";
 import { formatDate, formatDateTime, formatTime, formatDateShort } from "@/lib/format-date";
 
 type LeadDetailsDialogProps = {
@@ -398,138 +399,15 @@ export default function LeadDetailsDialog({
               </div>
             </div>
 
-            {/* FOLLOW UP HISTORY */}
+            {/* FOLLOW UP HISTORY + STATUS HISTORY → Unified Timeline */}
 
             <div>
               <SectionTitle
                 icon={<History size={16} />}
-                title="Follow Up History"
+                title="Timeline"
               />
 
-              {lead.followups?.length ? (
-                <div className="space-y-3">
-                  {lead.followups.map((item) => (
-                    <div
-                      key={item.id}
-                      className="
-                      rounded-2xl
-                      border
-                      border-white/10
-                      bg-black/25
-                      p-5
-                      transition-colors
-                      hover:border-[#D4AF37]/25
-                      "
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className="
-                            flex
-                            h-8
-                            w-8
-                            shrink-0
-                            items-center
-                            justify-center
-                            rounded-full
-                            border
-                            border-[#D4AF37]/25
-                            bg-[#D4AF37]/[0.08]
-                            text-xs
-                            font-semibold
-                            uppercase
-                            text-[#D4AF37]
-                            "
-                          >
-                            {(item.user?.name || "U")[0]}
-                          </div>
-                          <p className="font-medium text-white">
-                            {item.user?.name || "Unknown User"}
-                          </p>
-                        </div>
-
-                        <p className="text-xs text-white/35">
-                          {formatDateTime(item.createdAt)}
-                        </p>
-                      </div>
-
-                      <div className="mt-3.5 rounded-xl border border-white/5 bg-white/[0.03] p-4">
-                        <p className="whitespace-pre-wrap text-sm text-white/70">
-                          {item.remarks}
-                        </p>
-                      </div>
-
-                      {item.nextFollowUp && (
-                        <div className="mt-3.5 flex items-center gap-2 rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.06] px-4 py-2.5">
-                          <Calendar size={14} className="text-[#D4AF37]" />
-                          <p className="text-sm text-[#D4AF37]">
-                            Next Follow Up:{" "}
-                            {formatDateTime(item.nextFollowUp)}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState label="No follow up history found." />
-              )}
-            </div>
-
-            {/* ACTIVITY HISTORY */}
-
-            {/* STATUS HISTORY */}
-
-            <div>
-              <SectionTitle
-                icon={<History size={16} />}
-                title="Status History"
-              />
-
-              {lead.statusHistory?.length ? (
-                <div className="space-y-3">
-                  {lead.statusHistory.map((item) => (
-                    <div
-                      key={item.id}
-                      className="
-                      flex
-                      items-center
-                      justify-between
-                      gap-4
-                      rounded-2xl
-                      border
-                      border-white/10
-                      bg-black/25
-                      p-5
-                      transition-colors
-                      hover:border-[#D4AF37]/25
-                      "
-                    >
-                      <div>
-                        <p className="flex items-center gap-2 font-medium">
-                          <span className="text-white/50">
-                            {item.oldStatus}
-                          </span>
-                          <ArrowRight size={14} className="text-[#D4AF37]" />
-                          <span className="text-[#D4AF37]">
-                            {item.newStatus}
-                          </span>
-                        </p>
-
-                        <p className="mt-1.5 text-xs text-white/35">
-                          Changed by {item.changedBy?.name || "Unknown User"}
-                        </p>
-                      </div>
-
-                      <div className="shrink-0 text-xs text-white/30">
-                        {formatDateTime(item.changedAt)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState label="No status history available." />
-              )}
+              <LeadTimeline leadId={lead.id} />
             </div>
           </div>
         ) : (

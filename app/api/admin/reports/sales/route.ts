@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
       }),
       prisma.lead.groupBy({
         by: ["assignedToId", "status"],
+        where: { isDeleted: false },
         _count: { _all: true },
       }),
     ]);

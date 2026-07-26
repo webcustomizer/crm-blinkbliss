@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
     await prisma.$transaction([
       prisma.user.update({
         where: { id: user.id },
-        data: { password: hashedPassword },
+        data: { password: hashedPassword, forcePasswordChange: false },
       }),
       prisma.loginSession.updateMany({
         where: { userId: user.id, isExpired: false },

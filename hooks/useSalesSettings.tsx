@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { LayoutDashboard, Users, Megaphone, MessageSquare, User } from "lucide-react";
 import { subscribeToSettingsChanges } from "@/lib/realtime";
 
@@ -16,14 +16,17 @@ const SalesSettingsContext = createContext<SalesSettingsCtx>({ navItems: [], nav
 export function SalesSettingsProvider({ children }: { children: ReactNode }) {
   const [navItems, setNavItems] = useState<NavItem[]>([]);
   const [navLoaded, setNavLoaded] = useState(false);
+  const hasTeamLeaderRef = useRef(false);
 
-  const buildNav = useCallback((payload: { messageEnabled?: boolean; groupChatEnabled?: boolean }) => {
+  const buildNav = useCallback((payload: { messageEnabled?: boolean; tlMessageEnabled?: boolean; groupChatEnabled?: boolean; tlGroupChatEnabled?: boolean; hasTeamLeader?: boolean }) => {
     const base: NavItem[] = [
       { title: "Dashboard", href: "/sales/dashboard", icon: LayoutDashboard },
       { title: "My Leads", href: "/sales/my-leads", icon: Users },
     ];
-    if (payload.messageEnabled !== false) base.push({ title: "Messages", href: "/sales/messages", icon: MessageSquare, badgeKey: "messages" as const });
-    if (payload.groupChatEnabled !== false) base.push({ title: "Group Chat", href: "/sales/group-chat", icon: MessageSquare, badgeKey: "groupChat" as const });
+    const msgEnabled = payload.hasTeamLeader ? payload.tlMessageEnabled !== false : payload.messageEnabled !== false;
+    if (msgEnabled) base.push({ title: "Messages", href: "/sales/messages", icon: MessageSquare, badgeKey: "messages" as const });
+    const gcEnabled = payload.hasTeamLeader ? payload.tlGroupChatEnabled !== false : payload.groupChatEnabled !== false;
+    if (gcEnabled) base.push({ title: "Group Chat", href: "/sales/group-chat", icon: MessageSquare, badgeKey: "groupChat" as const });
     base.push({ title: "Announcements", href: "/sales/announcements", icon: Megaphone, badgeKey: "announcements" as const });
     base.push({ title: "Profile", href: "/sales/profile", icon: User });
     return base;
@@ -34,9 +37,13 @@ export function SalesSettingsProvider({ children }: { children: ReactNode }) {
       try {
         const res = await fetch("/api/salesperson/settings", { cache: "no-store" });
         const json = await res.json();
+        hasTeamLeaderRef.current = !!json.data?.hasTeamLeader;
         setNavItems(buildNav({
           messageEnabled: json.data?.messageEnabled,
+          tlMessageEnabled: json.data?.tlMessageEnabled,
           groupChatEnabled: json.data?.groupChatEnabled,
+          tlGroupChatEnabled: json.data?.tlGroupChatEnabled,
+          hasTeamLeader: json.data?.hasTeamLeader,
         }));
       } catch {
         setNavItems(buildNav({}));
@@ -46,7 +53,7 @@ export function SalesSettingsProvider({ children }: { children: ReactNode }) {
     })();
 
     const unsub = subscribeToSettingsChanges((payload) => {
-      setNavItems(buildNav(payload));
+      setNavItems(buildNav({ ...payload, hasTeamLeader: hasTeamLeaderRef.current }));
     });
     return () => unsub();
   }, [buildNav]);

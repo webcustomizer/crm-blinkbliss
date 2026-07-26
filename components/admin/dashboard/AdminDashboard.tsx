@@ -1,6 +1,7 @@
 "use client";
 
 import useSWR from "swr";
+import { apiFetch } from "@/lib/api-fetch";
 import { supabase } from "@/lib/supabase";
 
 import StatsCards from "./StatsCards";
@@ -8,7 +9,7 @@ import TodayStats from "./TodayStats";
 import FollowUpCards from "./FollowUpCards";
 import LeadAnalytics from "./LeadAnalytics";
 
-const fetcher = (url: string) => fetch(url, { cache: "no-store" }).then((r) => r.json());
+const fetcher = (url: string) => apiFetch(url).then((r) => r.json());
 
 export default function AdminDashboard() {
   const { data, error, isLoading, mutate } = useSWR(

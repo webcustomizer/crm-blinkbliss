@@ -11,11 +11,18 @@ export async function GET(req: NextRequest) {
   if ("error" in auth) return auth.error;
   try {
     const settings = await getCachedCRMSettings();
+    const user = await prisma.user.findUnique({
+      where: { id: auth.user.id },
+      select: { teamLeaderId: true },
+    });
     return NextResponse.json({
       success: true,
       data: {
         groupChatEnabled: settings?.groupChatEnabled !== false,
+        tlGroupChatEnabled: settings?.tlGroupChatEnabled !== false,
         messageEnabled: settings?.messageEnabled !== false,
+        tlMessageEnabled: settings?.tlMessageEnabled !== false,
+        hasTeamLeader: !!user?.teamLeaderId,
         passwordMinLength: settings?.passwordMinLength || 8,
         passwordRequireSpecial: settings?.passwordRequireSpecial || false,
         maxFollowUps: settings?.maxFollowUps ?? 3,

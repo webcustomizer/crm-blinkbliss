@@ -4,7 +4,7 @@ import { Phone, CalendarClock, Calendar, ChevronLeft, ChevronRight } from "lucid
 
 import LeadStatusBadge from "./LeadStatusBadge";
 import { prefetchLead } from "@/lib/leadCache";
-import { formatDate, formatDateTime, formatTime, formatDateShort } from "@/lib/format-date";
+import { formatDate, formatDateShort } from "@/lib/format-date";
 
 interface Lead {
   id: string;

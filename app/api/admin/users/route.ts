@@ -5,6 +5,20 @@ import { hashPassword } from "@/lib/hash";
 import { requireAuth } from "@/lib/require-auth";
 import { validatePasswordStrength } from "@/lib/password-validator";
 
+export async function GET(req: NextRequest) {
+  const auth = await requireAuth(req, ["ADMIN"]);
+  if ("error" in auth) return auth.error;
+  try {
+    const users = await prisma.user.findMany({
+      select: { id: true, name: true, role: true },
+      orderBy: { name: "asc" },
+    });
+    return NextResponse.json({ success: true, data: users });
+  } catch {
+    return NextResponse.json({ success: false, message: "Failed to fetch users." }, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req, ["ADMIN"]);
   if ("error" in auth) return auth.error;

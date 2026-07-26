@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Eye, EyeOff, Lock, Mail, ArrowLeft, Sparkles, ShieldCheck, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, ArrowLeft, Sparkles, ShieldCheck, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,8 +28,15 @@ export default function LoginForm() {
     return () => clearInterval(timer);
   }, [cooldown]);
 
-  function redirectAfterLogin(role: string) {
-    window.location.href = role === "ADMIN" ? "/admin/dashboard" : "/sales/dashboard";
+  function redirectAfterLogin(role: string, forcePasswordChange?: boolean) {
+    if (forcePasswordChange) {
+      const profilePath = role === "ADMIN" ? "/admin/settings" : role === "TEAM_LEAD" ? "/team-leader/profile" : "/sales/profile";
+      window.location.href = `${profilePath}?forceChange=true`;
+      return;
+    }
+    if (role === "ADMIN") window.location.href = "/admin/dashboard";
+    else if (role === "TEAM_LEAD") window.location.href = "/team-leader/dashboard";
+    else window.location.href = "/sales/dashboard";
   }
 
   async function handleCredentials(e: React.FormEvent) {
@@ -63,7 +70,7 @@ export default function LoginForm() {
       }
 
       // No 2FA — direct login
-      redirectAfterLogin(data.user.role);
+      redirectAfterLogin(data.user.role, data.forcePasswordChange);
     } catch {
       setError("Something went wrong.");
     } finally {
@@ -95,7 +102,7 @@ export default function LoginForm() {
         return;
       }
 
-      redirectAfterLogin(data.user.role);
+      redirectAfterLogin(data.user.role, data.forcePasswordChange);
     } catch {
       setError("Verification failed.");
     } finally {
@@ -194,15 +201,15 @@ export default function LoginForm() {
                 <Label className="text-[#D4AF37]">Email</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#D4AF37]" />
-                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@blink.com" className="h-12 border-[#D4AF37]/30 bg-[#111111] pl-10 text-white placeholder:text-gray-500 focus-visible:ring-[#D4AF37]" />
+                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="user@blinknbliss.com" disabled={loading} className="h-12 border-[#D4AF37]/30 bg-[#111111] pl-10 text-white placeholder:text-gray-500 focus-visible:ring-[#D4AF37] disabled:opacity-50" />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label className="text-[#D4AF37]">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#D4AF37]" />
-                  <Input type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 border-[#D4AF37]/30 bg-[#111111] pl-10 pr-12 text-white placeholder:text-gray-500 focus-visible:ring-[#D4AF37]" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#D4AF37] transition hover:text-[#e8cf7a]">
+                  <Input type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} disabled={loading} className="h-12 border-[#D4AF37]/30 bg-[#111111] pl-10 pr-12 text-white placeholder:text-gray-500 focus-visible:ring-[#D4AF37] disabled:opacity-50" />
+                  <button type="button" aria-label="Toggle password visibility" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#D4AF37] transition hover:text-[#e8cf7a]">
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
@@ -212,6 +219,7 @@ export default function LoginForm() {
                 <Link href="/forgot-password" className="text-xs text-gray-500 hover:text-[#D4AF37] transition-colors">Forgot Password?</Link>
               </div>
               <Button type="submit" disabled={loading} className="h-12 w-full bg-gradient-to-r from-[#e8cf7a] via-[#D4AF37] to-[#b8912b] text-lg font-semibold text-black shadow-lg shadow-[#D4AF37]/20 transition hover:scale-[1.02] hover:shadow-[#D4AF37]/30 disabled:opacity-60 disabled:hover:scale-100">
+                {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin inline" /> : null}
                 {loading ? "Signing In..." : "Login"}
               </Button>
             </form>
@@ -238,7 +246,8 @@ export default function LoginForm() {
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                   placeholder="000000"
-                  className="h-14 border-[#D4AF37]/30 bg-[#111111] text-center text-2xl font-mono tracking-[0.5em] text-white placeholder:text-gray-600 focus-visible:ring-[#D4AF37]"
+                  disabled={loading}
+                  className="h-14 border-[#D4AF37]/30 bg-[#111111] text-center text-2xl font-mono tracking-[0.5em] text-white placeholder:text-gray-600 focus-visible:ring-[#D4AF37] disabled:opacity-50"
                   autoFocus
                 />
               </div>
@@ -247,6 +256,7 @@ export default function LoginForm() {
 
               <div className="space-y-3">
                 <Button type="submit" disabled={loading || otp.length !== 6} className="h-12 w-full bg-gradient-to-r from-[#e8cf7a] via-[#D4AF37] to-[#b8912b] text-base font-semibold text-black shadow-lg shadow-[#D4AF37]/20 transition hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100">
+                  {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin inline" /> : null}
                   {loading ? "Verifying..." : "Verify & Login"}
                   {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
                 </Button>

@@ -7,7 +7,17 @@ export async function DELETE(req: NextRequest) {
   try {
     const auth = await requireAuth(req, ["ADMIN"]);
     if ("error" in auth) return auth.error;
-    const user = auth.user;
+
+    const confirm = req.nextUrl.searchParams.get("confirm") === "true";
+
+    if (!confirm) {
+      const count = await prisma.activityLog.count();
+      return NextResponse.json({
+        success: false,
+        message: `This will delete ${count} activity records. Call with ?confirm=true to proceed.`,
+        totalCount: count,
+      });
+    }
 
     const deleted = await prisma.activityLog.deleteMany({});
 

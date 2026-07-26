@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
+import { apiFetch } from "@/lib/api-fetch";
 import { toast } from "sonner";
 
 import StatsCards from "./StatsCards";
@@ -59,9 +60,7 @@ export default function SalesDashboard() {
   // Fetch logged in user
   const getCurrentUser = useCallback(async () => {
     try {
-      const res = await fetch("/api/auth/me", {
-        cache: "no-store",
-      });
+      const res = await apiFetch("/api/auth/me");
 
       const data = await res.json();
 
@@ -87,8 +86,7 @@ export default function SalesDashboard() {
     }
 
     try {
-      const res = await fetch("/api/salesperson/dashboard", {
-        cache: "no-store",
+      const res = await apiFetch("/api/salesperson/dashboard", {
         signal: controller.signal,
       });
 

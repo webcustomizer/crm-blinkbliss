@@ -15,6 +15,29 @@ const StatusChart = dynamic(() => import("./StatusChart"), {
   ),
 });
 
+const TeamPerformance = dynamic(() => import("./TeamPerformance"), {
+  ssr: false,
+  loading: () => (
+    <div className="rounded-[28px] border border-[#D4AF37]/20 bg-gradient-to-br from-[#171717] to-[#0d0d0d] p-6 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)]">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="h-12 w-12 animate-pulse rounded-2xl bg-white/5" />
+        <div className="space-y-2">
+          <div className="h-5 w-40 animate-pulse rounded bg-white/5" />
+          <div className="h-3 w-56 animate-pulse rounded bg-white/5" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-20 animate-pulse rounded-xl bg-white/5" />
+        ))}
+      </div>
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="h-24 animate-pulse rounded-[20px] bg-white/5 mb-3" />
+      ))}
+    </div>
+  ),
+});
+
 const FunnelChart = dynamic(() => import("./FunnelChart"), {
   ssr: false,
   loading: () => (
@@ -82,6 +105,16 @@ export default function ReportsPage() {
     },
   );
 
+  const { data: teamData } = useSWR<{ success: boolean; data: { summary: any; teams: any[] } }>(
+    `/api/admin/reports/team-performance?filter=${dateFilter}`,
+    fetcher,
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 10000,
+    },
+  );
+
   const funnel = funnelData?.success ? funnelData.data : null;
 
   if (isLoading || !reportData?.success) {
@@ -137,6 +170,14 @@ export default function ReportsPage() {
 
       {/* Salesperson Performance Table */}
       <SalesReportTable salespersonReport={d.salespersonReport} />
+
+      {/* Team Performance */}
+      {teamData?.success && teamData.data && (
+        <TeamPerformance
+          summary={teamData.data.summary}
+          teams={teamData.data.teams}
+        />
+      )}
     </div>
   );
 }

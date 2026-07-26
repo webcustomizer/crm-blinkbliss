@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCachedCRMSettings } from "@/lib/settings-cache";
 import { requireAuth } from "@/lib/require-auth";
@@ -7,13 +8,26 @@ import { sendPushNotification } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
 
+async function getChatTypeForUser(userId: string): Promise<"GENERAL" | "TL_TEAM"> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { teamLeaderId: true },
+  });
+  return user?.teamLeaderId ? "TL_TEAM" : "GENERAL";
+}
+
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req, ["SALESPERSON"]);
   if ("error" in auth) return auth.error;
 
   try {
     const settings = await getCachedCRMSettings();
-    if (!settings?.groupChatEnabled) {
+    const chatType = await getChatTypeForUser(auth.user.id);
+
+    const settingCheck = chatType === "TL_TEAM"
+      ? (settings?.tlGroupChatEnabled ?? true)
+      : (settings?.groupChatEnabled ?? true);
+    if (!settingCheck) {
       return NextResponse.json(
         { success: false, message: "Group chat is disabled." },
         { status: 403 },
@@ -22,7 +36,7 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const query = searchParams.get("query") || "";
-    const cursor = searchParams.get("cursor"); // oldest message id currently loaded
+    const cursor = searchParams.get("cursor");
     const PAGE_SIZE = 30;
 
     if (query && query.length >= 2) {
@@ -43,20 +57,19 @@ export async function GET(req: NextRequest) {
 
     const currentUser = await prisma.user.findUnique({
       where: { id: auth.user.id },
-      select: { createdAt: true },
+      select: { createdAt: true, teamLeaderId: true },
     });
 
     const messages = await prisma.groupMessage.findMany({
       where: {
+        chatType,
         deleted: false,
+        ...(chatType === "TL_TEAM" && currentUser?.teamLeaderId ? { teamLeaderId: currentUser.teamLeaderId } : {}),
         ...(currentUser && { createdAt: { gte: currentUser.createdAt } }),
       },
-      orderBy: { createdAt: "desc" }, // newest first for pagination
+      orderBy: { createdAt: "desc" },
       take: PAGE_SIZE,
-      ...(cursor && {
-        skip: 1, // cursor record khud skip karo
-        cursor: { id: cursor },
-      }),
+      ...(cursor && { skip: 1, cursor: { id: cursor } }),
       include: {
         sender: { select: { id: true, name: true, role: true } },
         lead: { select: { id: true, name: true, phone: true } },
@@ -64,8 +77,21 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    const teamLeaderId = (await prisma.user.findUnique({
+      where: { id: auth.user.id },
+      select: { teamLeaderId: true },
+    }))?.teamLeaderId;
+
     const users = await prisma.user.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        OR: [
+          { id: auth.user.id },
+          ...(chatType === "TL_TEAM" && teamLeaderId
+            ? [{ id: teamLeaderId }, { teamLeaderId }, { role: "ADMIN" as const }]
+            : [{ role: "ADMIN" as const }]),
+        ],
+      },
       select: { id: true, name: true, role: true },
     });
 
@@ -78,7 +104,7 @@ export async function GET(req: NextRequest) {
           readAt: r.readAt.toISOString(),
         })),
       }))
-      .reverse(); // UI ke liye oldest→newest order
+      .reverse();
 
     return NextResponse.json({
       success: true,
@@ -100,7 +126,12 @@ export async function POST(req: NextRequest) {
 
   try {
     const settings = await getCachedCRMSettings();
-    if (!settings?.groupChatEnabled) {
+    const chatType = await getChatTypeForUser(auth.user.id);
+
+    const settingCheck = chatType === "TL_TEAM"
+      ? (settings?.tlGroupChatEnabled ?? true)
+      : (settings?.groupChatEnabled ?? true);
+    if (!settingCheck) {
       return NextResponse.json(
         { success: false, message: "Group chat is disabled." },
         { status: 403 },
@@ -115,9 +146,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const postUser = await prisma.user.findUnique({
+      where: { id: auth.user.id },
+      select: { teamLeaderId: true },
+    });
+
     const message = await prisma.groupMessage.create({
       data: {
         senderId: auth.user.id,
+        chatType,
+        teamLeaderId: chatType === "TL_TEAM" ? postUser?.teamLeaderId || null : null,
         content,
         leadId: leadId || null,
         fileUrl: fileUrl || null,
@@ -134,22 +172,44 @@ export async function POST(req: NextRequest) {
 
     await broadcastNewGroupMessage(result);
 
-    // Fire-and-forget: push to all active users except sender
-    const allUsers = await prisma.user.findMany({
-      where: { isActive: true, id: { not: auth.user.id } },
-      select: { id: true },
+    const pushRecipients = await prisma.user.findMany({
+      where: {
+        isActive: true,
+        id: { not: auth.user.id },
+        ...(chatType === "GENERAL"
+          ? { OR: [{ role: "ADMIN" }, { teamLeaderId: null, role: "SALESPERSON" }] }
+          : postUser?.teamLeaderId
+            ? {
+                OR: [
+                  { role: "ADMIN" },
+                  { id: postUser.teamLeaderId, role: "TEAM_LEAD" },
+                  { teamLeaderId: postUser.teamLeaderId, role: "SALESPERSON" },
+                ],
+              }
+            : {
+                OR: [
+                  { role: "ADMIN" },
+                  { role: "TEAM_LEAD" },
+                  { teamLeaderId: { not: null }, role: "SALESPERSON" },
+                ],
+              }),
+      },
+      select: { id: true, role: true },
     });
-    if (allUsers.length > 0) {
-      Promise.allSettled(
-        allUsers.map((u) =>
+    if (pushRecipients.length > 0) {
+      after(() => Promise.allSettled(
+        pushRecipients.map((u) =>
           sendPushNotification({
             userId: u.id,
             title: `Team Chat — ${auth.user.name}`,
             message: content.length > 100 ? content.slice(0, 100) + "…" : content,
-            link: `/sales/group-chat`,
+            link: u.role === "ADMIN" ? "/admin/group-chat" : "/sales/group-chat",
           }),
         ),
-      ).catch(() => {});
+      ).then((results) => {
+        const failures = results.filter((r) => r.status === "rejected");
+        if (failures.length > 0) console.error("SP group-chat push failures:", failures.length);
+      }));
     }
 
     return NextResponse.json({ success: true, data: result });
@@ -166,15 +226,27 @@ export async function PATCH(req: NextRequest) {
   if ("error" in auth) return auth.error;
 
   try {
+    const chatType = await getChatTypeForUser(auth.user.id);
     const { messageIds, markAll } = await req.json();
+
+    const patchUser = await prisma.user.findUnique({
+      where: { id: auth.user.id },
+      select: { teamLeaderId: true },
+    });
+
+    const markWhere: any = {
+      chatType,
+      deleted: false,
+      senderId: { not: auth.user.id },
+      groupReads: { none: { userId: auth.user.id } },
+    };
+    if (chatType === "TL_TEAM" && patchUser?.teamLeaderId) {
+      markWhere.teamLeaderId = patchUser.teamLeaderId;
+    }
 
     if (markAll) {
       const unreadMessages = await prisma.groupMessage.findMany({
-        where: {
-          deleted: false,
-          senderId: { not: auth.user.id },
-          groupReads: { none: { userId: auth.user.id } },
-        },
+        where: markWhere,
         select: { id: true },
       });
       if (unreadMessages.length > 0) {

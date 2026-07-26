@@ -176,6 +176,8 @@ export function subscribeToTyping(
 export function broadcastSettingsChange(payload: {
   groupChatEnabled?: boolean;
   messageEnabled?: boolean;
+  tlGroupChatEnabled?: boolean;
+  tlMessageEnabled?: boolean;
 }) {
   const channel = supabase.channel("crmsetting:changes");
   let settled = false;
@@ -205,6 +207,8 @@ export function subscribeToSettingsChanges(
   onChanged: (payload: {
     groupChatEnabled?: boolean;
     messageEnabled?: boolean;
+    tlGroupChatEnabled?: boolean;
+    tlMessageEnabled?: boolean;
   }) => void,
 ): () => void {
   const channelKey = "crmsetting:changes";
@@ -223,6 +227,8 @@ export function subscribeToSettingsChanges(
           onChanged({
             groupChatEnabled: row.groupChatEnabled !== false,
             messageEnabled: row.messageEnabled !== false,
+            tlGroupChatEnabled: row.tlGroupChatEnabled !== false,
+            tlMessageEnabled: row.tlMessageEnabled !== false,
           });
         }
       },

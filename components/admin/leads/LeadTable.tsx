@@ -29,7 +29,7 @@ type Lead = {
   assignedTo?: { id: string; name: string } | null;
 };
 
-type Salesperson = { id: string; name: string };
+type Salesperson = { id: string; name: string; role?: string };
 
 interface Props { salespersons: Salesperson[] }
 
@@ -371,9 +371,16 @@ export default function LeadsTable({ salespersons }: Props) {
               className="cursor-pointer rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none hover:border-[#D4AF37]/40 focus:border-[#D4AF37]/60"
             >
               <option value="">All Salespersons</option>
-              {salespersons.map((person) => (
-                <option key={person.id} value={person.id} className="bg-[#111111] text-white">{person.name}</option>
-              ))}
+              <optgroup label="Team Leaders">
+                {salespersons.filter((p) => p.role === "TEAM_LEAD").map((person) => (
+                  <option key={person.id} value={person.id} className="bg-[#111111] text-white">{person.name}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Salespersons">
+                {salespersons.filter((p) => p.role !== "TEAM_LEAD").map((person) => (
+                  <option key={person.id} value={person.id} className="bg-[#111111] text-white">{person.name}</option>
+                ))}
+              </optgroup>
             </select>
           </div>
           <select
@@ -448,9 +455,16 @@ export default function LeadsTable({ salespersons }: Props) {
               className="cursor-pointer rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-xs text-white outline-none"
             >
               <option value="">Assign to…</option>
-              {salespersons.map((sp) => (
-                <option key={sp.id} value={sp.id} className="bg-[#111111]">{sp.name}</option>
-              ))}
+              <optgroup label="Team Leaders">
+                {salespersons.filter((sp) => sp.role === "TEAM_LEAD").map((sp) => (
+                  <option key={sp.id} value={sp.id} className="bg-[#111111]">{sp.name}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Salespersons">
+                {salespersons.filter((sp) => sp.role !== "TEAM_LEAD").map((sp) => (
+                  <option key={sp.id} value={sp.id} className="bg-[#111111]">{sp.name}</option>
+                ))}
+              </optgroup>
             </select>
             <button onClick={() => bulkAction("delete")} disabled={bulkLoading}
               className="rounded-lg bg-red-600/20 px-3 py-1 text-xs text-red-400 hover:bg-red-600/30 disabled:opacity-40 flex items-center gap-1">
@@ -492,9 +506,16 @@ export default function LeadsTable({ salespersons }: Props) {
                     className="w-full cursor-pointer rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-xs text-white outline-none"
                   >
                     <option value="">Assign to…</option>
-                    {salespersons.map((sp) => (
-                      <option key={sp.id} value={sp.id} className="bg-[#111111]">{sp.name}</option>
-                    ))}
+                    <optgroup label="Team Leaders">
+                      {salespersons.filter((sp) => sp.role === "TEAM_LEAD").map((sp) => (
+                        <option key={sp.id} value={sp.id} className="bg-[#111111]">{sp.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Salespersons">
+                      {salespersons.filter((sp) => sp.role !== "TEAM_LEAD").map((sp) => (
+                        <option key={sp.id} value={sp.id} className="bg-[#111111]">{sp.name}</option>
+                      ))}
+                    </optgroup>
                   </select>
                 </div>
                 <button role="menuitem" onClick={() => bulkAction("delete")} disabled={bulkLoading}
@@ -585,9 +606,16 @@ export default function LeadsTable({ salespersons }: Props) {
                           className="cursor-pointer rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-xs text-white outline-none"
                         >
                           <option value="">Unassigned</option>
-                          {salespersons.map((person) => (
-                            <option key={person.id} value={person.id} className="bg-[#111111]">{person.name}</option>
-                          ))}
+                          <optgroup label="Team Leaders">
+                            {salespersons.filter((p) => p.role === "TEAM_LEAD").map((person) => (
+                              <option key={person.id} value={person.id} className="bg-[#111111]">{person.name}</option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="Salespersons">
+                            {salespersons.filter((p) => p.role !== "TEAM_LEAD").map((person) => (
+                              <option key={person.id} value={person.id} className="bg-[#111111]">{person.name}</option>
+                            ))}
+                          </optgroup>
                         </select>
                         <button
                           onClick={() => {
@@ -679,9 +707,16 @@ export default function LeadsTable({ salespersons }: Props) {
                             className="cursor-pointer rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-xs text-white outline-none hover:border-[#D4AF37]/40 focus:border-[#D4AF37]/60"
                           >
                             <option value="">Select</option>
-                            {salespersons.map((person) => (
-                              <option key={person.id} value={person.id} className="bg-[#111111]">{person.name}</option>
-                            ))}
+                            <optgroup label="Team Leaders">
+                              {salespersons.filter((p) => p.role === "TEAM_LEAD").map((person) => (
+                                <option key={person.id} value={person.id} className="bg-[#111111]">{person.name}</option>
+                              ))}
+                            </optgroup>
+                            <optgroup label="Salespersons">
+                              {salespersons.filter((p) => p.role !== "TEAM_LEAD").map((person) => (
+                                <option key={person.id} value={person.id} className="bg-[#111111]">{person.name}</option>
+                              ))}
+                            </optgroup>
                           </select>
                         </td>
                         <td className="p-3">

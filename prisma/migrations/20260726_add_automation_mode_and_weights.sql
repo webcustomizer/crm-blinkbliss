@@ -1,0 +1,2 @@
+ALTER TABLE "CRMSetting" ADD COLUMN "automationMode" TEXT NOT NULL DEFAULT 'DISABLED';
+ALTER TABLE "CRMSetting" ADD COLUMN "automationWeights" JSONB;

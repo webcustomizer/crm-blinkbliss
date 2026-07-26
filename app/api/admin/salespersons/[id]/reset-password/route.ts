@@ -51,7 +51,7 @@ export async function PATCH(
     const [updatedUser] = await prisma.$transaction([
       prisma.user.update({
         where: { id },
-        data: { password: hashedPassword },
+        data: { password: hashedPassword, forcePasswordChange: true },
         select: { id: true, name: true, email: true, phone: true, role: true, isActive: true },
       }),
       prisma.loginSession.updateMany({

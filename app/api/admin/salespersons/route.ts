@@ -13,8 +13,14 @@ export async function GET(req: NextRequest) {
 
   try {
     const users = await prisma.user.findMany({
-      where: { role: "SALESPERSON" },
-      select: { id: true, name: true, email: true, phone: true, isActive: true },
+      where: { role: { in: ["SALESPERSON", "TEAM_LEAD"] } },
+      select: {
+        id: true, name: true, email: true, phone: true, isActive: true, role: true,
+        teamLeaderId: true,
+        teamLeader: { select: { id: true, name: true } },
+        ledTeam: { select: { id: true, name: true } },
+        _count: { select: { teamMembers: true } },
+      },
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json({ success: true, data: users });

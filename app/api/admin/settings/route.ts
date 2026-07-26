@@ -14,7 +14,11 @@ export async function GET(req: NextRequest) {
   try {
     let settings = await getCachedCRMSettings();
     if (!settings) {
-      settings = await prisma.cRMSetting.create({ data: {} });
+      settings = await prisma.$transaction(async (tx) => {
+        const row = await tx.cRMSetting.findFirst({ orderBy: { createdAt: "asc" } });
+        if (row) return row;
+        return tx.cRMSetting.create({ data: {} });
+      });
     }
     return NextResponse.json({ success: true, data: settings });
   } catch {
@@ -33,7 +37,11 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json();
     let settings = await getCachedCRMSettings();
     if (!settings) {
-      settings = await prisma.cRMSetting.create({ data: {} });
+      settings = await prisma.$transaction(async (tx) => {
+        const row = await tx.cRMSetting.findFirst({ orderBy: { createdAt: "asc" } });
+        if (row) return row;
+        return tx.cRMSetting.create({ data: {} });
+      });
     }
 
     const updated = await prisma.cRMSetting.update({
@@ -49,6 +57,12 @@ export async function PATCH(req: NextRequest) {
         // Group chat
         ...(body.groupChatEnabled !== undefined && { groupChatEnabled: !!body.groupChatEnabled }),
         ...(body.messageEnabled !== undefined && { messageEnabled: !!body.messageEnabled }),
+        // Team Leader
+        ...(body.tlGroupChatEnabled !== undefined && { tlGroupChatEnabled: !!body.tlGroupChatEnabled }),
+        ...(body.tlMessageEnabled !== undefined && { tlMessageEnabled: !!body.tlMessageEnabled }),
+        ...(body.tlTeamLeadsEnabled !== undefined && { tlTeamLeadsEnabled: !!body.tlTeamLeadsEnabled }),
+        ...(body.tlDistributeEnabled !== undefined && { tlDistributeEnabled: !!body.tlDistributeEnabled }),
+        ...(body.tlMaxTeamSize !== undefined && { tlMaxTeamSize: Math.max(1, Math.min(100, Math.floor(body.tlMaxTeamSize))) }),
         // Security
         ...(body.twoFactorRequired !== undefined && { twoFactorRequired: !!body.twoFactorRequired }),
         ...(body.passwordMinLength !== undefined && { passwordMinLength: Math.max(6, Math.min(32, Math.floor(body.passwordMinLength))) }),
@@ -65,6 +79,10 @@ export async function PATCH(req: NextRequest) {
     const broadcastPayload: Record<string, boolean> = {};
     if (body.groupChatEnabled !== undefined) broadcastPayload.groupChatEnabled = body.groupChatEnabled;
     if (body.messageEnabled !== undefined) broadcastPayload.messageEnabled = body.messageEnabled;
+    if (body.tlTeamLeadsEnabled !== undefined) broadcastPayload.tlTeamLeadsEnabled = body.tlTeamLeadsEnabled;
+    if (body.tlGroupChatEnabled !== undefined) broadcastPayload.tlGroupChatEnabled = body.tlGroupChatEnabled;
+    if (body.tlMessageEnabled !== undefined) broadcastPayload.tlMessageEnabled = body.tlMessageEnabled;
+    if (body.tlDistributeEnabled !== undefined) broadcastPayload.tlDistributeEnabled = body.tlDistributeEnabled;
     if (Object.keys(broadcastPayload).length > 0) {
       broadcastSettingsChange(broadcastPayload);
     }

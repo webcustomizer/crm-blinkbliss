@@ -10,6 +10,7 @@ import CommunicationSettings from "@/components/admin/settings/CommunicationSett
 import SecuritySettings from "@/components/admin/settings/SecuritySettings";
 import BackupSettings from "@/components/admin/settings/BackupSettings";
 import ActivitySettings from "@/components/admin/settings/ActivitySettings";
+import TeamLeaderSettings from "@/components/admin/settings/TeamLeaderSettings";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,7 @@ export default function SettingsPage() {
             <TabBtn value="backup" label="Backup" />
             <TabBtn value="import" label="Import" />
             <TabBtn value="export" label="Export" />
+            <TabBtn value="teamleader" label="Team Lead" />
             <TabBtn value="admin" label="Admin" />
             <TabBtn value="activity" label="Activity" />
           </TabsList>
@@ -59,6 +61,9 @@ export default function SettingsPage() {
           </TabsContent>
           <TabsContent value="export">
             <ExportLeadsSection />
+          </TabsContent>
+          <TabsContent value="teamleader">
+            <TeamLeaderSettings />
           </TabsContent>
           <TabsContent value="admin">
             <CreateAdminSettings />

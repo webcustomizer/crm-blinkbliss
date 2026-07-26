@@ -12,7 +12,7 @@ export type TokenPayload = {
   id: string;
   name: string;
   email: string;
-  role: "ADMIN" | "SALESPERSON";
+  role: "ADMIN" | "SALESPERSON" | "TEAM_LEAD";
 };
 
 export async function createToken(payload: TokenPayload, expiresIn = "7d") {
@@ -36,7 +36,7 @@ export async function verifyToken(token: string): Promise<TokenPayload> {
     typeof payload.id !== "string" ||
     typeof payload.name !== "string" ||
     typeof payload.email !== "string" ||
-    (payload.role !== "ADMIN" && payload.role !== "SALESPERSON")
+    (payload.role !== "ADMIN" && payload.role !== "SALESPERSON" && payload.role !== "TEAM_LEAD")
   ) {
     throw new Error("Invalid token payload");
   }

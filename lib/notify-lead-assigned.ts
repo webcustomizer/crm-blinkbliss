@@ -25,7 +25,7 @@ export async function notifyLeadAssigned({
       leadName || "New lead"
     } has been assigned to you check it out!`;
 
-    const notification = await prisma.notification.create({
+    await prisma.notification.create({
       data: {
         title: "🔔 New Lead Assigned",
         message,
@@ -44,6 +44,29 @@ export async function notifyLeadAssigned({
       link: `/sales/my-leads?leadId=${leadId}`,
     });
 
+    // Also notify the team leader if the assignee has one
+    const assignee = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { teamLeaderId: true, name: true },
+    });
+    if (assignee?.teamLeaderId) {
+      const tlMessage = `${assignee.name || "A team member"} received a new lead: ${leadName || "New lead"}`;
+      await prisma.notification.create({
+        data: {
+          title: "🔔 Team Lead Update",
+          message: tlMessage,
+          userId: assignee.teamLeaderId,
+          leadId,
+          link: `/team-leader/team/${userId}`,
+        },
+      });
+      await sendPushNotification({
+        userId: assignee.teamLeaderId,
+        title: "🔔 Team Lead Update",
+        message: tlMessage,
+        link: `/team-leader/team/${userId}`,
+      });
+    }
 
   } catch (error) {
     console.error("❌ Notification failed:", error instanceof Error ? error.message : error);

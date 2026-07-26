@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getNextAutoAssignee } from "@/lib/auto-assign";
 import { notifyLeadAssigned } from "@/lib/notify-lead-assigned";
+import { notifyBulkAssigned } from "@/lib/notify-bulk-assigned";
 import { requireAuth } from "@/lib/require-auth";
 import { logActivity } from "@/lib/activity";
 import { ActivityAction } from "@/app/generated/prisma/client";
@@ -18,7 +20,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const page = Number(searchParams.get("page") || 1);
-    const limit = Number(searchParams.get("limit") || 20);
+    const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") || 20)));
     const search = searchParams.get("search") || "";
     const filter = searchParams.get("filter") || "ALL";
     const salespersonId = searchParams.get("salespersonId") || "";
@@ -139,14 +141,19 @@ export async function POST(req: NextRequest) {
     });
 
     if (autoAssignedId) {
-      await notifyLeadAssigned({ userId: autoAssignedId, leadId: lead.id, leadName: lead.name });
+      after(() => notifyLeadAssigned({ userId: autoAssignedId, leadId: lead.id, leadName: lead.name }).catch((err) =>
+        console.error("❌ Auto-assign notification failed:", err),
+      ));
     }
 
     if (GOOGLE_SHEET_WEBHOOK) {
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
         await fetch(GOOGLE_SHEET_WEBHOOK, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
           body: JSON.stringify({
             leadId: lead.id, name: lead.name, phone: lead.phone, email: lead.email,
             city: lead.city, age: lead.age, purpose: lead.purpose,
@@ -155,6 +162,7 @@ export async function POST(req: NextRequest) {
             source: lead.source, assignedTo: autoAssignedId ?? "", createdAt: lead.createdAt,
           }),
         });
+        clearTimeout(timeout);
       } catch { /* ignore google sheet errors */ }
     }
 
@@ -199,7 +207,7 @@ export async function PATCH(req: NextRequest) {
         // Validate salesperson if assigning (not unassigning)
         if (value) {
           const sp = await prisma.user.findFirst({
-            where: { id: value, role: "SALESPERSON", isActive: true },
+            where: { id: value, role: { in: ["SALESPERSON", "TEAM_LEAD"] }, isActive: true },
           });
           if (!sp) {
             return NextResponse.json({ success: false, message: "Salesperson not found or inactive." }, { status: 400 });
@@ -225,19 +233,29 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ success: false, message: "Invalid action." }, { status: 400 });
     }
 
+    await prisma.notification.deleteMany({ where: { leadId: { in: ids } } });
+
+    // Only notify for leads that weren't already assigned to this person
+    let newlyAssignedCount = ids.length;
+
     await prisma.lead.updateMany({
       where: { id: { in: ids }, isDeleted: false },
       data: updateData,
     });
 
-    // Send notifications for bulk assign
+    // Send single bulk notification instead of N individual ones
     if (action === "assign" && value) {
-      const leads = await prisma.lead.findMany({
-        where: { id: { in: ids } },
-        select: { id: true, name: true },
+      const existingLeads = await prisma.lead.findMany({
+        where: { id: { in: ids }, isDeleted: false },
+        select: { id: true, assignedToId: true },
       });
-      for (const lead of leads) {
-        notifyLeadAssigned({ userId: value, leadId: lead.id, leadName: lead.name }).catch(() => {});
+      newlyAssignedCount = existingLeads.filter((l) => l.assignedToId !== value).length;
+
+      if (newlyAssignedCount > 0) {
+        const adminName = auth.user.name || "Admin";
+        after(() => notifyBulkAssigned({ userId: value, leadCount: newlyAssignedCount, assignedByName: adminName }).catch((err) =>
+          console.error("❌ Admin bulk assign notification failed:", err),
+        ));
       }
     }
 

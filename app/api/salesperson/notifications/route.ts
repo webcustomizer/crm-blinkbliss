@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireAuth(req, ["SALESPERSON"]);
+    const auth = await requireAuth(req, ["SALESPERSON", "TEAM_LEAD"]);
     if ("error" in auth) return auth.error;
     const user = auth.user;
 
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
 // patch notification as read
 export async function PATCH(req: NextRequest) {
   try {
-    const auth = await requireAuth(req, ["SALESPERSON"]);
+    const auth = await requireAuth(req, ["SALESPERSON", "TEAM_LEAD"]);
     if ("error" in auth) return auth.error;
     const user = auth.user;
 

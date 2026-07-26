@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 import { isSessionActive } from "@/lib/require-auth";
 
-// Proxy always runs on Node.js runtime in Next.js 16+.
+// Middleware runs on Node.js runtime in Next.js 16+.
 
 const LOGIN_PATH = "/login";
 
@@ -46,6 +46,8 @@ export async function proxy(request: NextRequest) {
 
       if (user.role === "ADMIN")
         return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+      if (user.role === "TEAM_LEAD")
+        return NextResponse.redirect(new URL("/team-leader/dashboard", request.url));
       return NextResponse.redirect(new URL("/sales/dashboard", request.url));
     } catch {
       return clearTokenCookie(NextResponse.next());
@@ -92,11 +94,22 @@ export async function proxy(request: NextRequest) {
     if (
       (pathname.startsWith("/sales") ||
         pathname.startsWith("/api/salesperson")) &&
-      user.role !== "SALESPERSON"
+      user.role !== "SALESPERSON" &&
+      user.role !== "TEAM_LEAD"
     ) {
       if (isApiRoute)
         return NextResponse.json({ message: "Forbidden" }, { status: 403 });
       return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+    }
+
+    if (
+      (pathname.startsWith("/team-leader") ||
+        pathname.startsWith("/api/team-leader")) &&
+      user.role !== "TEAM_LEAD"
+    ) {
+      if (isApiRoute)
+        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+      return NextResponse.redirect(new URL(user.role === "ADMIN" ? "/admin/dashboard" : "/sales/dashboard", request.url));
     }
 
     return NextResponse.next();
@@ -119,8 +132,11 @@ export const config = {
     "/login",
     "/admin/:path*",
     "/sales/:path*",
+    "/team-leader/:path*",
     "/api/admin/:path*",
     "/api/salesperson/:path*",
+    "/api/team-leader/:path*",
     "/api/upload/:path*",
+    "/api/save-push-token/:path*",
   ],
 };

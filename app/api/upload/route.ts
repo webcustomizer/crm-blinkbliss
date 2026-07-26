@@ -19,7 +19,7 @@ function sanitizeFileName(name: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAuth(req, ["ADMIN", "SALESPERSON"]);
+  const auth = await requireAuth(req, ["ADMIN", "SALESPERSON", "TEAM_LEAD"]);
   if ("error" in auth) return auth.error;
 
   try {

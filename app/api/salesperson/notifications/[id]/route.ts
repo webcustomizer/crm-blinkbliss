@@ -12,7 +12,7 @@ export async function PATCH(
   },
 ) {
   try {
-    const auth = await requireAuth(req, ["SALESPERSON"]);
+    const auth = await requireAuth(req, ["SALESPERSON", "TEAM_LEAD"]);
     if ("error" in auth) return auth.error;
     const user = auth.user;
 
@@ -85,7 +85,7 @@ export async function DELETE(
   },
 ) {
   try {
-    const auth = await requireAuth(req, ["SALESPERSON"]);
+    const auth = await requireAuth(req, ["SALESPERSON", "TEAM_LEAD"]);
     if ("error" in auth) return auth.error;
     const user = auth.user;
 

@@ -41,7 +41,7 @@ export default function ChatImage({ src, alt = "Image", fileName }: ChatImagePro
         {fileName && (
           <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between rounded-lg bg-black/60 px-2 py-1 opacity-0 group-hover/img:opacity-100 transition-opacity">
             <span className="text-[10px] text-white/70 truncate">{fileName}</span>
-            <a href={src} download={fileName} onClick={(e) => e.stopPropagation()} className="text-white/50 hover:text-white">
+            <a href={src} download={fileName} aria-label={`Download ${fileName}`} onClick={(e) => e.stopPropagation()} className="text-white/50 hover:text-white">
               <Download size={12} />
             </a>
           </div>
@@ -55,6 +55,7 @@ export default function ChatImage({ src, alt = "Image", fileName }: ChatImagePro
         >
           <button
             onClick={() => setOpen(false)}
+            aria-label="Close preview"
             style={{ top: "max(env(safe-area-inset-top, 0px), 12px)" }}
             className="absolute right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition z-10"
           >

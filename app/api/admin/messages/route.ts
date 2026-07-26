@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/require-auth";
 import { logActivity } from "@/lib/activity";
@@ -132,7 +133,7 @@ export async function POST(req: NextRequest) {
       where: { id: receiverId },
       select: { id: true, role: true, isActive: true },
     });
-    if (!receiver || !receiver.isActive || receiver.role !== "SALESPERSON") {
+    if (!receiver || !receiver.isActive || !["SALESPERSON", "TEAM_LEAD"].includes(receiver.role)) {
       return NextResponse.json(
         { success: false, message: "Invalid receiver." },
         { status: 400 },
@@ -169,12 +170,13 @@ export async function POST(req: NextRequest) {
 
     // Push notification to receiver
     const senderName = (await prisma.user.findUnique({ where: { id: auth.user.id }, select: { name: true } }))?.name || "Admin";
-    sendPushNotification({
+    const receiverLink = receiver.role === "TEAM_LEAD" ? "/team-leader/messages" : "/sales/messages";
+    after(() => sendPushNotification({
       userId: receiverId,
       title: senderName,
       message: content.length > 100 ? content.slice(0, 100) + "…" : content,
-      link: `/sales/messages`,
-    }).catch(() => {});
+      link: receiverLink,
+    }).catch((err) => console.error("Admin message push failed:", err)));
 
     return NextResponse.json({ success: true, data: message });
   } catch {
@@ -215,9 +217,9 @@ export async function DELETE(req: NextRequest) {
     const { withUserId } = await req.json();
     if (withUserId) {
       const target = await prisma.user.findUnique({ where: { id: withUserId }, select: { role: true } });
-      if (!target || target.role !== "SALESPERSON") {
+      if (!target || !["SALESPERSON", "TEAM_LEAD"].includes(target.role)) {
         return NextResponse.json(
-          { success: false, message: "Can only delete conversations with salespersons." },
+          { success: false, message: "Can only delete conversations with salespersons or team leaders." },
           { status: 403 },
         );
       }

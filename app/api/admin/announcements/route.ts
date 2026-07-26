@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { sendPushNotification } from "@/lib/push";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/require-auth";
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
 
     const salespersons = await prisma.user.findMany({
       where: {
-        role: "SALESPERSON",
+        role: { in: ["SALESPERSON", "TEAM_LEAD"] },
         isActive: true,
       },
 
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
 
     // ADD THIS:
     if (salespersons.length > 0) {
-      Promise.all(
+      after(() => Promise.all(
         salespersons.map((salesperson) =>
           sendPushNotification({
             userId: salesperson.id,
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
             link: `/sales/announcements?announcementId=${announcement.id}`,
           }),
         ),
-      ).catch(() => {});
+      ).catch((err) => console.error("Announcement push failed:", err)));
     }
 
     await logActivity({

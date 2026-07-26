@@ -1,49 +1,137 @@
 import { prisma } from "@/lib/prisma";
 
 /**
- * Agar automation ON hai, to active salespersons mein se
- * round-robin tareeqe se agla salesperson return karta hai
- * aur CRMSetting.lastAssignedSalespersonId ko usi waqt update kar deta hai.
+ * Weighted round-robin auto-assign based on automationMode:
  *
- * Agar automation OFF hai, ya koi active salesperson nahi hai,
- * to null return karta hai (lead unassigned rahegi).
+ * DISABLED          → returns null (no auto-assign)
+ * TL_WEIGHTED       → picks a TL (weighted), returns TL's id
+ * TL_TEAM_AUTO      → picks a TL (weighted), then picks a SP within that team (round-robin), returns SP's id
+ * DIRECT_WEIGHTED   → picks any eligible person (weighted), returns their id
  *
- * $transaction use kiya hai taake ek sath 2 leads create hon
- * (jaise CSV import + manual add) to round-robin pointer sahi rahe.
+ * Weighted round-robin uses smooth weighted algorithm (Nginx style):
+ * each candidate gets a "currentWeight" that increases by their weight
+ * every round, and the candidate with the highest currentWeight is chosen,
+ * then their currentWeight is decreased by the total weight sum.
+ *
+ * Uses $transaction so concurrent CSV imports serialize correctly.
  */
 export async function getNextAutoAssignee(): Promise<string | null> {
   return prisma.$transaction(async (tx) => {
     const settings = await tx.cRMSetting.findFirst();
+    if (!settings || !settings.autoAssignEnabled) return null;
 
-    if (!settings || !settings.autoAssignEnabled) {
-      return null;
+    const mode = settings.automationMode || "DISABLED";
+    if (mode === "DISABLED") return null;
+
+    const weights = (settings.automationWeights as Record<string, number>) || {};
+
+    if (mode === "TL_WEIGHTED" || mode === "TL_TEAM_AUTO") {
+      return pickFromWeightedPool(tx, weights, ["TEAM_LEAD"], settings.id, settings.lastAssignedSalespersonId, mode === "TL_TEAM_AUTO" ? tx : null);
     }
 
-    const salespeople = await tx.user.findMany({
-      where: { role: "SALESPERSON", isActive: true },
+    if (mode === "DIRECT_WEIGHTED") {
+      return pickFromWeightedPool(tx, weights, ["SALESPERSON", "TEAM_LEAD"], settings.id, settings.lastAssignedSalespersonId, null);
+    }
+
+    return null;
+  });
+}
+
+async function pickFromWeightedPool(
+  tx: any,
+  weights: Record<string, number>,
+  allowedRoles: string[],
+  settingsId: string,
+  lastAssignedId: string | null,
+  teamAutoTx: any,
+): Promise<string | null> {
+  const candidates = await tx.user.findMany({
+    where: { role: { in: allowedRoles }, isActive: true },
+    select: { id: true, name: true, role: true },
+    orderBy: { name: "asc" },
+  });
+
+  if (candidates.length === 0) return null;
+
+  // Assign weight to each candidate: custom weight from settings, or default
+  const weightedCandidates = candidates.map((c: any) => ({
+    id: c.id,
+    name: c.name,
+    role: c.role,
+    weight: Math.max(weights[c.id] || 1, 1),
+  }));
+
+  // Build currentWeight state: default 0 for each candidate
+  const currentWeights: Record<string, number> = {};
+  weightedCandidates.forEach((c: any) => { currentWeights[c.id] = 0; });
+
+  // Find which candidate was last assigned and restore relative state
+  if (lastAssignedId) {
+    const lastIdx = weightedCandidates.findIndex((c: any) => c.id === lastAssignedId);
+    if (lastIdx !== -1) {
+      // Simulate: add weight to everyone, subtract from last chosen
+      weightedCandidates.forEach((c: any) => { currentWeights[c.id] += c.weight; });
+      currentWeights[lastAssignedId] -= weightedCandidates.reduce((s: number, c: any) => s + c.weight, 0);
+    }
+  }
+
+  // Add weight to all candidates for this round
+  weightedCandidates.forEach((c: any) => { currentWeights[c.id] += c.weight; });
+
+  // Pick the candidate with the highest currentWeight
+  let chosen = weightedCandidates[0];
+  for (const c of weightedCandidates) {
+    if (currentWeights[c.id] > currentWeights[chosen.id]) {
+      chosen = c;
+    }
+  }
+
+  // Subtract total weight from chosen
+  const totalWeight = weightedCandidates.reduce((s: number, c: any) => s + c.weight, 0);
+  currentWeights[chosen.id] -= totalWeight;
+
+  // Advance the pointer
+  await tx.cRMSetting.update({
+    where: { id: settingsId },
+    data: { lastAssignedSalespersonId: chosen.id },
+  });
+
+  // If TL_TEAM_AUTO mode, pick a team member from the chosen TL's team
+  if (teamAutoTx && chosen.role === "TEAM_LEAD") {
+    const teamMembers = await tx.user.findMany({
+      where: { teamLeaderId: chosen.id, isActive: true },
       select: { id: true },
       orderBy: { name: "asc" },
     });
 
-    if (salespeople.length === 0) {
-      return null;
+    if (teamMembers.length === 0) {
+      // No team members — TL gets the lead directly
+      return chosen.id;
     }
 
-    let nextIndex = 0;
-    if (settings.lastAssignedSalespersonId) {
-      const lastIndex = salespeople.findIndex(
-        (sp) => sp.id === settings.lastAssignedSalespersonId,
-      );
-      nextIndex = lastIndex === -1 ? 0 : (lastIndex + 1) % salespeople.length;
-    }
+    // Simple round-robin within team using a separate pointer stored in weights
+    const teamPointerKey = `__team_${chosen.id}`;
+    const teamPointer = (weights[teamPointerKey] as number) || 0;
+    const nextIdx = teamMembers.length > 0 ? teamPointer % teamMembers.length : 0;
+    const member = teamMembers[nextIdx];
 
-    const nextSalesperson = salespeople[nextIndex];
-
+    // Update team pointer in weights
+    const updatedWeights = { ...weights, [teamPointerKey]: (teamPointer + 1) % teamMembers.length };
     await tx.cRMSetting.update({
-      where: { id: settings.id },
-      data: { lastAssignedSalespersonId: nextSalesperson.id },
+      where: { id: settingsId },
+      data: { automationWeights: updatedWeights },
     });
 
-    return nextSalesperson.id;
-  });
+    return member.id;
+  }
+
+  return chosen.id;
+}
+
+/**
+ * Returns the automation mode string for display purposes.
+ */
+export async function getAutomationMode(): Promise<string> {
+  const settings = await prisma.cRMSetting.findFirst();
+  return settings?.automationMode || "DISABLED";
 }

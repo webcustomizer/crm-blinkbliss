@@ -6,26 +6,59 @@ import { requireAuth } from "@/lib/require-auth";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const auth = await requireAuth(req, ["SALESPERSON"]);
+  const auth = await requireAuth(req, ["SALESPERSON", "TEAM_LEAD"]);
   if ("error" in auth) return auth.error;
 
   const userId = auth.user.id;
+  const role = auth.user.role;
 
   const settings = await getCachedCRMSettings();
 
-  const [messageUnread, groupUnread, announcementUnread] = await Promise.all([
-    settings?.messageEnabled !== false
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { teamLeaderId: true, createdAt: true },
+  });
+
+  const hasTeamLeader = !!user?.teamLeaderId;
+  const isTL = role === "TEAM_LEAD";
+
+  const messageCheck = isTL
+    ? (settings?.tlMessageEnabled !== false)
+    : (hasTeamLeader ? (settings?.tlMessageEnabled !== false) : (settings?.messageEnabled !== false));
+
+  const groupCheck = isTL
+    ? (settings?.tlGroupChatEnabled !== false)
+    : (hasTeamLeader ? (settings?.tlGroupChatEnabled !== false) : (settings?.groupChatEnabled !== false));
+
+  let groupWhere: any = {
+    deleted: false,
+    senderId: { not: userId },
+    groupReads: { none: { userId } },
+  };
+
+  if (user?.createdAt) {
+    groupWhere.createdAt = { gte: user.createdAt };
+  }
+
+  if (isTL) {
+    groupWhere.chatType = "TL_TEAM";
+    groupWhere.teamLeaderId = userId;
+  } else if (hasTeamLeader) {
+    groupWhere.chatType = "TL_TEAM";
+    groupWhere.teamLeaderId = user!.teamLeaderId;
+  } else {
+    groupWhere.chatType = "GENERAL";
+  }
+
+  const [messageUnread, groupUnread, announcementUnread, notificationUnread] = await Promise.all([
+    messageCheck
       ? prisma.message.count({
           where: { receiverId: userId, isRead: false },
         }).catch(() => 0)
       : 0,
-    settings?.groupChatEnabled !== false
+    groupCheck
       ? prisma.groupMessage.count({
-          where: {
-            deleted: false,
-            senderId: { not: userId },
-            groupReads: { none: { userId } },
-          },
+          where: groupWhere,
         }).catch(() => 0)
       : 0,
     prisma.announcement.count({
@@ -33,10 +66,13 @@ export async function GET(req: NextRequest) {
         reads: { none: { userId } },
       },
     }).catch(() => 0),
+    prisma.notification.count({
+      where: { userId, isRead: false },
+    }).catch(() => 0),
   ]);
 
   return NextResponse.json({
     success: true,
-    data: { messages: messageUnread, groupChat: groupUnread, announcements: announcementUnread },
+    data: { messages: messageUnread, groupChat: groupUnread, announcements: announcementUnread, notifications: notificationUnread },
   });
 }

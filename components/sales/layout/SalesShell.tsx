@@ -70,7 +70,6 @@ export default function SalesShell({ children, user }: SalesShellProps) {
           <MobileDrawer
             open={mobileMenuOpen}
             onClose={() => setMobileMenuOpen(false)}
-            user={user}
           />
 
           <div className="lg:hidden">

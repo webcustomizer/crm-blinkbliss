@@ -4,8 +4,14 @@ import { hashPassword } from "@/lib/hash";
 import { validatePasswordStrength } from "@/lib/password-validator";
 import { safeStringCompare } from "@/lib/email";
 import { getCachedCRMSettings } from "@/lib/settings-cache";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (!(await rateLimit(ip, "login"))) {
+    return NextResponse.json({ success: false, message: "Too many attempts. Please try again later." }, { status: 429 });
+  }
+
   try {
     const { email, token, newPassword } = await req.json();
 
@@ -54,6 +60,7 @@ export async function POST(req: NextRequest) {
           otpExpiresAt: null,
           failedLoginAttempts: 0,
           lockedUntil: null,
+          forcePasswordChange: false,
         },
       }),
       prisma.loginSession.updateMany({

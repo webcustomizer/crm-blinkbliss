@@ -110,6 +110,8 @@ export interface GroupChatMessage {
   fileUrl: string | null;
   fileName: string | null;
   fileSize: number | null;
+  chatType?: string;
+  teamLeaderId?: string | null;
   createdAt: string;
   sender?: { id: string; name: string };
   lead?: { id: string; name: string | null; phone: string } | null;
@@ -134,10 +136,19 @@ export interface SalesTargetData {
 export interface UserWithTarget extends LeadAssignedTo {
   email: string;
   monthlyTarget: number;
+  targetMonths?: number;
+  eligibleForTeamLeader?: boolean;
+  eligibleSince?: string | null;
   responseTimeAvg: number;
   isActive: boolean;
   currentMonthAchieved: number;
   currentMonthTarget: number;
+  totalJoinedLeads?: number;
+  role?: string;
+  teamLeaderId?: string | null;
+  teamLeader?: { id: string; name: string } | null;
+  ledTeam?: { id: string; name: string } | null;
+  totalLeads?: number;
 }
 
 export interface FunnelStage {

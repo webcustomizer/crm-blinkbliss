@@ -91,7 +91,7 @@ function ResetFormInner() {
             <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#D4AF37]" />
             <Input type={showPw ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
               className="h-12 border-[#D4AF37]/30 bg-[#111] pl-10 pr-12 text-white" placeholder="Min 8 characters" autoFocus />
-            <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#D4AF37]">
+            <button type="button" aria-label="Toggle password visibility" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#D4AF37]">
               {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>

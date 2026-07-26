@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCachedCRMSettings } from "@/lib/settings-cache";
 import { requireAuth } from "@/lib/require-auth";
@@ -179,12 +180,12 @@ export async function POST(req: NextRequest) {
 
     // Push notification to receiver
     const senderName = (await prisma.user.findUnique({ where: { id: auth.user.id }, select: { name: true } }))?.name || "Salesperson";
-    sendPushNotification({
+    after(() => sendPushNotification({
       userId: receiverId,
       title: senderName,
       message: content.length > 100 ? content.slice(0, 100) + "…" : content,
       link: `/admin/messages`,
-    }).catch(() => {});
+    }).catch((err) => console.error("SP message push failed:", err)));
 
     logActivity({
       userId: auth.user.id,

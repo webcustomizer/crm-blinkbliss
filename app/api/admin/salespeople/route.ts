@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const salespeople = await prisma.user.findMany({
-      where: { role: "SALESPERSON", isActive: true },
+      where: { role: { in: ["SALESPERSON", "TEAM_LEAD"] }, isActive: true },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     });
