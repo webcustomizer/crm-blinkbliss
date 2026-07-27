@@ -48,7 +48,12 @@ async function pickFromWeightedPool(
   teamAuto: boolean,
 ): Promise<string | null> {
   const candidates = await tx.user.findMany({
-    where: { role: { in: allowedRoles }, isActive: true },
+    where: {
+      role: { in: allowedRoles },
+      isActive: true,
+      // In DIRECT_WEIGHTED mode, exclude SPs who are under a TL
+      ...(allowedRoles.includes("SALESPERSON") ? { teamLeaderId: null } : {}),
+    },
     select: { id: true, name: true, role: true },
     orderBy: { name: "asc" },
   });
