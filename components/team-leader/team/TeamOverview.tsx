@@ -282,7 +282,7 @@ function MemberDetailPanel({ member, onClose }: { member: Member; onClose: () =>
         onClick={(e) => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="shrink-0 bg-[#0a0a0a] border-b border-white/[0.06] px-5 py-4">
+        <div className="shrink-0 bg-[#0a0a0a] border-b border-white/[0.06] px-5 pt-[calc(env(safe-area-inset-top)+1rem)] pb-4 sm:pt-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full font-semibold text-sm ${
