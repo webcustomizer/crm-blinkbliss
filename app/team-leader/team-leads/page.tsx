@@ -67,7 +67,7 @@ export default function TeamLeadsPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [completionFilter, setCompletionFilter] = useState("ALL");
   const [scope, setScope] = useState<"all" | "self" | "team">("all");
-  const prevScopeRef = useRef("all");
+
   const [memberFilter, setMemberFilter] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -78,7 +78,6 @@ export default function TeamLeadsPage() {
   const [detailLeadId, setDetailLeadId] = useState<string | null>(null);
   const [actionLeadId, setActionLeadId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const pageRef = useRef(1);
   const filterTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [scopeCounts, setScopeCounts] = useState({ all: 0, self: 0, team: 0 });
 
@@ -152,27 +151,21 @@ export default function TeamLeadsPage() {
     return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [fetchData, fetchScopeCounts]);
 
-  useEffect(() => {
-    pageRef.current = page;
-  }, [page]);
+
 
   useEffect(() => {
     if (filterTimerRef.current) clearTimeout(filterTimerRef.current);
     filterTimerRef.current = setTimeout(() => {
       setPage(1);
-      pageRef.current = 1;
-      const isTabOnly = scope !== prevScopeRef.current && search === "" && statusFilter === "ALL" && completionFilter === "ALL" && memberFilter === "";
-      prevScopeRef.current = scope;
-      void fetchData(true, 1, isTabOnly);
-      if (!isTabOnly) void fetchScopeCounts();
+      void fetchData(true, 1, true);
+      void fetchScopeCounts();
     }, 300);
     return () => { if (filterTimerRef.current) clearTimeout(filterTimerRef.current); };
-  }, [search, statusFilter, scope, memberFilter]);
+  }, [search, statusFilter, completionFilter, scope, memberFilter]);
 
   function handlePageChange(newPage: number) {
     if (filterTimerRef.current) clearTimeout(filterTimerRef.current);
     setPage(newPage);
-    pageRef.current = newPage;
     void fetchData(false, newPage);
   }
 

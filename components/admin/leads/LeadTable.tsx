@@ -4,15 +4,15 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-  Search, ChevronLeft, ChevronRight, Trash2, CheckSquare,
-  Square, MoreHorizontal, Eye, Users, Calendar, RefreshCw, AlertTriangle,
+import { Search, ChevronLeft, ChevronRight, Trash2, CheckSquare,
+  Square, MoreHorizontal, Eye, Users, Calendar, RefreshCw, AlertTriangle, ChevronDown,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import LeadDetailsPanel from "./LeadDetailsPanel";
 import LeadDialog from "./LeadDialog";
 import { LEAD_SOURCES } from "@/lib/constants/lead";
 import { formatDateShort } from "@/lib/format-date";
+import AssignDropdown from "./AssignDropdown";
 
 type Lead = {
   id: string;
@@ -135,6 +135,8 @@ export default function LeadsTable({ salespersons }: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const [showBulkMenu, setShowBulkMenu] = useState(false);
+  const [showBulkAssign, setShowBulkAssign] = useState(false);
+  const bulkAssignRef = useRef<HTMLDivElement>(null);
 
   // Go-to-page input
   const [pageInput, setPageInput] = useState("");
@@ -152,6 +154,14 @@ export default function LeadsTable({ salespersons }: Props) {
     const timer = setTimeout(() => setSearch(searchInput), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [searchInput]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (bulkAssignRef.current && !bulkAssignRef.current.contains(e.target as Node)) setShowBulkAssign(false);
+    }
+    if (showBulkAssign) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showBulkAssign]);
 
   // Guards against out-of-order responses: if the user changes filters
   // quickly, only the most recently issued request is allowed to update state.
@@ -444,28 +454,45 @@ export default function LeadsTable({ salespersons }: Props) {
               className="rounded-lg bg-red-500/20 px-3 py-1 text-xs text-red-400 hover:bg-red-500/30 disabled:opacity-40">
               Mark Dead
             </button>
-            <button onClick={() => bulkAction("assign", "")} disabled={bulkLoading}
-              className="rounded-lg bg-blue-500/20 px-3 py-1 text-xs text-blue-400 hover:bg-blue-500/30 disabled:opacity-40">
-              Unassign
-            </button>
-            <select
-              onChange={(e) => { if (e.target.value) bulkAction("assign", e.target.value); }}
-              disabled={bulkLoading}
-              aria-label="Assign selected leads to"
-              className="cursor-pointer rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-xs text-white outline-none"
-            >
-              <option value="">Assign to…</option>
-              <optgroup label="Team Leaders">
-                {salespersons.filter((sp) => sp.role === "TEAM_LEAD").map((sp) => (
-                  <option key={sp.id} value={sp.id} className="bg-[#111111]">{sp.name}</option>
-                ))}
-              </optgroup>
-              <optgroup label="Salespersons">
-                {salespersons.filter((sp) => sp.role !== "TEAM_LEAD").map((sp) => (
-                  <option key={sp.id} value={sp.id} className="bg-[#111111]">{sp.name}</option>
-                ))}
-              </optgroup>
-            </select>
+            <div ref={bulkAssignRef} className="relative">
+              <button
+                onClick={() => setShowBulkAssign(!showBulkAssign)}
+                disabled={bulkLoading}
+                className="flex items-center gap-1 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-xs text-white/50 hover:text-white/70 hover:border-white/20 disabled:opacity-40"
+              >
+                Assign to…<ChevronDown size={10} className={`shrink-0 transition-transform ${showBulkAssign ? "rotate-180" : ""}`} />
+              </button>
+              {showBulkAssign && (
+                <div className="absolute left-0 top-full z-30 mt-1 w-48 rounded-lg border border-white/10 bg-[#111111] shadow-xl">
+                  <button onClick={() => { bulkAction("assign", ""); setShowBulkAssign(false); }}
+                    className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[11px] text-red-400 hover:bg-red-500/10">
+                    — Unassign —
+                  </button>
+                  {salespersons.filter((sp) => sp.role === "TEAM_LEAD").length > 0 && (
+                    <div className="border-t border-white/5">
+                      <div className="px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wider text-white/25">Team Leaders</div>
+                      {salespersons.filter((sp) => sp.role === "TEAM_LEAD").map((sp) => (
+                        <button key={sp.id} onClick={() => { bulkAction("assign", sp.id); setShowBulkAssign(false); }}
+                          className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[11px] text-white/70 hover:bg-white/5">
+                          {sp.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {salespersons.filter((sp) => sp.role !== "TEAM_LEAD").length > 0 && (
+                    <div className="border-t border-white/5">
+                      <div className="px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wider text-white/25">Salespersons</div>
+                      {salespersons.filter((sp) => sp.role !== "TEAM_LEAD").map((sp) => (
+                        <button key={sp.id} onClick={() => { bulkAction("assign", sp.id); setShowBulkAssign(false); }}
+                          className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[11px] text-white/70 hover:bg-white/5">
+                          {sp.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             <button onClick={() => bulkAction("delete")} disabled={bulkLoading}
               className="rounded-lg bg-red-600/20 px-3 py-1 text-xs text-red-400 hover:bg-red-600/30 disabled:opacity-40 flex items-center gap-1">
               <Trash2 size={12} /> Delete
@@ -493,30 +520,29 @@ export default function LeadsTable({ salespersons }: Props) {
                   className="w-full rounded-lg px-3 py-1.5 text-left text-xs text-red-400 hover:bg-red-500/10 disabled:opacity-40">
                   Mark Dead
                 </button>
-                <button role="menuitem" onClick={() => bulkAction("assign", "")} disabled={bulkLoading}
-                  className="w-full rounded-lg px-3 py-1.5 text-left text-xs text-blue-400 hover:bg-blue-500/10 disabled:opacity-40">
-                  Unassign
-                </button>
                 <div className="border-t border-white/10 pt-1">
-                  <select
-                    onChange={(e) => { if (e.target.value) bulkAction("assign", e.target.value); }}
-                    disabled={bulkLoading}
-                    aria-label="Assign selected leads to"
-                    defaultValue=""
-                    className="w-full cursor-pointer rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-xs text-white outline-none"
-                  >
-                    <option value="">Assign to…</option>
-                    <optgroup label="Team Leaders">
-                      {salespersons.filter((sp) => sp.role === "TEAM_LEAD").map((sp) => (
-                        <option key={sp.id} value={sp.id} className="bg-[#111111]">{sp.name}</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Salespersons">
+                  <div className="px-3 py-1 text-[9px] font-semibold uppercase tracking-wider text-white/25">Assign to</div>
+                  <button role="menuitem" onClick={() => { bulkAction("assign", ""); setShowBulkMenu(false); }} disabled={bulkLoading}
+                    className="w-full rounded-lg px-3 py-1.5 text-left text-xs text-red-400 hover:bg-red-500/10 disabled:opacity-40">
+                    — Unassign —
+                  </button>
+                  {salespersons.filter((sp) => sp.role === "TEAM_LEAD").map((sp) => (
+                    <button key={sp.id} role="menuitem" onClick={() => { bulkAction("assign", sp.id); setShowBulkMenu(false); }} disabled={bulkLoading}
+                      className="w-full rounded-lg px-3 py-1.5 text-left text-xs text-white/70 hover:bg-white/5 disabled:opacity-40">
+                      {sp.name}
+                    </button>
+                  ))}
+                  {salespersons.filter((sp) => sp.role !== "TEAM_LEAD").length > 0 && (
+                    <>
+                      <div className="px-3 py-1 text-[9px] font-semibold uppercase tracking-wider text-white/25">Salespersons</div>
                       {salespersons.filter((sp) => sp.role !== "TEAM_LEAD").map((sp) => (
-                        <option key={sp.id} value={sp.id} className="bg-[#111111]">{sp.name}</option>
+                        <button key={sp.id} role="menuitem" onClick={() => { bulkAction("assign", sp.id); setShowBulkMenu(false); }} disabled={bulkLoading}
+                          className="w-full rounded-lg px-3 py-1.5 text-left text-xs text-white/70 hover:bg-white/5 disabled:opacity-40">
+                          {sp.name}
+                        </button>
                       ))}
-                    </optgroup>
-                  </select>
+                    </>
+                  )}
                 </div>
                 <button role="menuitem" onClick={() => bulkAction("delete")} disabled={bulkLoading}
                   className="flex w-full items-center gap-1 rounded-lg px-3 py-1.5 text-left text-xs text-red-400 hover:bg-red-600/10 disabled:opacity-40">
@@ -599,24 +625,12 @@ export default function LeadsTable({ salespersons }: Props) {
                         <Calendar size={12} /> {formatDateShort(lead.createdAt)}
                       </span>
                       <div className="flex items-center gap-2">
-                        <select
-                          value={lead.assignedTo?.id || ""}
-                          onChange={(e) => assignLead(lead.id, e.target.value)}
-                          aria-label="Assign salesperson"
-                          className="cursor-pointer rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-xs text-white outline-none"
-                        >
-                          <option value="">Unassigned</option>
-                          <optgroup label="Team Leaders">
-                            {salespersons.filter((p) => p.role === "TEAM_LEAD").map((person) => (
-                              <option key={person.id} value={person.id} className="bg-[#111111]">{person.name}</option>
-                            ))}
-                          </optgroup>
-                          <optgroup label="Salespersons">
-                            {salespersons.filter((p) => p.role !== "TEAM_LEAD").map((person) => (
-                              <option key={person.id} value={person.id} className="bg-[#111111]">{person.name}</option>
-                            ))}
-                          </optgroup>
-                        </select>
+                        <AssignDropdown
+                          leadId={lead.id}
+                          currentAssignment={lead.assignedTo}
+                          salespersons={salespersons}
+                          onSelect={assignLead}
+                        />
                         <button
                           onClick={() => {
                             const params = new URLSearchParams(searchParams.toString());
@@ -700,24 +714,12 @@ export default function LeadsTable({ salespersons }: Props) {
                           </span>
                         </td>
                         <td className="p-3">
-                          <select
-                            value={lead.assignedTo?.id || ""}
-                            onChange={(e) => assignLead(lead.id, e.target.value)}
-                            aria-label={`Assign salesperson for ${lead.name || lead.phone}`}
-                            className="cursor-pointer rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-xs text-white outline-none hover:border-[#D4AF37]/40 focus:border-[#D4AF37]/60"
-                          >
-                            <option value="">Select</option>
-                            <optgroup label="Team Leaders">
-                              {salespersons.filter((p) => p.role === "TEAM_LEAD").map((person) => (
-                                <option key={person.id} value={person.id} className="bg-[#111111]">{person.name}</option>
-                              ))}
-                            </optgroup>
-                            <optgroup label="Salespersons">
-                              {salespersons.filter((p) => p.role !== "TEAM_LEAD").map((person) => (
-                                <option key={person.id} value={person.id} className="bg-[#111111]">{person.name}</option>
-                              ))}
-                            </optgroup>
-                          </select>
+                          <AssignDropdown
+                            leadId={lead.id}
+                            currentAssignment={lead.assignedTo}
+                            salespersons={salespersons}
+                            onSelect={assignLead}
+                          />
                         </td>
                         <td className="p-3">
                           <button
