@@ -19,9 +19,9 @@ type Mode = "DISABLED" | "TL_WEIGHTED" | "TL_TEAM_AUTO" | "DIRECT_WEIGHTED";
 
 const MODES: { value: Mode; label: string; desc: string }[] = [
   { value: "DISABLED", label: "Disabled", desc: "No automatic assignment — all leads stay unassigned." },
-  { value: "TL_WEIGHTED", label: "Team Leaders (Weighted)", desc: "Assigns to TLs based on weight. TL manually distributes to team." },
-  { value: "TL_TEAM_AUTO", label: "Team Leaders → Auto Team", desc: "Assigns to TL (weighted), then auto-distributes within their team." },
-  { value: "DIRECT_WEIGHTED", label: "Everyone Direct (Weighted)", desc: "Assigns directly to any eligible person based on weight." },
+  { value: "TL_WEIGHTED", label: "Team Leaders (Weighted)", desc: "Assigns to TLs in blocks based on weight. TL manually distributes to team." },
+  { value: "TL_TEAM_AUTO", label: "Team Leaders → Auto Team", desc: "Assigns to TL (weighted block), then auto-distributes within their team." },
+  { value: "DIRECT_WEIGHTED", label: "Everyone Direct (Weighted)", desc: "Assigns directly to any eligible person in blocks based on weight." },
 ];
 
 export default function AutomationSettings() {
@@ -177,8 +177,8 @@ export default function AutomationSettings() {
                 <h3 className="text-base font-semibold text-white">Assignment Weights</h3>
                 <p className="text-xs text-zinc-400">
                   {mode.includes("TL")
-                    ? "Higher weight = more leads assigned to that Team Leader"
-                    : "Higher weight = more leads assigned to that person"}
+                    ? "Weight = number of consecutive leads assigned to that Team Leader per cycle"
+                    : "Weight = number of consecutive leads assigned to that person per cycle"}
                 </p>
               </div>
             </div>
@@ -252,6 +252,43 @@ export default function AutomationSettings() {
               </div>
             )}
           </div>
+
+          {/* Cycle Preview */}
+          {activeCandidates.length > 0 && (() => {
+            const cycleNames: string[] = [];
+            activeCandidates.forEach((c) => {
+              const w = editedWeights[c.id] ?? c.weight;
+              for (let i = 0; i < w; i++) {
+                cycleNames.push(c.name);
+              }
+            });
+            const totalLeads = cycleNames.length;
+            // Group consecutive names
+            const blocks: { name: string; count: number }[] = [];
+            let last = "";
+            cycleNames.forEach((n) => {
+              if (n === last) blocks[blocks.length - 1].count++;
+              else { blocks.push({ name: n, count: 1 }); last = n; }
+            });
+            return (
+              <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+                <p className="text-xs font-medium text-zinc-300 mb-2">Cycle Preview ({totalLeads} leads per cycle)</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {blocks.map((b, i) => (
+                    <span key={i} className="inline-flex items-center gap-1 rounded-lg bg-[#D4AF37]/10 border border-[#D4AF37]/20 px-2 py-0.5 text-[11px] font-medium text-[#D4AF37]">
+                      {b.name} × {b.count}
+                    </span>
+                  ))}
+                </div>
+                <p className="mt-2 text-[11px] text-zinc-500">
+                  Leads 1-{blocks[0].count}: {blocks[0].name}
+                  {blocks.length > 2 ? `, ${blocks[1].count+1}-${blocks[0].count+blocks[1].count}: ${blocks[1].name}` : ""}
+                  {blocks.length > 3 ? ` ...` : ""}
+                  {` → cycle repeats`}
+                </p>
+              </div>
+            );
+          })()}
 
           {/* Solo SPs note when in TL mode */}
           {mode.includes("TL") && soloSPs.length > 0 && (
