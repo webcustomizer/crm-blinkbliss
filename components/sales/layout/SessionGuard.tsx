@@ -6,9 +6,10 @@ import { supabase } from "@/lib/supabase";
 
 interface SessionGuardProps {
   userId: string;
+  token: string;
 }
 
-export default function SessionGuard({ userId }: SessionGuardProps) {
+export default function SessionGuard({ userId, token }: SessionGuardProps) {
   const hasLoggedOutRef = useRef(false);
 
   useEffect(() => {
@@ -50,6 +51,21 @@ export default function SessionGuard({ userId }: SessionGuardProps) {
           void forceLogout("Account deleted");
         },
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "LoginSession",
+          filter: `token=eq.${token}`,
+        },
+        (payload) => {
+          const updated = payload.new as { isExpired?: boolean };
+          if (updated?.isExpired === true) {
+            void forceLogout("Session terminated by admin");
+          }
+        },
+      )
       .subscribe((status) => {
 
       });
@@ -57,7 +73,7 @@ export default function SessionGuard({ userId }: SessionGuardProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [userId, token]);
 
   return null;
 }

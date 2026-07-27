@@ -6,9 +6,7 @@ import Topbar from "@/components/admin/Topbar";
 import { Toaster } from "@/components/ui/sonner";
 import { SidebarProvider } from "@/components/admin/sidebar-context";
 import { verifyToken } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-
-export const dynamic = "force-dynamic";
+import SessionGuard from "@/components/sales/layout/SessionGuard";
 
 export default async function AdminLayout({
   children,
@@ -28,15 +26,9 @@ export default async function AdminLayout({
 
   if (user.role !== "ADMIN") redirect("/login");
 
-  const activeSession = await prisma.loginSession.findFirst({
-    where: { token, isExpired: false },
-    select: { id: true, user: { select: { isActive: true } } },
-  });
-
-  if (!activeSession || !activeSession.user?.isActive) redirect("/api/force-logout");
-
   return (
     <SidebarProvider>
+      <SessionGuard userId={user.id} token={token} />
       {/* h-screen + overflow-hidden = the whole app shell is pinned to the
           viewport. Nothing outside <main> can ever cause a page-level
           scrollbar anymore. */}

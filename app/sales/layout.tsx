@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import SalesShell from "@/components/sales/layout/SalesShell";
 import SessionGuard from "@/components/sales/layout/SessionGuard";
 import { verifyToken, type TokenPayload } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { Toaster } from "@/components/ui/sonner";
 import BackButtonHandler from "@/components/BackButtonHandler";
 import PushNotificationSetup from "@/components/PushNotificationSetup";
@@ -12,8 +11,6 @@ import PushNotificationSetup from "@/components/PushNotificationSetup";
 interface SalesLayoutProps {
   children: ReactNode;
 }
-
-export const dynamic = "force-dynamic";
 
 export default async function SalesLayout({ children }: SalesLayoutProps) {
   const cookieStore = await cookies();
@@ -31,20 +28,10 @@ export default async function SalesLayout({ children }: SalesLayoutProps) {
   if (!user) redirect("/login");
   if (user.role !== "SALESPERSON") redirect("/login");
 
-  // Streamlined: single query replaces the previous two parallel queries.
-  // JWT is trustworthy (signed server-side) so we skip the dbUser role
-  // check — we only need to verify isActive + session not terminated.
-  const activeSession = await prisma.loginSession.findFirst({
-    where: { token, isExpired: false },
-    select: { id: true, user: { select: { isActive: true } } },
-  });
-
-  if (!activeSession || !activeSession.user?.isActive) redirect("/api/force-logout");
-
   return (
     <SalesShell user={user}>
       <PushNotificationSetup />
-      <SessionGuard userId={user.id} />
+      <SessionGuard userId={user.id} token={token!} />
       <BackButtonHandler />
       {children}
       <Toaster position="top-right" richColors />

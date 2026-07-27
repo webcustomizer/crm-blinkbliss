@@ -62,7 +62,9 @@ export default function TeamLeaderShell({ children, user }: TeamLeaderShellProps
   const handleNewNotification = useCallback(() => {
     if (
       pathname.startsWith("/team-leader/messages") ||
-      pathname.startsWith("/team-leader/group-chat")
+      pathname.startsWith("/team-leader/group-chat") ||
+      pathname.startsWith("/team-leader/leads") ||
+      pathname.startsWith("/team-leader/team-leads")
     ) {
       return;
     }

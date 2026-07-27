@@ -34,7 +34,9 @@ export default function SalesShell({ children, user }: SalesShellProps) {
   const handleNewNotification = useCallback(() => {
     if (
       pathname.startsWith("/sales/messages") ||
-      pathname.startsWith("/sales/group-chat")
+      pathname.startsWith("/sales/group-chat") ||
+      pathname.startsWith("/sales/my-leads") ||
+      pathname.startsWith("/sales/follow-ups")
     ) {
       return;
     }

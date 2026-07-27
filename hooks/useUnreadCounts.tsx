@@ -34,7 +34,7 @@ export function UnreadProvider({ children, userId }: { children: ReactNode; user
 
   useEffect(() => {
     fetchUnread();
-    intervalRef.current = setInterval(fetchUnread, 15000);
+    intervalRef.current = setInterval(fetchUnread, 120000);
 
     // Without a userId we can't scope the filters below (e.g. server-rendered
     // shell before the user is known) — fall back to the unfiltered channel

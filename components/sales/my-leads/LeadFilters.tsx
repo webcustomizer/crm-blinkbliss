@@ -26,17 +26,17 @@ const statuses = [
     label: "Called",
     value: "CALLED",
   },
-  {
-    label: "Need More Follow Up",
-    value: "NEED_MORE_FOLLOW_UP",
+    {
+    label: "Seat Reserved",
+    value: "SEAT_RESERVED",
   },
-  {
+   {
     label: "Training Attended",
     value: "TRAINING_ATTENDED",
   },
   {
-    label: "Seat Reserved",
-    value: "SEAT_RESERVED",
+    label: "Need More Follow Up",
+    value: "NEED_MORE_FOLLOW_UP",
   },
   {
     label: "Joined",
