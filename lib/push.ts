@@ -20,6 +20,10 @@ function initFirebaseAdmin(): boolean {
   }
 }
 
+function isExpoPushToken(token: string): boolean {
+  return token.startsWith("ExponentPushToken[") || token.startsWith("ExpoPushToken[");
+}
+
 interface SendPushParams {
   userId: string;
   title: string;
@@ -27,36 +31,93 @@ interface SendPushParams {
   link?: string;
 }
 
+async function sendExpoPush(messages: { to: string; title: string; body: string; data: Record<string, string>; channelId: string }[]) {
+  const chunks: typeof messages[] = [];
+  for (let i = 0; i < messages.length; i += 100) {
+    chunks.push(messages.slice(i, i + 100));
+  }
+
+  const invalidTokens: string[] = [];
+
+  for (const chunk of chunks) {
+    try {
+      const res = await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(chunk),
+      });
+
+      const data = await res.json() as { data?: { status: string; message?: string; details?: { error?: string } }[] };
+
+      if (Array.isArray(data.data)) {
+        data.data.forEach((result, idx) => {
+          if (result.status === "error" && result.details?.error === "DeviceNotRegistered") {
+            invalidTokens.push(chunk[idx].to);
+          }
+        });
+      }
+    } catch (err) {
+      console.error("Expo push batch failed:", err instanceof Error ? err.message : err);
+    }
+  }
+
+  return invalidTokens;
+}
+
 export async function sendPushNotification({ userId, title, message, link }: SendPushParams) {
   try {
-    if (!initFirebaseAdmin()) return;
-
     const tokens = await prisma.pushToken.findMany({
       where: { userId },
       select: { id: true, token: true },
     });
     if (tokens.length === 0) return;
 
-    const results = await Promise.allSettled(
-      tokens.map((item) =>
-        getMessaging().send({
-          token: item.token,
-          notification: { title, body: message },
-          data: link ? { link } : {},
-          android: {
-            priority: "high",
-            notification: { channelId: "default", icon: "ic_notification", color: "#D4AF37" },
-          },
-        }),
-      ),
-    );
+    const expoTokens = tokens.filter((t) => isExpoPushToken(t.token));
+    const fcmTokens = tokens.filter((t) => !isExpoPushToken(t.token));
 
     const invalidIds: string[] = [];
-    results.forEach((r, i) => {
-      if (r.status === "rejected" && (r.reason?.code === "messaging/registration-token-not-registered" || r.reason?.code === "messaging/invalid-registration-token")) {
-        invalidIds.push(tokens[i].id);
-      }
-    });
+
+    // Send to Expo push tokens
+    if (expoTokens.length > 0) {
+      const linkData: Record<string, string> = link ? { link } : {};
+      const expoMessages: { to: string; title: string; body: string; data: Record<string, string>; channelId: string }[] = expoTokens.map((t) => ({
+        to: t.token,
+        title,
+        body: message,
+        data: linkData,
+        channelId: "default",
+      }));
+
+      const invalidExpoTokens = await sendExpoPush(expoMessages);
+      invalidExpoTokens.forEach((token) => {
+        const match = expoTokens.find((t) => t.token === token);
+        if (match) invalidIds.push(match.id);
+      });
+    }
+
+    // Send to FCM tokens (Capacitor web app)
+    if (fcmTokens.length > 0 && initFirebaseAdmin()) {
+      const results = await Promise.allSettled(
+        fcmTokens.map((item) =>
+          getMessaging().send({
+            token: item.token,
+            notification: { title, body: message },
+            data: link ? { link } : {},
+            android: {
+              priority: "high",
+              notification: { channelId: "default", icon: "ic_notification", color: "#D4AF37" },
+            },
+          }),
+        ),
+      );
+
+      results.forEach((r, i) => {
+        if (r.status === "rejected" && (r.reason?.code === "messaging/registration-token-not-registered" || r.reason?.code === "messaging/invalid-registration-token")) {
+          invalidIds.push(fcmTokens[i].id);
+        }
+      });
+    }
+
     if (invalidIds.length > 0) {
       await prisma.pushToken.deleteMany({ where: { id: { in: invalidIds } } });
     }

@@ -14,6 +14,7 @@
 /coverage
 /scripts
 /android
+/mobile
 # next.js
 /.next/
 /out/
