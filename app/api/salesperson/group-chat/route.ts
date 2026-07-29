@@ -65,7 +65,6 @@ export async function GET(req: NextRequest) {
         chatType,
         deleted: false,
         ...(chatType === "TL_TEAM" && currentUser?.teamLeaderId ? { teamLeaderId: currentUser.teamLeaderId } : {}),
-        ...(currentUser && { createdAt: { gte: currentUser.createdAt } }),
       },
       orderBy: { createdAt: "desc" },
       take: PAGE_SIZE,

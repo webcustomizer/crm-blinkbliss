@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     ).map((u) => u.id);
 
     const { searchParams } = new URL(req.url);
-    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const cursor = searchParams.get("cursor") || null;
     const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit")) || 10));
     const search = searchParams.get("search") || "";
     const filter = searchParams.get("filter") || "ALL";
@@ -72,9 +72,10 @@ export async function GET(req: NextRequest) {
       prisma.lead.count({ where }),
       prisma.lead.findMany({
         where,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: [{ isPriority: "desc" }, { createdAt: "desc" }],
+        orderBy: [{ isPriority: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+        take: limit + 1,
+        skip: cursor ? 1 : 0,
+        ...(cursor ? { cursor: { id: cursor } } : {}),
         select: {
           id: true, name: true, phone: true, email: true, city: true,
           source: true, status: true, followUpCount: true, nextFollowUp: true,
@@ -84,10 +85,16 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
+    const hasMore = leads.length > limit;
+    if (hasMore) leads.pop();
+    const nextCursor = leads.length > 0 ? leads[leads.length - 1].id : null;
+
     return NextResponse.json({
       success: true,
       data: leads,
-      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+      total,
+      nextCursor,
+      hasMore,
     });
   } catch {
     return NextResponse.json({ success: false, message: "Failed." }, { status: 500 });

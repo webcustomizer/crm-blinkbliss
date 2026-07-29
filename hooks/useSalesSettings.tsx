@@ -18,6 +18,8 @@ export function SalesSettingsProvider({ children }: { children: ReactNode }) {
   const [navLoaded, setNavLoaded] = useState(false);
   const hasTeamLeaderRef = useRef(false);
 
+  const settingsRef = useRef({ messageEnabled: true, tlMessageEnabled: true, groupChatEnabled: true, tlGroupChatEnabled: true, hasTeamLeader: false });
+
   const buildNav = useCallback((payload: { messageEnabled?: boolean; tlMessageEnabled?: boolean; groupChatEnabled?: boolean; tlGroupChatEnabled?: boolean; hasTeamLeader?: boolean }) => {
     const base: NavItem[] = [
       { title: "Dashboard", href: "/sales/dashboard", icon: LayoutDashboard },
@@ -38,13 +40,14 @@ export function SalesSettingsProvider({ children }: { children: ReactNode }) {
         const res = await fetch("/api/salesperson/settings", { cache: "no-store" });
         const json = await res.json();
         hasTeamLeaderRef.current = !!json.data?.hasTeamLeader;
-        setNavItems(buildNav({
-          messageEnabled: json.data?.messageEnabled,
-          tlMessageEnabled: json.data?.tlMessageEnabled,
-          groupChatEnabled: json.data?.groupChatEnabled,
-          tlGroupChatEnabled: json.data?.tlGroupChatEnabled,
-          hasTeamLeader: json.data?.hasTeamLeader,
-        }));
+        settingsRef.current = {
+          messageEnabled: json.data?.messageEnabled ?? true,
+          tlMessageEnabled: json.data?.tlMessageEnabled ?? true,
+          groupChatEnabled: json.data?.groupChatEnabled ?? true,
+          tlGroupChatEnabled: json.data?.tlGroupChatEnabled ?? true,
+          hasTeamLeader: json.data?.hasTeamLeader ?? false,
+        };
+        setNavItems(buildNav(settingsRef.current));
       } catch {
         setNavItems(buildNav({}));
       } finally {
@@ -53,7 +56,8 @@ export function SalesSettingsProvider({ children }: { children: ReactNode }) {
     })();
 
     const unsub = subscribeToSettingsChanges((payload) => {
-      setNavItems(buildNav({ ...payload, hasTeamLeader: hasTeamLeaderRef.current }));
+      settingsRef.current = { ...settingsRef.current, ...payload, hasTeamLeader: hasTeamLeaderRef.current };
+      setNavItems(buildNav(settingsRef.current));
     });
     return () => unsub();
   }, [buildNav]);

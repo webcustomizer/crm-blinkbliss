@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/require-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -9,17 +9,23 @@ export async function GET(req: NextRequest) {
   if ("error" in auth) return auth.error;
 
   try {
-    const [messages, announcements] = await Promise.all([
+    const [messages, groupUnread, announcements] = await Promise.all([
       prisma.message.count({ where: { receiverId: auth.user.id, isRead: false } }),
-      prisma.announcementRead.count({ where: { userId: auth.user.id } }),
+      prisma.groupMessage.count({
+        where: {
+          deleted: false,
+          senderId: { not: auth.user.id },
+          chatType: "TL_TEAM",
+          teamLeaderId: auth.user.id,
+          groupReads: { none: { userId: auth.user.id } },
+        },
+      }),
+      prisma.announcement.count({ where: { reads: { none: { userId: auth.user.id } } } }),
     ]);
-
-    const totalAnnouncements = await prisma.announcement.count();
-    const unreadAnnouncements = Math.max(0, totalAnnouncements - announcements);
 
     return NextResponse.json({
       success: true,
-      data: { messages, groupChat: 0, announcements: unreadAnnouncements },
+      data: { messages, groupChat: groupUnread, announcements },
     });
   } catch {
     return NextResponse.json({ success: false, message: "Failed." }, { status: 500 });

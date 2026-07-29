@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const { searchParams } = new URL(req.url);
-    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const cursor = searchParams.get("cursor") || null;
     const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit")) || 10));
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || searchParams.get("filter") || "ALL";
@@ -32,42 +32,44 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    const [total, leads] = await Promise.all([
-      prisma.lead.count({ where }),
-      prisma.lead.findMany({
-        where,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: [
-          { isPriority: "desc" },
-          { completion: "asc" },
-          { createdAt: "desc" },
-        ],
-        select: {
-          id: true,
-          name: true,
-          phone: true,
-          email: true,
-          city: true,
-          age: true,
-          purpose: true,
-          status: true,
-          completion: true,
-          isPriority: true,
-          remarks: true,
-          nextFollowUp: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
-    ]);
+    const leads = await prisma.lead.findMany({
+      where,
+      orderBy: [
+        { isPriority: "desc" },
+        { completion: "asc" },
+        { createdAt: "desc" },
+        { id: "desc" },
+      ],
+      take: limit + 1,
+      skip: cursor ? 1 : 0,
+      ...(cursor ? { cursor: { id: cursor } } : {}),
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        email: true,
+        city: true,
+        age: true,
+        purpose: true,
+        status: true,
+        completion: true,
+        isPriority: true,
+        remarks: true,
+        nextFollowUp: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    const hasMore = leads.length > limit;
+    if (hasMore) leads.pop();
+    const nextCursor = leads.length > 0 ? leads[leads.length - 1].id : null;
 
     return NextResponse.json({
       success: true,
       leads,
-      total,
-      page,
-      totalPages: Math.max(1, Math.ceil(total / limit)),
+      nextCursor,
+      hasMore,
     });
   } catch {
     return NextResponse.json({ success: false, message: "Failed." }, { status: 500 });

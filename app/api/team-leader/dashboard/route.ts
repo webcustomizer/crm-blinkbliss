@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
     ] = await Promise.all([
       hasTeam ? prisma.lead.count({ where: teamAllWhere }) : 0,
       hasTeam ? prisma.lead.groupBy({ by: ["status"], where: teamAllWhere, _count: { id: true } }) : [],
-      hasTeam ? prisma.lead.count({ where: { ...teamAllWhere, createdAt: { gte: todayStart, lte: todayEnd } } }) : 0,
+      hasTeam ? prisma.lead.count({ where: { isDeleted: false, createdAt: { gte: todayStart, lte: todayEnd }, OR: [{ assignedToId: { in: teamMemberIds } }, { assignedToId: null }] } }) : 0,
       hasTeam ? prisma.lead.count({ where: { ...teamAllWhere, status: "JOINED", updatedAt: { gte: todayStart, lte: todayEnd } } }) : 0,
       hasTeam ? prisma.followUp.count({ where: { userId: { in: teamMemberIds }, createdAt: { gte: todayStart, lte: todayEnd } } }) : 0,
       hasTeam ? prisma.lead.count({ where: { ...teamAllWhere, status: { notIn: ["JOINED", "DEAD"] }, nextFollowUp: { lt: todayStart } } }) : 0,

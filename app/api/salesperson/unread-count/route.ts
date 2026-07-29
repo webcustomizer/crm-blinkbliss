@@ -36,10 +36,6 @@ export async function GET(req: NextRequest) {
     groupReads: { none: { userId } },
   };
 
-  if (user?.createdAt) {
-    groupWhere.createdAt = { gte: user.createdAt };
-  }
-
   if (isTL) {
     groupWhere.chatType = "TL_TEAM";
     groupWhere.teamLeaderId = userId;

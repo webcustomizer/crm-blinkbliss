@@ -67,6 +67,7 @@ export default function SalesGroupChatPanel({
   // Guard against overlapping fetchMessages calls.
   const isFetchingRef = useRef(false);
   const initialLoadDoneRef = useRef(false);
+  const hasTeamLeaderRef = useRef(false);
 
   // Distinguish "just sent/received a message → autoscroll" from
   // "loaded older messages → do NOT autoscroll, preserve position"
@@ -250,7 +251,6 @@ export default function SalesGroupChatPanel({
   }, [messages, currentUserId]);
 
   // Realtime: listen for group chat toggle changes from admin
-  const hasTeamLeaderRef = useRef(false);
   useEffect(() => {
     const unsub = subscribeToSettingsChanges((payload) => {
       if (hasTeamLeaderRef.current) {
