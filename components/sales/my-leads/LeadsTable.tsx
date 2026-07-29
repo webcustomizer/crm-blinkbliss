@@ -21,11 +21,10 @@ interface Lead {
 interface LeadsTableProps {
   leads: Lead[];
   onView: (lead: Lead) => void;
-  total: number;
-  totalPages: number;
-  currentPage: number;
-  onPageChange: (page: number) => void;
-  pageSize: number;
+  hasMore: boolean;
+  hasPrevious: boolean;
+  onNext: () => void;
+  onPrev: () => void;
 }
 
 function PriorityBadge() {
@@ -39,18 +38,11 @@ function PriorityBadge() {
 export default function LeadsTable({
   leads,
   onView,
-  total,
-  totalPages,
-  currentPage,
-  onPageChange,
-  pageSize,
+  hasMore,
+  hasPrevious,
+  onNext,
+  onPrev,
 }: LeadsTableProps) {
-  const startIndex = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const endIndex = Math.min(currentPage * pageSize, total);
-
-  function goToPage(page: number) {
-    onPageChange(Math.min(Math.max(page, 1), totalPages));
-  }
 
   return (
     <div className="space-y-4">
@@ -260,7 +252,7 @@ export default function LeadsTable({
       </div>
 
       {/* Pagination controls */}
-      {total > 0 && (
+      {leads.length > 0 && (
         <div
           className="
           flex
@@ -279,15 +271,13 @@ export default function LeadsTable({
           "
         >
           <p className="text-xs text-zinc-400">
-            Showing <span className="text-white">{startIndex}</span>-
-            <span className="text-white">{endIndex}</span> of{" "}
-            <span className="text-white">{total}</span> leads
+            Showing <span className="text-white">{leads.length}</span> lead{leads.length !== 1 ? "s" : ""}
           </p>
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1}
+              onClick={onPrev}
+              disabled={!hasPrevious}
               className="
               flex
               h-9
@@ -311,14 +301,9 @@ export default function LeadsTable({
               <ChevronLeft size={16} />
             </button>
 
-            <span className="min-w-[80px] text-center text-xs text-zinc-400">
-              Page <span className="text-white">{currentPage}</span> of{" "}
-              <span className="text-white">{totalPages}</span>
-            </span>
-
             <button
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
+              onClick={onNext}
+              disabled={!hasMore}
               className="
               flex
               h-9

@@ -1,12 +1,9 @@
-// app/api/salesperson/leads/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/require-auth";
 
 export const dynamic = "force-dynamic";
-
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,128 +16,67 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
 
     const search = searchParams.get("search") || "";
-
     const status = searchParams.get("status") || "ALL";
     const completion = searchParams.get("completion") || "ALL";
-
-    // Pagination params — default page 1, 10 per page (LeadsTable ka default pageSize)
-    const page = Math.max(1, Number(searchParams.get("page")) || 1);
-
+    const cursor = searchParams.get("cursor") || null;
     const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit")) || 10));
 
     const where = {
-  isDeleted: false,
-  assignedToId: salespersonId,
+      isDeleted: false,
+      assignedToId: salespersonId,
 
-  ...(status !== "ALL" && {
-    status: status as any,
-  }),
+      ...(status !== "ALL" && { status: status as any }),
+      ...(completion !== "ALL" && { completion: completion as any }),
 
-  ...(completion !== "ALL" && {
-    completion: completion as any,
-  }),
-
-  ...(search && {
-    OR: [
-      {
-        name: {
-          contains: search,
-          mode: "insensitive" as const,
-        },
-      },
-
-      {
-        phone: {
-          contains: search,
-        },
-      },
-
-      {
-        city: {
-          contains: search,
-          mode: "insensitive" as const,
-        },
-      },
-    ],
-  }),
-};
-
-    // Total count aur current page ka data dono ek sath (parallel) fetch karte hain
-    const [total, leads] = await Promise.all([
-      prisma.lead.count({ where }),
-
-      prisma.lead.findMany({
-        where,
-
-        orderBy: [
-  {
-    isPriority: "desc",
-  },
-  {
-    completion: "asc",
-  },
-  {
-    createdAt: "desc",
-  },
-],
-
-        skip: (page - 1) * limit,
-
-        take: limit,
-
-        select: {
-          id: true,
-
-          name: true,
-
-          phone: true,
-
-          email: true,
-
-          city: true,
-
-          age: true,
-
-          purpose: true,
-
-          status: true,
-
-          completion: true,
-
-          isPriority: true,
-
-          remarks: true,
-
-          nextFollowUp: true,
-
-          createdAt: true,
-
-          updatedAt: true,
-        },
+      ...(search && {
+        OR: [
+          { name: { contains: search, mode: "insensitive" as const } },
+          { phone: { contains: search } },
+          { city: { contains: search, mode: "insensitive" as const } },
+        ],
       }),
-    ]);
+    };
+
+    const leads = await prisma.lead.findMany({
+      where,
+      orderBy: [{ isPriority: "desc" }, { completion: "asc" }, { createdAt: "desc" }, { id: "desc" }],
+      take: limit + 1,
+      skip: cursor ? 1 : 0,
+      ...(cursor ? { cursor: { id: cursor } } : {}),
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        email: true,
+        city: true,
+        age: true,
+        purpose: true,
+        status: true,
+        completion: true,
+        isPriority: true,
+        remarks: true,
+        nextFollowUp: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    const hasMore = leads.length > limit;
+    if (hasMore) leads.pop();
+    const nextCursor = leads.length > 0 ? leads[leads.length - 1].id : null;
 
     return NextResponse.json({
       success: true,
       leads,
-
-      total,
-
-      page,
-
-      totalPages: Math.max(1, Math.ceil(total / limit)),
+      nextCursor,
+      hasMore,
     });
   } catch (error) {
     console.error("Salesperson Leads Error:", error);
 
     return NextResponse.json(
-      {
-        message: "Something went wrong",
-      },
-
-      {
-        status: 500,
-      },
+      { message: "Something went wrong" },
+      { status: 500 },
     );
   }
 }

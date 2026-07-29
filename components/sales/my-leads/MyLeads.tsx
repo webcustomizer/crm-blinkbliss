@@ -41,12 +41,12 @@ export default function MyLeads({ userId }: { userId?: string }) {
 
   const [leads, setLeads] = useState<Lead[]>([]);
 
-  const [total, setTotal] = useState(0);
-
-  const [totalPages, setTotalPages] = useState(1);
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const currentPageRef = useRef(1);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [prevCursors, setPrevCursors] = useState<(string | null)[]>([]);
+  const cursorRef = useRef<string | null>(null);
+  const prevCursorsRef = useRef<(string | null)[]>([]);
 
   // Sirf first page load ke liye
   const [loading, setLoading] = useState(true);
@@ -69,8 +69,11 @@ const completionRef = useRef("");
   // Keep refs in sync with state so realtime callback always reads the
   // latest values (avoids stale closure capture).
   useEffect(() => {
-    currentPageRef.current = currentPage;
-  }, [currentPage]);
+    cursorRef.current = cursor;
+  }, [cursor]);
+  useEffect(() => {
+    prevCursorsRef.current = prevCursors;
+  }, [prevCursors]);
   useEffect(() => {
     searchRef.current = search;
   }, [search]);
@@ -78,10 +81,10 @@ const completionRef = useRef("");
     statusRef.current = status;
   }, [status]);
   useEffect(() => {
-  completionRef.current = completion;
-}, [completion]);
+    completionRef.current = completion;
+  }, [completion]);
 
-  async function getLeads(showLoader = false, page = currentPage) {
+  async function getLeads(showLoader = false, cursorVal: string | null = cursor) {
     try {
       if (showLoader) {
         setLoading(true);
@@ -98,10 +101,12 @@ const completionRef = useRef("");
       }
 
       if (completionRef.current) {
-  params.append("completion", completionRef.current);
-}
+        params.append("completion", completionRef.current);
+      }
 
-      params.append("page", String(page));
+      if (cursorVal) {
+        params.append("cursor", cursorVal);
+      }
       params.append("limit", String(PAGE_SIZE));
 
       const res = await fetch(`/api/salesperson/leads?${params.toString()}`, {
@@ -112,8 +117,9 @@ const completionRef = useRef("");
 
       if (res.ok) {
         setLeads(data.leads || []);
-        setTotal(data.total || 0);
-        setTotalPages(data.totalPages || 1);
+        setNextCursor(data.nextCursor);
+        setHasMore(data.hasMore);
+        setCursor(cursorVal);
       }
     } catch (error) {
 
@@ -125,11 +131,8 @@ const completionRef = useRef("");
   }
 
   useEffect(() => {
-    // Defer initial load to avoid synchronous setState within effect
-    const t = setTimeout(() => void getLeads(true, 1), 0);
+    const t = setTimeout(() => void getLeads(true, null), 0);
 
-    // Defer realtime subscription so the WebSocket doesn't open during
-    // initial render/TBT window — improves mobile perf + bfcache
     let channel: ReturnType<typeof supabase.channel> | null = null;
     const idle = setTimeout(() => {
       channel = supabase
@@ -143,8 +146,7 @@ const completionRef = useRef("");
             ...(userId ? { filter: `assignedToId=eq.${userId}` } : {}),
           },
           () => {
-
-            void getLeads(false, currentPageRef.current);
+            void getLeads(false, cursorRef.current);
           },
         )
         .subscribe((status) => {
@@ -160,11 +162,13 @@ const completionRef = useRef("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  // Search/status change hone par page 1 par reset karke fetch karein
+  // Search/status change hone par reset karke fetch karein
   useEffect(() => {
     const timer = setTimeout(() => {
-      setCurrentPage(1);
-      void getLeads(false, 1);
+      setPrevCursors([]);
+      setCursor(null);
+      setNextCursor(null);
+      void getLeads(false, null);
     }, 400);
 
     return () => clearTimeout(timer);
@@ -187,9 +191,17 @@ const completionRef = useRef("");
     return () => clearTimeout(timer);
   }, [searchParams]);
 
-  function handlePageChange(page: number) {
-    setCurrentPage(page);
-    void getLeads(false, page);
+  function handleNextPage() {
+    if (!nextCursor) return;
+    setPrevCursors((prev) => [...prev, cursor]);
+    void getLeads(false, nextCursor);
+  }
+
+  function handlePrevPage() {
+    if (prevCursors.length === 0) return;
+    const prevCursor = prevCursors[prevCursors.length - 1];
+    setPrevCursors((prev) => prev.slice(0, -1));
+    void getLeads(false, prevCursor);
   }
 
   function openLead(lead: Lead) {
@@ -273,15 +285,13 @@ const completionRef = useRef("");
   setCompletion={setCompletion}
 />
 
-      {/* Responsive: table on desktop, cards on mobile — server-side pagination */}
       <LeadsTable
         leads={leads}
         onView={openLead}
-        total={total}
-        totalPages={totalPages}
-        currentPage={currentPage}
-        onPageChange={handlePageChange}
-        pageSize={PAGE_SIZE}
+        hasMore={hasMore}
+        hasPrevious={prevCursors.length > 0}
+        onNext={handleNextPage}
+        onPrev={handlePrevPage}
       />
 
       {selectedLeadId && (

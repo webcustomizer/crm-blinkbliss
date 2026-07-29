@@ -157,6 +157,7 @@ model Lead {
   @@index([isDeleted])
   @@index([mergedIntoId])
   @@index([isPriority])
+  @@index([assignedToId, nextFollowUp])
 }
 
 model FollowUp {
