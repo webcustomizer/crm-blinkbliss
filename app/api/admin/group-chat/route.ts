@@ -114,6 +114,9 @@ export async function GET(req: NextRequest) {
         sender: { select: { id: true, name: true, role: true } },
         lead: { select: { id: true, name: true, phone: true } },
         groupReads: { select: { userId: true, readAt: true } },
+        replyTo: {
+          select: { id: true, content: true, senderId: true, fileUrl: true, fileName: true, sender: { select: { id: true, name: true } } },
+        },
       },
     });
 
@@ -163,7 +166,7 @@ export async function POST(req: NextRequest) {
   if ("error" in auth) return auth.error;
 
   try {
-    const { content, leadId, fileUrl, fileName, fileSize, chatType: bodyChatType, teamLeaderId: bodyTeamLeaderId } = await req.json();
+    const { content, leadId, fileUrl, fileName, fileSize, replyToId, chatType: bodyChatType, teamLeaderId: bodyTeamLeaderId } = await req.json();
     if (!content?.trim()) {
       return NextResponse.json(
         { success: false, message: "Content is required." },
@@ -192,10 +195,14 @@ export async function POST(req: NextRequest) {
         fileUrl: fileUrl || null,
         fileName: fileName || null,
         fileSize: fileSize || null,
+        replyToId: replyToId || null,
       },
       include: {
         sender: { select: { id: true, name: true, role: true } },
         lead: { select: { id: true, name: true, phone: true } },
+        replyTo: {
+          select: { id: true, content: true, senderId: true, fileUrl: true, fileName: true, sender: { select: { id: true, name: true } } },
+        },
       },
     });
 

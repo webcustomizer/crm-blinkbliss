@@ -1,0 +1,1 @@
+ALTER TABLE "GroupMessage" ADD COLUMN IF NOT EXISTS "replyToId" TEXT;

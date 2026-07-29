@@ -327,6 +327,7 @@ model GroupMessage {
   fileUrl String?
   fileName String?
   fileSize Int?
+  replyToId String?
   deleted Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -334,6 +335,8 @@ model GroupMessage {
   sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
   lead Lead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
   teamLeader User? @relation("TeamLeaderGroupMessages", fields: [teamLeaderId], references: [id], onDelete: SetNull)
+  replyTo GroupMessage? @relation("GroupMessageReplies", fields: [replyToId], references: [id])
+  replies GroupMessage[] @relation("GroupMessageReplies")
   groupReads GroupReadReceipt[]
 
   @@index([createdAt])

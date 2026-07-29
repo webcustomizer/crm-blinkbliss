@@ -236,7 +236,7 @@ export default function TeamLeaderGroupChatPanel({
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     const tempMsg: GroupChatMessage & { _sending?: boolean } = {
       id: tempId, content, senderId: currentUserId, leadId,
-      fileUrl: null, fileName: null, fileSize: null,
+      fileUrl: null, fileName: null, fileSize: null, replyToId: null,
       createdAt: new Date().toISOString(), _sending: true,
       sender: users.find((u) => u.id === currentUserId),
       lead: mentionedLead ? { id: mentionedLead.id, name: mentionedLead.name, phone: mentionedLead.phone } : undefined,
@@ -284,7 +284,7 @@ export default function TeamLeaderGroupChatPanel({
     const tempMsg: GroupChatMessage & { _sending?: boolean } = {
       id: tempId, content: caption || file.name, senderId: currentUserId,
       leadId: mentionedLead?.id || null, fileUrl: blobUrl, fileName: file.name,
-      fileSize: file.size, createdAt: new Date().toISOString(), _sending: true,
+      fileSize: file.size, replyToId: null, createdAt: new Date().toISOString(), _sending: true,
       sender: users.find((u) => u.id === currentUserId),
     };
     shouldAutoScrollRef.current = true;

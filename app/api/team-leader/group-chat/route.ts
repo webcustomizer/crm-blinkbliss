@@ -66,6 +66,9 @@ export async function GET(req: NextRequest) {
         sender: { select: { id: true, name: true, role: true } },
         lead: { select: { id: true, name: true, phone: true } },
         groupReads: { select: { userId: true, readAt: true } },
+        replyTo: {
+          select: { id: true, content: true, senderId: true, fileUrl: true, fileName: true, sender: { select: { id: true, name: true } } },
+        },
       },
     });
 
@@ -108,7 +111,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Team group chat is disabled." }, { status: 403 });
     }
 
-    const { content, leadId, fileUrl, fileName, fileSize } = await req.json();
+    const { content, leadId, fileUrl, fileName, fileSize, replyToId } = await req.json();
     if (!content?.trim()) {
       return NextResponse.json({ success: false, message: "Content is required." }, { status: 400 });
     }
@@ -123,10 +126,14 @@ export async function POST(req: NextRequest) {
         fileUrl: fileUrl || null,
         fileName: fileName || null,
         fileSize: fileSize || null,
+        replyToId: replyToId || null,
       },
       include: {
         sender: { select: { id: true, name: true, role: true } },
         lead: { select: { id: true, name: true, phone: true } },
+        replyTo: {
+          select: { id: true, content: true, senderId: true, fileUrl: true, fileName: true, sender: { select: { id: true, name: true } } },
+        },
       },
     });
 

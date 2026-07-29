@@ -110,6 +110,8 @@ export interface GroupChatMessage {
   fileUrl: string | null;
   fileName: string | null;
   fileSize: number | null;
+  replyToId: string | null;
+  replyTo?: { id: string; content: string; senderId: string; sender?: { id: string; name: string }; fileUrl?: string | null; fileName?: string | null } | null;
   chatType?: string;
   teamLeaderId?: string | null;
   createdAt: string;
