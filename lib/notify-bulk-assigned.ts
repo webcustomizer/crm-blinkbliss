@@ -17,18 +17,30 @@ export async function notifyBulkAssigned({
   try {
     console.log(`📋 notifyBulkAssigned called: userId=${userId}, leadCount=${leadCount}, assignedByName=${assignedByName}`);
 
+    const assignee = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, teamLeaderId: true, name: true },
+    });
+    if (!assignee) {
+      console.error(`❌ User ${userId} not found for bulk notification`);
+      return;
+    }
+
+    const isSalesperson = assignee.role === 'SALESPERSON';
+    const link = isSalesperson ? '/sales/my-leads' : `/team-leader/team/${userId}`;
+
     const prefix = assignedByName
       ? `${leadCount} leads have been assigned to you by ${assignedByName}`
       : `${leadCount} leads have been assigned to you`;
     const message = `${prefix}. Check them out!`;
 
-    console.log(`📋 Creating notification for userId=${userId}`);
+    console.log(`📋 Creating notification for userId=${userId}, role=${assignee.role}, link=${link}`);
     const notification = await prisma.notification.create({
       data: {
         title: "📋 Leads Assigned",
         message,
         userId,
-        link: `/sales/my-leads`,
+        link,
       },
     });
     console.log(`📋 Notification created: id=${notification.id}`);
@@ -38,13 +50,9 @@ export async function notifyBulkAssigned({
       userId,
       title: "📋 Leads Assigned",
       message,
-      link: `/sales/my-leads`,
+      link,
     });
 
-    const assignee = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { teamLeaderId: true, name: true },
-    });
     console.log(`📋 Assignee: teamLeaderId=${assignee?.teamLeaderId}, assignedById=${assignedById}`);
     if (assignee?.teamLeaderId && assignedById !== assignee.teamLeaderId) {
       const tlMessage = `${assignee.name || "A team member"} received ${leadCount} leads${assignedByName ? ` from ${assignedByName}` : ""}`;
