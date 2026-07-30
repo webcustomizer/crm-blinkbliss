@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
     }
 
     // For overdue and upcoming, use individual counts (small, fast queries)
-    const [overdueCount, upcomingCount, overdueLeadDetails] = await Promise.all([
+    const [overdueCount, upcomingCount] = await Promise.all([
       prisma.lead.count({
         where: {
           isDeleted: false,
@@ -106,16 +106,6 @@ export async function GET(req: NextRequest) {
           status: { notIn: ["JOINED", "DEAD"] },
           nextFollowUp: { gt: todayEnd, lte: twoDaysLater },
         },
-      }),
-      prisma.lead.findMany({
-        where: {
-          isDeleted: false,
-          assignedToId: salespersonId,
-          status: { notIn: ["JOINED", "DEAD"] },
-          nextFollowUp: { lt: todayStart },
-        },
-        select: { id: true, name: true, phone: true, status: true, remarks: true, nextFollowUp: true },
-        orderBy: { nextFollowUp: "asc" },
       }),
     ]);
 
@@ -138,7 +128,6 @@ export async function GET(req: NextRequest) {
         conversionRate,
       },
       followUps: followUpLeads,
-      overdueFollowUpDetails: overdueLeadDetails,
       activities,
     });
   } catch (error) {

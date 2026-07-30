@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     const selfId = auth.user.id;
     const selfWhere = { isDeleted: false, assignedToId: selfId };
 
-    const [selfStatusGroups, selfFollowUpLeads, selfOverdueCount, selfUpcomingCount, selfOverdueLeads] = await Promise.all([
+    const [selfStatusGroups, selfFollowUpLeads, selfOverdueCount, selfUpcomingCount] = await Promise.all([
       prisma.lead.groupBy({ by: ["status"], where: selfWhere, _count: { id: true } }),
       prisma.lead.findMany({
         where: { ...selfWhere, status: { notIn: ["JOINED", "DEAD"] }, nextFollowUp: { gte: todayStart, lte: todayEnd } },
@@ -33,11 +33,6 @@ export async function GET(req: NextRequest) {
       }),
       prisma.lead.count({ where: { ...selfWhere, status: { notIn: ["JOINED", "DEAD"] }, nextFollowUp: { lt: todayStart } } }),
       prisma.lead.count({ where: { ...selfWhere, status: { notIn: ["JOINED", "DEAD"] }, nextFollowUp: { gt: todayEnd, lte: twoDaysLater } } }),
-      prisma.lead.findMany({
-        where: { ...selfWhere, status: { notIn: ["JOINED", "DEAD"] }, nextFollowUp: { lt: todayStart } },
-        select: { id: true, name: true, phone: true, status: true, nextFollowUp: true },
-        orderBy: { nextFollowUp: "asc" }, take: 100,
-      }),
     ]);
 
     const [selfRecentActivities, selfTodayNewLeads, selfTodayJoined] = await Promise.all([
@@ -67,7 +62,6 @@ export async function GET(req: NextRequest) {
       todayNewLeads: selfTodayNewLeads,
       todayJoined: selfTodayJoined,
       todayFollowUpDetails: selfFollowUpLeads,
-      overdueFollowUpDetails: selfOverdueLeads,
       recentActivities: selfRecentActivities,
     };
 
