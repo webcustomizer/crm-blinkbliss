@@ -7,25 +7,35 @@ export async function POST(req: NextRequest) {
     const auth = await requireAuth(req, ["ADMIN", "SALESPERSON", "TEAM_LEAD"]);
     if ("error" in auth) return auth.error;
 
-    const body = await req.json();
-    const { token: pushToken } = body;
+    let body: { token?: unknown };
+    try {
+      body = await req.json();
+    } catch {
+      console.error("save-push-token: invalid JSON body");
+      return NextResponse.json(
+        { message: "Invalid request body" },
+        { status: 400 },
+      );
+    }
+
+    const pushToken =
+      typeof body?.token === "string" ? body.token.trim() : null;
 
     if (!pushToken) {
+      console.warn("save-push-token: missing or empty token for user", auth.user.id);
       return NextResponse.json(
         { message: "Push token is required" },
         { status: 400 },
       );
     }
 
-    // Upsert on the unique `token` column instead of findFirst-then-create.
-    // The old check-then-act pattern raced under concurrent registration
-    // attempts (e.g. two effects firing near-simultaneously on the client)
-    // and threw an unhandled unique constraint error on `create`.
     await prisma.pushToken.upsert({
       where: { token: pushToken },
       update: { userId: auth.user.id },
       create: { userId: auth.user.id, token: pushToken },
     });
+
+    console.log("save-push-token: saved token for user", auth.user.id);
 
     return NextResponse.json({
       success: true,
