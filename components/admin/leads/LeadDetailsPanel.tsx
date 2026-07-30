@@ -30,9 +30,11 @@ export default function LeadDetailsPanel({ onUpdate }: Props) {
   const isOpen = Boolean(leadId);
 
   const close = useCallback(() => {
+    const closedLeadId = searchParams.get("leadId");
     setVisible(false);
     setTimeout(() => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("leadId") !== closedLeadId) return;
       params.delete("leadId");
       router.replace(`?${params.toString()}`, { scroll: false });
     }, 100);
