@@ -17,31 +17,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Avoid duplicate entries for the same token
-    const existing = await prisma.pushToken.findFirst({
+    // Upsert on the unique `token` column instead of findFirst-then-create.
+    // The old check-then-act pattern raced under concurrent registration
+    // attempts (e.g. two effects firing near-simultaneously on the client)
+    // and threw an unhandled unique constraint error on `create`.
+    await prisma.pushToken.upsert({
       where: { token: pushToken },
-    });
-
-    if (existing) {
-      // Token already saved — just make sure it's linked to the current user
-      if (existing.userId !== auth.user.id) {
-        await prisma.pushToken.update({
-          where: { id: existing.id },
-          data: { userId: auth.user.id },
-        });
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: "Push token already registered",
-      });
-    }
-
-    await prisma.pushToken.create({
-      data: {
-        userId: auth.user.id,
-        token: pushToken,
-      },
+      update: { userId: auth.user.id },
+      create: { userId: auth.user.id, token: pushToken },
     });
 
     return NextResponse.json({
@@ -49,6 +32,7 @@ export async function POST(req: NextRequest) {
       message: "Push token saved successfully",
     });
   } catch (error) {
+    console.error("save-push-token failed:", error);
     return NextResponse.json(
       { message: "Something went wrong" },
       { status: 500 },
