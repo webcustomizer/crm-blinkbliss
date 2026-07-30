@@ -15,11 +15,14 @@ export async function notifyBulkAssigned({
   assignedById,
 }: NotifyBulkAssignedParams) {
   try {
+    console.log(`📋 notifyBulkAssigned called: userId=${userId}, leadCount=${leadCount}, assignedByName=${assignedByName}`);
+
     const prefix = assignedByName
       ? `${leadCount} leads have been assigned to you by ${assignedByName}`
       : `${leadCount} leads have been assigned to you`;
     const message = `${prefix}. Check them out!`;
 
+    console.log(`📋 Creating notification for userId=${userId}`);
     const notification = await prisma.notification.create({
       data: {
         title: "📋 Leads Assigned",
@@ -28,7 +31,9 @@ export async function notifyBulkAssigned({
         link: `/sales/my-leads`,
       },
     });
+    console.log(`📋 Notification created: id=${notification.id}`);
 
+    console.log(`📋 Sending push to userId=${userId}`);
     await sendPushNotification({
       userId,
       title: "📋 Leads Assigned",
@@ -40,8 +45,10 @@ export async function notifyBulkAssigned({
       where: { id: userId },
       select: { teamLeaderId: true, name: true },
     });
+    console.log(`📋 Assignee: teamLeaderId=${assignee?.teamLeaderId}, assignedById=${assignedById}`);
     if (assignee?.teamLeaderId && assignedById !== assignee.teamLeaderId) {
       const tlMessage = `${assignee.name || "A team member"} received ${leadCount} leads${assignedByName ? ` from ${assignedByName}` : ""}`;
+      console.log(`📋 Creating TL notification for userId=${assignee.teamLeaderId}`);
       await prisma.notification.create({
         data: {
           title: "🔔 Team Lead Update",
@@ -50,6 +57,7 @@ export async function notifyBulkAssigned({
           link: `/team-leader/team/${userId}`,
         },
       });
+      console.log(`📋 Sending push to TL userId=${assignee.teamLeaderId}`);
       await sendPushNotification({
         userId: assignee.teamLeaderId,
         title: "🔔 Team Lead Update",

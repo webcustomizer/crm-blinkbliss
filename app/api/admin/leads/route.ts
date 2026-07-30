@@ -238,24 +238,27 @@ export async function PATCH(req: NextRequest) {
     // Only notify for leads that weren't already assigned to this person
     let newlyAssignedCount = ids.length;
 
-    await prisma.lead.updateMany({
-      where: { id: { in: ids }, isDeleted: false },
-      data: updateData,
-    });
-
-    // Send single bulk notification instead of N individual ones
+    // Check existing assignments BEFORE updating
     if (action === "assign" && value) {
       const existingLeads = await prisma.lead.findMany({
         where: { id: { in: ids }, isDeleted: false },
         select: { id: true, assignedToId: true },
       });
       newlyAssignedCount = existingLeads.filter((l) => l.assignedToId !== value).length;
+    }
 
-      if (newlyAssignedCount > 0) {
-        const adminName = auth.user.name || "Admin";
-        after(() => notifyBulkAssigned({ userId: value, leadCount: newlyAssignedCount, assignedByName: adminName }).catch((err) =>
-          console.error("❌ Admin bulk assign notification failed:", err),
-        ));
+    await prisma.lead.updateMany({
+      where: { id: { in: ids }, isDeleted: false },
+      data: updateData,
+    });
+
+    // Send single bulk notification instead of N individual ones
+    if (action === "assign" && value && newlyAssignedCount > 0) {
+      const adminName = auth.user.name || "Admin";
+      try {
+        await notifyBulkAssigned({ userId: value, leadCount: newlyAssignedCount, assignedByName: adminName });
+      } catch (err) {
+        console.error("❌ Admin bulk assign notification failed:", err);
       }
     }
 
