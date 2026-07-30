@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { tempToken, otp } = await req.json();
+    const { tempToken, otp, deviceName: bodyDeviceName, deviceType: bodyDeviceType, browser: bodyBrowser, os: bodyOs } = await req.json();
     if (!tempToken || !otp) {
       return NextResponse.json({ success: false, message: "Missing data." }, { status: 400 });
     }
@@ -66,14 +66,15 @@ export async function POST(req: NextRequest) {
     });
     const ua = req.headers.get("user-agent") || "";
     const isCapacitor = ua.includes("Capacitor");
-    const browser = isCapacitor ? "App" : ua.includes("Chrome") ? "Chrome" : ua.includes("Firefox") ? "Firefox" : ua.includes("Safari") ? "Safari" : "Unknown";
-    const os = ua.includes("Android") ? "Android" : ua.includes("iPhone") || ua.includes("iPad") ? "iOS" : ua.includes("Windows") ? "Windows" : ua.includes("Mac") ? "Mac" : ua.includes("Linux") ? "Linux" : "Unknown";
-    const deviceType = ua.includes("Mobile") ? "mobile" : "desktop";
+    const browser = bodyBrowser || (isCapacitor ? "App" : ua.includes("Chrome") ? "Chrome" : ua.includes("Firefox") ? "Firefox" : ua.includes("Safari") ? "Safari" : "Unknown");
+    const os = bodyOs || (ua.includes("Android") ? "Android" : ua.includes("iPhone") || ua.includes("iPad") ? "iOS" : ua.includes("Windows") ? "Windows" : ua.includes("Mac") ? "Mac" : ua.includes("Linux") ? "Linux" : "Unknown");
+    const deviceType = bodyDeviceType || (ua.includes("Mobile") ? "mobile" : "desktop");
+    const deviceName = bodyDeviceName || `${browser} on ${os}`;
 
     await prisma.loginSession.create({
       data: {
         userId: user.id, token,
-        deviceName: `${browser} on ${os}`,
+        deviceName,
         deviceType,
         browser,
         os,
