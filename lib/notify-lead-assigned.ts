@@ -19,7 +19,13 @@ export async function notifyLeadAssigned({
       },
     });
 
+    const assignee = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, teamLeaderId: true, name: true },
+    });
 
+    const isSalesperson = assignee?.role === 'SALESPERSON';
+    const link = isSalesperson ? `/sales/my-leads?leadId=${leadId}` : `/team-leader/dashboard`;
 
     const message = `${
       leadName || "New lead"
@@ -31,7 +37,7 @@ export async function notifyLeadAssigned({
         message,
         userId,
         leadId,
-        link: `/sales/my-leads?leadId=${leadId}`,
+        link,
       },
     });
 
@@ -41,14 +47,10 @@ export async function notifyLeadAssigned({
       userId,
       title: "🔔 New Lead Assigned",
       message,
-      link: `/sales/my-leads?leadId=${leadId}`,
+      link,
     });
 
     // Also notify the team leader if the assignee has one
-    const assignee = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { teamLeaderId: true, name: true },
-    });
     if (assignee?.teamLeaderId) {
       const tlMessage = `${assignee.name || "A team member"} received a new lead: ${leadName || "New lead"}`;
       await prisma.notification.create({

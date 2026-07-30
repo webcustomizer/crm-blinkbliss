@@ -27,7 +27,7 @@ export async function notifyBulkAssigned({
     }
 
     const isSalesperson = assignee.role === 'SALESPERSON';
-    const link = isSalesperson ? '/sales/my-leads' : `/team-leader/team/${userId}`;
+    const link = isSalesperson ? '/sales/my-leads' : '/team-leader/dashboard';
 
     const prefix = assignedByName
       ? `${leadCount} leads have been assigned to you by ${assignedByName}`
