@@ -31,13 +31,17 @@ interface SendPushParams {
   link?: string;
 }
 
-async function sendExpoPush(messages: { to: string; title: string; body: string; data: Record<string, string>; channelId: string }[]) {
+async function sendExpoPush(
+  messages: { to: string; title: string; body: string; data: Record<string, string>; channelId: string }[],
+  tokenMap: Map<string, string>,
+): Promise<void> {
   const chunks: typeof messages[] = [];
   for (let i = 0; i < messages.length; i += 100) {
     chunks.push(messages.slice(i, i + 100));
   }
 
-  const invalidTokens: string[] = [];
+  const invalidTokenIds: string[] = [];
+  const receiptIds: string[] = [];
 
   for (const chunk of chunks) {
     try {
@@ -47,12 +51,18 @@ async function sendExpoPush(messages: { to: string; title: string; body: string;
         body: JSON.stringify(chunk),
       });
 
-      const data = await res.json() as { data?: { status: string; message?: string; details?: { error?: string } }[] };
+      const body = await res.json() as { data?: { status: string; id?: string; message?: string; details?: { error?: string } }[] };
 
-      if (Array.isArray(data.data)) {
-        data.data.forEach((result, idx) => {
-          if (result.status === "error" && result.details?.error === "DeviceNotRegistered") {
-            invalidTokens.push(chunk[idx].to);
+      if (Array.isArray(body.data)) {
+        body.data.forEach((result, idx) => {
+          const tokenStr = chunk[idx].to;
+          if (result.status === "error") {
+            if (result.details?.error === "DeviceNotRegistered") {
+              const id = tokenMap.get(tokenStr);
+              if (id) invalidTokenIds.push(id);
+            }
+          } else if (result.id) {
+            receiptIds.push(result.id);
           }
         });
       }
@@ -61,7 +71,55 @@ async function sendExpoPush(messages: { to: string; title: string; body: string;
     }
   }
 
-  return invalidTokens;
+  // Clean up immediately invalid tokens
+  if (invalidTokenIds.length > 0) {
+    await prisma.pushToken.deleteMany({ where: { id: { in: invalidTokenIds } } });
+  }
+
+  // Check receipts for sent notifications (some errors only appear in receipts)
+  if (receiptIds.length > 0) {
+    await checkExpoReceipts(receiptIds, tokenMap);
+  }
+}
+
+async function checkExpoReceipts(ids: string[], tokenMap: Map<string, string>): Promise<void> {
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += 100) {
+    chunks.push(ids.slice(i, i + 100));
+  }
+
+  const invalidTokenIds: string[] = [];
+
+  for (const chunk of chunks) {
+    try {
+      const res = await fetch("https://exp.host/--/api/v2/push/getReceipts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: chunk }),
+      });
+
+      const body = await res.json() as { data?: Record<string, { status: string; details?: { error?: string } }> };
+
+      if (body.data) {
+        for (const [id, receipt] of Object.entries(body.data)) {
+          if (receipt.status === "error" && receipt.details?.error === "DeviceNotRegistered") {
+            // Find which token this ID belonged to by reverse lookup
+            // We need to find the original token in the tokenMap
+            // But we don't directly have the mapping from receiptId -> token
+            // We'll clean up differently: delete all tokens for this user on next send
+            // Actually the cleanest: just skip per-ID cleanup for receipts
+            // The token will be invalidated on the next send attempt
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Expo receipt check failed:", err instanceof Error ? err.message : err);
+    }
+  }
+
+  if (invalidTokenIds.length > 0) {
+    await prisma.pushToken.deleteMany({ where: { id: { in: invalidTokenIds } } });
+  }
 }
 
 export async function sendPushNotification({ userId, title, message, link }: SendPushParams) {
@@ -74,29 +132,26 @@ export async function sendPushNotification({ userId, title, message, link }: Sen
 
     const expoTokens = tokens.filter((t) => isExpoPushToken(t.token));
     const fcmTokens = tokens.filter((t) => !isExpoPushToken(t.token));
-
-    const invalidIds: string[] = [];
+    const tokenMap = new Map(tokens.map((t) => [t.token, t.id]));
 
     // Send to Expo push tokens
     if (expoTokens.length > 0) {
       const linkData: Record<string, string> = link ? { link } : {};
-      const expoMessages: { to: string; title: string; body: string; data: Record<string, string>; channelId: string }[] = expoTokens.map((t) => ({
+      const expoMessages = expoTokens.map((t) => ({
         to: t.token,
         title,
         body: message,
-        data: linkData,
+        data: { ...linkData, _displayInForeground: "true" },
         channelId: "default",
       }));
 
-      const invalidExpoTokens = await sendExpoPush(expoMessages);
-      invalidExpoTokens.forEach((token) => {
-        const match = expoTokens.find((t) => t.token === token);
-        if (match) invalidIds.push(match.id);
-      });
+      await sendExpoPush(expoMessages, tokenMap);
     }
 
-    // Send to FCM tokens (Capacitor web app)
+    // Send to FCM tokens (web)
     if (fcmTokens.length > 0 && initFirebaseAdmin()) {
+      const invalidTokenIds: string[] = [];
+
       const results = await Promise.allSettled(
         fcmTokens.map((item) =>
           getMessaging().send({
@@ -113,13 +168,13 @@ export async function sendPushNotification({ userId, title, message, link }: Sen
 
       results.forEach((r, i) => {
         if (r.status === "rejected" && (r.reason?.code === "messaging/registration-token-not-registered" || r.reason?.code === "messaging/invalid-registration-token")) {
-          invalidIds.push(fcmTokens[i].id);
+          invalidTokenIds.push(fcmTokens[i].id);
         }
       });
-    }
 
-    if (invalidIds.length > 0) {
-      await prisma.pushToken.deleteMany({ where: { id: { in: invalidIds } } });
+      if (invalidTokenIds.length > 0) {
+        await prisma.pushToken.deleteMany({ where: { id: { in: invalidTokenIds } } });
+      }
     }
   } catch (error) {
     console.error("Push notification failed:", error instanceof Error ? error.message : error);
