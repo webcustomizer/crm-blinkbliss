@@ -33,7 +33,6 @@ export async function sendEmailDirect({ to, subject, html }: SendEmailParams): P
       subject,
       html,
     });
-    console.log(`[EMAIL] Sent to ${to} — subject: ${subject}`);
     return true;
   } catch (error) {
     console.error("[EMAIL] Send failed:", error);

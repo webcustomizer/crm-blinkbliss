@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
-import { toast } from "sonner";
 
 export function handleAPIError(error: unknown, context: string): NextResponse {
   console.error(`[CRM Error] ${context}:`, error);
-  toast.error("Something went wrong. Please try again.");
+  if (typeof window !== "undefined") {
+    try {
+      const { toast } = require("sonner");
+      toast.error("Something went wrong. Please try again.");
+    } catch {}
+  }
   return NextResponse.json(
     { message: "Something went wrong" },
     { status: 500 },

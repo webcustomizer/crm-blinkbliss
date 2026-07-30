@@ -34,7 +34,8 @@ export async function POST(req: NextRequest) {
       metadata: { targetId, sourceId },
     });
     return NextResponse.json({ success: true, message: "Leads merged.", data: target });
-  } catch {
+  } catch (error) {
+    console.error("Lead merge failed:", error instanceof Error ? error.message : error);
     return NextResponse.json({ success: false, message: "Merge failed." }, { status: 500 });
   }
 }

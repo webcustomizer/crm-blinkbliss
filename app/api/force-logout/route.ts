@@ -21,7 +21,9 @@ async function performForceLogout(req: NextRequest, token: string | null) {
         action: ActivityAction.SESSION_EXPIRED,
         description: `${user.name} was force logged out`,
       });
-    } catch {}
+    } catch (error) {
+      console.error("Force logout error:", error instanceof Error ? error.message : error);
+    }
   }
 
   const response = NextResponse.redirect(new URL("/login", req.url));
