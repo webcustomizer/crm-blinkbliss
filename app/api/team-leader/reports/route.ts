@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/app/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
 
     const [
       statusCounts, totalLeads,
-      dailyLeadsRaw, conversionOverTime, topSources, topCities, recentActivities,
+      dailyTrendRows, conversionOverTime, topSources, topCities, recentActivities,
     ] = await Promise.all([
       prisma.lead.groupBy({
         by: ["status"],
@@ -44,15 +45,20 @@ export async function GET(req: NextRequest) {
         _count: true,
       }),
       prisma.lead.count({ where: whereBase }),
-      prisma.lead.findMany({
-        where: whereBase,
-        select: { createdAt: true },
-        orderBy: { createdAt: "asc" },
-      }),
-      prisma.statusHistory.findMany({
+      prisma.$queryRaw<{ date: Date; count: number }[]>`
+        SELECT DATE_TRUNC('day', "createdAt")::date AS date, COUNT(*)::int AS count
+        FROM "Lead"
+        WHERE "assignedToId" IN (${Prisma.join(allIds)})
+          AND "isDeleted" = false
+          AND "createdAt" >= ${from}
+          AND "createdAt" <= ${to}
+        GROUP BY DATE_TRUNC('day', "createdAt")::date
+        ORDER BY date ASC
+      `,
+      prisma.statusHistory.groupBy({
+        by: ["oldStatus", "newStatus"],
         where: { changedAt: { gte: from, lte: to }, lead: { assignedToId: { in: allIds }, isDeleted: false } },
-        select: { oldStatus: true, newStatus: true, changedAt: true },
-        orderBy: { changedAt: "asc" },
+        _count: true,
       }),
       prisma.lead.groupBy({
         by: ["source"],
@@ -83,32 +89,33 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
-    const memberPerformance = [];
-    for (const id of teamMemberIds) {
-      const memberWhere = { assignedToId: id, isDeleted: false, createdAt: { gte: from, lte: to } };
-      const [total, statusBreakdown, followups, member] = await Promise.all([
-        prisma.lead.count({ where: memberWhere }),
-        prisma.lead.groupBy({ by: ["status"], where: memberWhere, _count: true }),
-        prisma.followUp.count({ where: { userId: id, createdAt: { gte: from, lte: to } } }),
-        prisma.user.findUnique({ where: { id }, select: { name: true } }),
-      ]);
-      const statusMap: Record<string, number> = {};
-      for (const sb of statusBreakdown) statusMap[sb.status] = sb._count;
-      const joined = statusMap["JOINED"] || 0;
-      memberPerformance.push({
-        id,
-        name: member?.name || "Unknown",
-        total,
-        newLeads: statusMap["NEW"] || 0,
-        called: statusMap["CALLED"] || 0,
-        training: statusMap["TRAINING_ATTENDED"] || 0,
-        reserved: statusMap["SEAT_RESERVED"] || 0,
-        joined,
-        dead: statusMap["DEAD"] || 0,
-        followups,
-        conversionRate: total > 0 ? Math.round((joined / total) * 100) : 0,
-      });
-    }
+    const memberPerformance = await Promise.all(
+      teamMemberIds.map(async (id) => {
+        const memberWhere = { assignedToId: id, isDeleted: false, createdAt: { gte: from, lte: to } };
+        const [total, statusBreakdown, followups, member] = await Promise.all([
+          prisma.lead.count({ where: memberWhere }),
+          prisma.lead.groupBy({ by: ["status"], where: memberWhere, _count: true }),
+          prisma.followUp.count({ where: { userId: id, createdAt: { gte: from, lte: to } } }),
+          prisma.user.findUnique({ where: { id }, select: { name: true } }),
+        ]);
+        const statusMap: Record<string, number> = {};
+        for (const sb of statusBreakdown) statusMap[sb.status] = sb._count;
+        const joined = statusMap["JOINED"] || 0;
+        return {
+          id,
+          name: member?.name || "Unknown",
+          total,
+          newLeads: statusMap["NEW"] || 0,
+          called: statusMap["CALLED"] || 0,
+          training: statusMap["TRAINING_ATTENDED"] || 0,
+          reserved: statusMap["SEAT_RESERVED"] || 0,
+          joined,
+          dead: statusMap["DEAD"] || 0,
+          followups,
+          conversionRate: total > 0 ? Math.round((joined / total) * 100) : 0,
+        };
+      })
+    );
 
     const statusMap: Record<string, number> = {};
     for (const s of statusCounts) statusMap[s.status] = s._count;
@@ -117,17 +124,15 @@ export async function GET(req: NextRequest) {
     const deadCount = statusMap["DEAD"] || 0;
     const conversionRate = totalLeads > 0 ? Math.round((joinedCount / totalLeads) * 100) : 0;
 
-    const dailyCountsMap: Record<string, number> = {};
-    for (const l of dailyLeadsRaw) {
-      const day = l.createdAt.toISOString().split("T")[0];
-      dailyCountsMap[day] = (dailyCountsMap[day] || 0) + 1;
-    }
-    const dailyTrend = Object.entries(dailyCountsMap).map(([date, count]) => ({ date, count }));
+    const dailyTrend = dailyTrendRows.map((row) => ({
+      date: row.date.toISOString().split("T")[0],
+      count: row.count,
+    }));
 
     const conversionFlows: Record<string, number> = {};
     for (const h of conversionOverTime) {
       const key = `${h.oldStatus}->${h.newStatus}`;
-      conversionFlows[key] = (conversionFlows[key] || 0) + 1;
+      conversionFlows[key] = h._count;
     }
 
     return NextResponse.json({
