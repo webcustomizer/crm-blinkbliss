@@ -9,11 +9,32 @@ export async function GET(req: NextRequest) {
   if ("error" in auth) return auth.error;
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: auth.user.id },
-      select: { id: true, name: true, email: true, phone: true, role: true, isActive: true, createdAt: true },
+    const teamMemberIds = (
+      await prisma.user.findMany({ where: { teamLeaderId: auth.user.id }, select: { id: true } })
+    ).map((u) => u.id);
+    const allIds = [auth.user.id, ...teamMemberIds];
+
+    const [user, teamMembersCount, leadsCount, statusHistoriesCount] = await prisma.$transaction([
+      prisma.user.findUnique({
+        where: { id: auth.user.id },
+        select: { id: true, name: true, email: true, phone: true, role: true, isActive: true, createdAt: true },
+      }),
+      prisma.user.count({ where: { teamLeaderId: auth.user.id } }),
+      prisma.lead.count({ where: { assignedToId: { in: allIds }, isDeleted: false } }),
+      prisma.statusHistory.count({ where: { lead: { assignedToId: { in: allIds }, isDeleted: false } } }),
+    ]);
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...user,
+        _count: {
+          teamMembers: teamMembersCount,
+          leads: leadsCount,
+          statusHistories: statusHistoriesCount,
+        },
+      },
     });
-    return NextResponse.json({ success: true, data: user });
   } catch {
     return NextResponse.json({ success: false, message: "Failed." }, { status: 500 });
   }

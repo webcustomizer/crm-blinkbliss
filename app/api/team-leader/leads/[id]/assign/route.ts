@@ -47,6 +47,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     });
     if (!targetUser) return NextResponse.json({ success: false, message: "Target team member not found or not active." }, { status: 404 });
 
+    if (lead.status === "JOINED" || lead.status === "DEAD") {
+      return NextResponse.json({ success: false, message: `Cannot assign a ${lead.status.toLowerCase()} lead.` }, { status: 400 });
+    }
+
     if (lead.assignedToId === userId) {
       return NextResponse.json({ success: true, message: "Lead is already assigned to this person." });
     }

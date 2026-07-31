@@ -50,6 +50,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Some leads not found or not in your team." }, { status: 400 });
     }
 
+    const lockedLeads = leads.filter((l) => l.status === "JOINED" || l.status === "DEAD");
+    if (lockedLeads.length > 0) {
+      return NextResponse.json({ success: false, message: `${lockedLeads.length} lead(s) are joined/dead and cannot be reassigned.` }, { status: 400 });
+    }
+
     const alreadyAssigned = leads.filter((l) => l.assignedToId === userId).map((l) => l.id);
     const toAssign = leads.filter((l) => l.assignedToId !== userId);
 

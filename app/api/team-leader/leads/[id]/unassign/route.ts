@@ -27,6 +27,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ success: false, message: "Lead is not assigned to you or your team." }, { status: 403 });
     }
 
+    if (lead.status === "JOINED" || lead.status === "DEAD") {
+      return NextResponse.json({ success: false, message: `Cannot reassign a ${lead.status.toLowerCase()} lead.` }, { status: 400 });
+    }
+
     await prisma.notification.deleteMany({ where: { leadId: id } });
     await prisma.lead.update({ where: { id }, data: { assignedToId: auth.user.id } });
 
