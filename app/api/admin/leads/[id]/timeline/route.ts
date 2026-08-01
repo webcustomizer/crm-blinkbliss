@@ -36,7 +36,7 @@ export async function GET(
       where: { id },
       select: {
         id: true, name: true, phone: true, createdAt: true,
-        assignedToId: true,
+        assignedToId: true, assignedAt: true,
         assignedTo: { select: { id: true, name: true } },
       },
     });
@@ -80,6 +80,17 @@ export async function GET(
       timestamp: lead.createdAt.toISOString(),
       description: `Lead created${lead.name ? ` — ${lead.name}` : ""} (${lead.phone})`,
     });
+
+    // Assigned event from assignedAt (current/last assignment)
+    if (lead.assignedAt && lead.assignedToId) {
+      events.push({
+        id: `assigned-${lead.id}`,
+        type: "ASSIGNED",
+        timestamp: lead.assignedAt.toISOString(),
+        description: `Lead assigned to ${lead.assignedTo?.name || "a user"}`,
+        user: null,
+      });
+    }
 
     // Assigned event from activity logs
     for (const a of activityLogs) {
