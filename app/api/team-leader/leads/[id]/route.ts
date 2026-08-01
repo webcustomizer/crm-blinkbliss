@@ -76,6 +76,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     // Note-only save
+    // No separate ActivityLog entry here — the FollowUp(0) record itself
+    // is what the admin timeline renders as a "Note added" event.
+    // Logging it again via logActivity used to create a duplicate
+    // "Remark updated" event alongside it.
     if (body.isNote) {
       const remarksText = (body.remarks || "").trim();
       if (!remarksText) {
@@ -98,12 +102,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (!lead.firstResponseAt) {
         await prisma.lead.update({ where: { id }, data: { firstResponseAt: new Date() } });
       }
-
-      logActivity({
-        userId: user.id, leadId: id, action: ActivityAction.REMARK_UPDATED,
-        description: `${user.name} (TL) added a note`,
-        metadata: { leadName: lead.name || lead.phone, remarks: remarksText },
-      }).catch(() => {});
 
       return NextResponse.json({ success: true, message: "Note saved successfully", note });
     }

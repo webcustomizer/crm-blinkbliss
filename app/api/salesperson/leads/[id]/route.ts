@@ -147,6 +147,10 @@ export async function PATCH(
     //   followUpNumber = 0 → shows in history forever
     // - Does NOT touch followUpCount / nextFollowUp / status
     //   so it never counts as a real follow up
+    // - No separate ActivityLog entry here — the FollowUp(0)
+    //   record itself is what the admin timeline renders as
+    //   a "Note added" event. Logging it again via logActivity
+    //   used to create a duplicate "Remark updated" event.
     // =====================================================
     if (body.isNote) {
       const remarksText = (body.remarks || "").trim();
@@ -197,17 +201,6 @@ export async function PATCH(
           data: { firstResponseAt: new Date() },
         });
       }
-
-      await logActivity({
-        userId: user.id,
-        leadId: id,
-        action: ActivityAction.REMARK_UPDATED,
-        description: `${user.name} added a note`,
-        metadata: {
-          leadName: lead.name || lead.phone,
-          remarks: remarksText,
-        },
-      });
 
       return NextResponse.json({
         message: "Note saved successfully",

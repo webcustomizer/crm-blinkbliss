@@ -22,6 +22,11 @@ function statusLabel(s: string): string {
   return map[s] || s;
 }
 
+// Same-transaction window: status route creates followUp(0) + statusHistory
+// together inside one $transaction, so their timestamps land within a
+// couple hundred ms of each other in practice. 2s gives comfortable slack.
+const LINK_WINDOW_MS = 2000;
+
 export async function GET(
   req: NextRequest,
   context: { params: Promise<{ id: string }> },
@@ -92,7 +97,7 @@ export async function GET(
       });
     }
 
-    // Assigned event from activity logs
+    // Assigned / priority / remark / generic events from activity logs
     for (const a of activityLogs) {
       if (a.action === "LEAD_UPDATED" && a.metadata) {
         const meta = a.metadata as Record<string, any>;
@@ -143,20 +148,35 @@ export async function GET(
       });
     }
 
-    // Status changes
-    for (const s of statusHistory) {
-      events.push({
-        id: s.id,
-        type: "STATUS_CHANGED",
-        timestamp: s.changedAt.toISOString(),
-        description: `Status changed from ${statusLabel(s.oldStatus)} to ${statusLabel(s.newStatus)}`,
-        user: s.changedBy,
-        meta: { oldStatus: s.oldStatus, newStatus: s.newStatus },
-      });
-    }
-
-    // Follow-ups
+    // Follow-ups (followUpNumber === 0 is either a plain note OR the
+    // remarks attached to a status change — figure out which)
     for (const f of followups) {
+      if (f.followUpNumber === 0) {
+        // Was this note created in the same transaction as a status change?
+        // Same user + timestamps within LINK_WINDOW_MS of each other = yes.
+        const linkedStatusChange = statusHistory.find((s) => {
+          const diffMs = Math.abs(
+            new Date(s.changedAt).getTime() - new Date(f.createdAt).getTime()
+          );
+          return diffMs <= LINK_WINDOW_MS && s.changedById === f.userId;
+        });
+
+        if (linkedStatusChange) {
+          // Skip — its remarks get merged into the STATUS_CHANGED event below,
+          // so we don't want a duplicate standalone event for it.
+          continue;
+        }
+
+        events.push({
+          id: f.id,
+          type: "REMARK",
+          timestamp: f.createdAt.toISOString(),
+          description: `Note added — ${f.remarks || "No remarks"}`,
+          user: f.user,
+        });
+        continue;
+      }
+
       events.push({
         id: f.id,
         type: "FOLLOW_UP",
@@ -164,6 +184,26 @@ export async function GET(
         description: `Follow-up #${f.followUpNumber} completed — ${f.remarks || "No remarks"}`,
         user: f.user,
         meta: { followUpNumber: f.followUpNumber, nextFollowUp: f.nextFollowUp?.toISOString() },
+      });
+    }
+
+    // Status changes — merge in the remarks from the linked followUp(0), if any
+    for (const s of statusHistory) {
+      const linkedNote = followups.find((f) => {
+        if (f.followUpNumber !== 0) return false;
+        const diffMs = Math.abs(
+          new Date(s.changedAt).getTime() - new Date(f.createdAt).getTime()
+        );
+        return diffMs <= LINK_WINDOW_MS && s.changedById === f.userId;
+      });
+
+      events.push({
+        id: s.id,
+        type: "STATUS_CHANGED",
+        timestamp: s.changedAt.toISOString(),
+        description: `Status changed from ${statusLabel(s.oldStatus)} to ${statusLabel(s.newStatus)}${linkedNote ? ` — ${linkedNote.remarks}` : ""}`,
+        user: s.changedBy,
+        meta: { oldStatus: s.oldStatus, newStatus: s.newStatus },
       });
     }
 
