@@ -2,18 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/app/generated/prisma/client";
+import { getPKTDayBoundaryUTC } from "@/lib/format-date";
 
 export const dynamic = "force-dynamic";
 
 function getDateRange(filter: string): { from: Date; to: Date } {
-  const now = new Date();
-  const to = new Date(now);
+  const to = getPKTDayBoundaryUTC(0, true);
   let from: Date;
   switch (filter) {
-    case "TODAY": from = new Date(now); from.setHours(0, 0, 0, 0); break;
-    case "WEEK": from = new Date(now); from.setDate(from.getDate() - 7); break;
-    case "MONTH": from = new Date(now); from.setMonth(from.getMonth() - 1); break;
-    case "QUARTER": from = new Date(now); from.setMonth(from.getMonth() - 3); break;
+    case "TODAY": from = getPKTDayBoundaryUTC(0, false); break;
+    case "WEEK": from = getPKTDayBoundaryUTC(-7, false); break;
+    case "MONTH": from = getPKTDayBoundaryUTC(-30, false); break;
+    case "QUARTER": from = getPKTDayBoundaryUTC(-90, false); break;
     default: from = new Date(2020, 0, 1); break;
   }
   return { from, to };
