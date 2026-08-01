@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
         messageEnabled: settings?.messageEnabled !== false,
         tlMessageEnabled: settings?.tlMessageEnabled !== false,
         hasTeamLeader: !!user?.teamLeaderId,
+        teamLeaderId: user?.teamLeaderId || null,
         passwordMinLength: settings?.passwordMinLength || 8,
         passwordRequireSpecial: settings?.passwordRequireSpecial || false,
         maxFollowUps: settings?.maxFollowUps ?? 3,
