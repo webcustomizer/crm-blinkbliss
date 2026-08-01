@@ -105,6 +105,9 @@ export async function DELETE(req: NextRequest) {
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json({ success: false, message: "No lead IDs." }, { status: 400 });
     }
+    await prisma.notification.deleteMany({
+      where: { leadId: { in: ids } },
+    });
     const result = await prisma.lead.deleteMany({
       where: { id: { in: ids }, isDeleted: true },
     });
