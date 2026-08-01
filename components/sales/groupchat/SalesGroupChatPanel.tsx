@@ -53,7 +53,7 @@ export default function SalesGroupChatPanel({
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingRef = useRef<{
-    sendTyping: (b: boolean, n: string) => void;
+    sendTyping: (b: boolean, n: string, c?: { chatType?: string; teamLeaderId?: string | null }) => void;
   } | null>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mentionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -68,6 +68,7 @@ export default function SalesGroupChatPanel({
   const isFetchingRef = useRef(false);
   const initialLoadDoneRef = useRef(false);
   const hasTeamLeaderRef = useRef(false);
+  const myTeamLeaderIdRef = useRef<string | null>(null);
 
   // Distinguish "just sent/received a message → autoscroll" from
   // "loaded older messages → do NOT autoscroll, preserve position"
@@ -184,6 +185,12 @@ export default function SalesGroupChatPanel({
     const { unsubscribe, sendTyping } = subscribeToTyping(
       "group:chat",
       (payload) => {
+        const myTlId = myTeamLeaderIdRef.current;
+        if (myTlId) {
+          if (payload.chatType !== "TL_TEAM" || payload.teamLeaderId !== myTlId) return;
+        } else if (payload.chatType === "TL_TEAM") {
+          return;
+        }
         const timers = typingRemovalTimersRef.current;
 
         const existing = timers.get(payload.name);
@@ -270,6 +277,7 @@ export default function SalesGroupChatPanel({
       .then((r) => r.json())
       .then((j) => {
         hasTeamLeaderRef.current = !!j.data?.hasTeamLeader;
+        myTeamLeaderIdRef.current = j.data?.teamLeaderId || null;
         const chatDisabled = j.data?.hasTeamLeader
           ? j.data?.tlGroupChatEnabled === false
           : j.data?.groupChatEnabled === false;
@@ -285,10 +293,13 @@ export default function SalesGroupChatPanel({
   function onInputChange(val: string) {
     setNewMsg(val);
     if (typingRef.current) {
-      typingRef.current.sendTyping(val.length > 0, myName);
+      const ctx = myTeamLeaderIdRef.current
+        ? { chatType: "TL_TEAM" as const, teamLeaderId: myTeamLeaderIdRef.current }
+        : { chatType: "GENERAL" as const, teamLeaderId: null };
+      typingRef.current.sendTyping(val.length > 0, myName, ctx);
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
       typingTimerRef.current = setTimeout(() => {
-        typingRef.current?.sendTyping(false, myName);
+        typingRef.current?.sendTyping(false, myName, ctx);
       }, 3000);
     }
 

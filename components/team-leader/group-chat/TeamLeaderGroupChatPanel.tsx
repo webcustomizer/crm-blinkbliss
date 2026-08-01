@@ -41,7 +41,7 @@ export default function TeamLeaderGroupChatPanel({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const typingRef = useRef<{ sendTyping: (b: boolean, n: string) => void } | null>(null);
+  const typingRef = useRef<{ sendTyping: (b: boolean, n: string, c?: { chatType?: string; teamLeaderId?: string | null }) => void } | null>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mentionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingRemovalTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -124,6 +124,7 @@ export default function TeamLeaderGroupChatPanel({
 
   useEffect(() => {
     const { unsubscribe, sendTyping } = subscribeToTyping("group:chat", (payload) => {
+      if (payload.chatType !== "TL_TEAM" || payload.teamLeaderId !== currentUserId) return;
       const timers = typingRemovalTimersRef.current;
       const existing = timers.get(payload.name);
       if (existing) { clearTimeout(existing); timers.delete(payload.name); }
@@ -193,10 +194,10 @@ export default function TeamLeaderGroupChatPanel({
   function onInputChange(val: string) {
     setNewMsg(val);
     if (typingRef.current) {
-      typingRef.current.sendTyping(val.length > 0, myName);
+      typingRef.current.sendTyping(val.length > 0, myName, { chatType: "TL_TEAM", teamLeaderId: currentUserId });
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
       typingTimerRef.current = setTimeout(() => {
-        typingRef.current?.sendTyping(false, myName);
+        typingRef.current?.sendTyping(false, myName, { chatType: "TL_TEAM", teamLeaderId: currentUserId });
       }, 3000);
     }
     const atIdx = val.lastIndexOf("@");

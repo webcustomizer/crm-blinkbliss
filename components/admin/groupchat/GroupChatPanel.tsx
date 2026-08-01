@@ -103,7 +103,7 @@ export default function GroupChatPanel({
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingRef = useRef<{
-    sendTyping: (b: boolean, n: string) => void;
+    sendTyping: (b: boolean, n: string, c?: { chatType?: string; teamLeaderId?: string | null }) => void;
   } | null>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mentionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -116,10 +116,15 @@ export default function GroupChatPanel({
   const initialLoadDoneRef = useRef(false);
   const shouldAutoScrollRef = useRef(true);
   const selectedTeamLeaderRef = useRef(selectedTeamLeader);
+  const tabRef = useRef(tab);
 
   useEffect(() => {
     selectedTeamLeaderRef.current = selectedTeamLeader;
   }, [selectedTeamLeader]);
+
+  useEffect(() => {
+    tabRef.current = tab;
+  }, [tab]);
 
   useEffect(() => {
     if (!initialLoadDoneRef.current) return;
@@ -270,6 +275,13 @@ export default function GroupChatPanel({
     const { unsubscribe, sendTyping } = subscribeToTyping(
       "group:chat",
       (payload) => {
+        const myTab = tabRef.current;
+        const myTlId = myTab === "TL_TEAM" ? selectedTeamLeaderRef.current?.id : null;
+        if (myTab === "TL_TEAM") {
+          if (payload.chatType !== "TL_TEAM" || payload.teamLeaderId !== myTlId) return;
+        } else if (payload.chatType === "TL_TEAM") {
+          return;
+        }
         const timers = typingRemovalTimersRef.current;
         const existing = timers.get(payload.name);
         if (existing) {
@@ -344,10 +356,14 @@ export default function GroupChatPanel({
   function onInputChange(val: string) {
     setNewMsg(val);
     if (typingRef.current) {
-      typingRef.current.sendTyping(val.length > 0, myName);
+      const ctx = {
+        chatType: tab,
+        teamLeaderId: tab === "TL_TEAM" ? selectedTeamLeader?.id || null : null,
+      };
+      typingRef.current.sendTyping(val.length > 0, myName, ctx);
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
       typingTimerRef.current = setTimeout(() => {
-        typingRef.current?.sendTyping(false, myName);
+        typingRef.current?.sendTyping(false, myName, ctx);
       }, 3000);
     }
     const atIdx = val.lastIndexOf("@");

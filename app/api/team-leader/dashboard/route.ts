@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
       hasTeam ? prisma.lead.groupBy({ by: ["status"], where: teamAllWhere, _count: { id: true } }) : [],
       hasTeam ? prisma.lead.count({ where: { isDeleted: false, createdAt: { gte: todayStart, lte: todayEnd }, OR: [{ assignedToId: { in: teamMemberIds } }, { assignedToId: null }] } }) : 0,
       hasTeam ? prisma.lead.count({ where: { ...teamAllWhere, status: "JOINED", updatedAt: { gte: todayStart, lte: todayEnd } } }) : 0,
-      hasTeam ? prisma.followUp.count({ where: { userId: { in: teamMemberIds }, createdAt: { gte: todayStart, lte: todayEnd } } }) : 0,
+      hasTeam ? prisma.followUp.count({ where: { userId: { in: teamMemberIds }, followUpNumber: { gt: 0 }, createdAt: { gte: todayStart, lte: todayEnd } } }) : 0,
       hasTeam ? prisma.lead.count({ where: { ...teamAllWhere, status: { notIn: ["JOINED", "DEAD"] }, nextFollowUp: { lt: todayStart } } }) : 0,
       hasTeam ? prisma.lead.groupBy({
         by: ["assignedToId", "status"],
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
       }) : [],
       hasTeam ? prisma.followUp.groupBy({
         by: ["userId"],
-        where: { userId: { in: teamMemberIds } },
+        where: { userId: { in: teamMemberIds }, followUpNumber: { gt: 0 } },
         _count: { id: true },
       }) : [],
     ]);
@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
       teamTodayFollowupCounts, teamDailyLeads,
     ] = await Promise.all([
       hasTeam ? prisma.followUp.findMany({
-        where: { userId: { in: teamMemberIds } },
+        where: { userId: { in: teamMemberIds }, followUpNumber: { gt: 0 } },
         select: { id: true, createdAt: true, user: { select: { name: true } }, lead: { select: { name: true, phone: true } } },
         orderBy: { createdAt: "desc" }, take: 5,
       }) : [],
@@ -138,7 +138,7 @@ export async function GET(req: NextRequest) {
       }) : [],
       hasTeam ? prisma.followUp.groupBy({
         by: ["userId"],
-        where: { userId: { in: teamMemberIds }, createdAt: { gte: todayStart, lte: todayEnd } },
+        where: { userId: { in: teamMemberIds }, followUpNumber: { gt: 0 }, createdAt: { gte: todayStart, lte: todayEnd } },
         _count: { id: true },
       }) : [],
       // Daily trend: sequential small counts (1 connection at a time)

@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
         const [total, statusBreakdown, followups, member] = await Promise.all([
           prisma.lead.count({ where: memberWhere }),
           prisma.lead.groupBy({ by: ["status"], where: memberWhere, _count: true }),
-          prisma.followUp.count({ where: { userId: id, createdAt: { gte: from, lte: to } } }),
+          prisma.followUp.count({ where: { userId: id, followUpNumber: { gt: 0 }, createdAt: { gte: from, lte: to } } }),
           prisma.user.findUnique({ where: { id }, select: { name: true } }),
         ]);
         const statusMap: Record<string, number> = {};

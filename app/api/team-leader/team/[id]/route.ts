@@ -37,9 +37,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         orderBy: [{ isPriority: "desc" }, { updatedAt: "desc" }],
         take: 10,
       }),
-      prisma.followUp.count({ where: { userId: id } }),
+      prisma.followUp.count({ where: { userId: id, followUpNumber: { gt: 0 } } }),
       prisma.followUp.findFirst({
-        where: { userId: id },
+        where: { userId: id, followUpNumber: { gt: 0 } },
         select: { createdAt: true },
         orderBy: { createdAt: "desc" },
       }),

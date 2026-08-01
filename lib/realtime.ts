@@ -140,7 +140,7 @@ export function subscribeToTyping(
   onTyping: TypingCallback,
 ): {
   unsubscribe: () => void;
-  sendTyping: (isTyping: boolean, name: string) => void;
+  sendTyping: (isTyping: boolean, name: string, context?: { chatType?: string; teamLeaderId?: string | null }) => void;
 } {
   if (activeChannels.has(`typing:${channelKey}`)) {
     supabase.removeChannel(activeChannels.get(`typing:${channelKey}`)!);
@@ -159,11 +159,11 @@ export function subscribeToTyping(
       supabase.removeChannel(channel);
       activeChannels.delete(`typing:${channelKey}`);
     },
-    sendTyping: (isTyping: boolean, name: string) => {
+    sendTyping: (isTyping: boolean, name: string, context?: { chatType?: string; teamLeaderId?: string | null }) => {
       channel.send({
         type: "broadcast",
         event: "typing",
-        payload: { isTyping, name, ts: Date.now() },
+        payload: { isTyping, name, ts: Date.now(), ...(context || {}) },
       });
     },
   };
