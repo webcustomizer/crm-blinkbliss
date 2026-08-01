@@ -129,6 +129,7 @@ model Lead {
   lastFollowUp DateTime?
   nextFollowUp DateTime?
   assignedToId String?
+  assignedAt DateTime?
   firstResponseAt DateTime?
   isDeleted Boolean @default(false)
   deletedAt DateTime?
@@ -149,6 +150,7 @@ model Lead {
   mergedLeads Lead[] @relation("MergeTarget")
 
   @@index([assignedToId])
+  @@index([assignedAt])
   @@index([assignedToId, status])
   @@index([phone, isDeleted])
   @@index([email, isDeleted])

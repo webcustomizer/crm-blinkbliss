@@ -32,7 +32,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     await prisma.notification.deleteMany({ where: { leadId: id } });
-    await prisma.lead.update({ where: { id }, data: { assignedToId: auth.user.id } });
+    await prisma.lead.update({ where: { id }, data: { assignedToId: auth.user.id, assignedAt: new Date() } });
 
     return NextResponse.json({ success: true, message: "Lead unassigned back to you." });
   } catch {

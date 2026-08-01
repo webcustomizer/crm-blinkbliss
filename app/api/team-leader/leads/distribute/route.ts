@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
 
     await prisma.lead.updateMany({
       where: { id: { in: toAssign.map((l) => l.id) } },
-      data: { assignedToId: userId },
+      data: { assignedToId: userId, assignedAt: new Date() },
     });
 
     const msg = alreadyAssigned.length > 0

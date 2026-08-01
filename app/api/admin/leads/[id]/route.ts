@@ -140,7 +140,7 @@ export async function PATCH(
             ...(body.source !== undefined && { source: body.source }),
             ...(body.status !== undefined && { status: body.status }),
             ...(body.remarks !== undefined && { remarks: body.remarks }),
-            ...(body.assignedToId !== undefined && { assignedToId: body.assignedToId || null }),
+            ...(body.assignedToId !== undefined && { assignedToId: body.assignedToId || null, assignedAt: body.assignedToId ? new Date() : null }),
             ...(body.isPriority !== undefined && { isPriority: body.isPriority }),
             ...(body.nextFollowUp !== undefined && { nextFollowUp: body.nextFollowUp ? new Date(body.nextFollowUp) : null }),
             ...followUpUpdate,

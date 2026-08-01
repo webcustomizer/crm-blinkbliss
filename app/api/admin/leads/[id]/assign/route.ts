@@ -19,7 +19,7 @@ export async function PATCH(
       // Unassign
       const lead = await prisma.lead.update({
         where: { id },
-        data: { assignedToId: null },
+        data: { assignedToId: null, assignedAt: null },
         include: { assignedTo: { select: { id: true, name: true } } },
       });
       await prisma.notification.deleteMany({ where: { leadId: id } });
@@ -42,7 +42,7 @@ export async function PATCH(
     // Assign
     const lead = await prisma.lead.update({
       where: { id },
-      data: { assignedToId: salespersonId },
+      data: { assignedToId: salespersonId, assignedAt: new Date() },
       include: { assignedTo: { select: { id: true, name: true } } },
     });
 

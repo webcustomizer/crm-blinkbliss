@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
     ).map((u) => u.id);
     const allIds = [auth.user.id, ...teamMemberIds];
 
-    const whereBase = { assignedToId: { in: allIds }, isDeleted: false, createdAt: { gte: from, lte: to } };
+    const whereBase = { assignedToId: { in: allIds }, isDeleted: false, assignedAt: { gte: from, lte: to } };
 
     const [
       statusCounts, totalLeads,
@@ -46,13 +46,13 @@ export async function GET(req: NextRequest) {
       }),
       prisma.lead.count({ where: whereBase }),
       prisma.$queryRaw<{ date: Date; count: number }[]>`
-        SELECT DATE_TRUNC('day', "createdAt")::date AS date, COUNT(*)::int AS count
+        SELECT DATE_TRUNC('day', "assignedAt")::date AS date, COUNT(*)::int AS count
         FROM "Lead"
         WHERE "assignedToId" IN (${Prisma.join(allIds)})
           AND "isDeleted" = false
-          AND "createdAt" >= ${from}
-          AND "createdAt" <= ${to}
-        GROUP BY DATE_TRUNC('day', "createdAt")::date
+          AND "assignedAt" >= ${from}
+          AND "assignedAt" <= ${to}
+        GROUP BY DATE_TRUNC('day', "assignedAt")::date
         ORDER BY date ASC
       `,
       prisma.statusHistory.groupBy({
@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
 
     const memberPerformance = await Promise.all(
       teamMemberIds.map(async (id) => {
-        const memberWhere = { assignedToId: id, isDeleted: false, createdAt: { gte: from, lte: to } };
+        const memberWhere = { assignedToId: id, isDeleted: false, assignedAt: { gte: from, lte: to } };
         const [total, statusBreakdown, followups, member] = await Promise.all([
           prisma.lead.count({ where: memberWhere }),
           prisma.lead.groupBy({ by: ["status"], where: memberWhere, _count: true }),

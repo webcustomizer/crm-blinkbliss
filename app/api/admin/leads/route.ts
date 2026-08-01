@@ -137,6 +137,7 @@ export async function POST(req: NextRequest) {
         completion: checkLeadCompletion({ name, phone, email, city, age: age ? Number(age) : null, purpose, currentStatus, bestTimeToReach, willingToAttendTraining }),
         remarks: null,
         assignedToId: autoAssignedId,
+        assignedAt: autoAssignedId ? new Date() : null,
       },
     });
 
@@ -214,6 +215,7 @@ export async function PATCH(req: NextRequest) {
           }
         }
         updateData.assignedToId = value || null;
+        updateData.assignedAt = value ? new Date() : null;
         description = `Bulk ${value ? "assign" : "unassign"} ${ids.length} leads`;
         break;
       }

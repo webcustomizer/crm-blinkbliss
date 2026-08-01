@@ -178,6 +178,7 @@ export async function POST(req: NextRequest) {
           willingToAttendTraining,
         }),
         assignedToId: assignedToIds[i],
+        assignedAt: assignedToIds[i] ? new Date() : null,
       };
     });
 

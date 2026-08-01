@@ -55,7 +55,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ success: true, message: "Lead is already assigned to this person." });
     }
 
-    await prisma.lead.update({ where: { id }, data: { assignedToId: userId } });
+    await prisma.lead.update({ where: { id }, data: { assignedToId: userId, assignedAt: new Date() } });
 
     await prisma.notification.deleteMany({ where: { leadId: id } });
 
