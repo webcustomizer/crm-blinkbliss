@@ -11,20 +11,25 @@ import {
 } from "lucide-react";
 import { useSidebar } from "./sidebar-context";
 import { supabase } from "@/lib/supabase";
+import { prefetchRoute } from "@/lib/prefetch";
+
+const now = new Date();
+const month = now.getMonth() + 1;
+const year = now.getFullYear();
 
 const menuItems = [
-  { title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-  { title: "Leads", href: "/admin/leads", icon: Users },
-  { title: "Customers", href: "/admin/customers", icon: UserRoundCheck },
-  { title: "Salespersons", href: "/admin/salespersons", icon: UserCog },
-  { title: "Reports", href: "/admin/reports", icon: ChartColumn },
-  { title: "Messages", href: "/admin/messages", icon: MessageSquare, badgeKey: "messages" as const },
-  { title: "Announcements", href: "/admin/announcements", icon: Megaphone },
-  { title: "Group Chat", href: "/admin/group-chat", icon: MessageSquare, badgeKey: "groupChat" as const },
-  { title: "Activity", href: "/admin/activity", icon: Activity },
-  { title: "Trash", href: "/admin/trash", icon: Trash2 },
-  { title: "Sessions", href: "/admin/sessions", icon: Shield },
-  { title: "Settings", href: "/admin/settings", icon: Settings },
+  { title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard, prefetch: ["/api/admin/dashboard/stats"] },
+  { title: "Leads", href: "/admin/leads", icon: Users, prefetch: ["/api/admin/leads?page=1&limit=10&search=&filter=ALL&salespersonId=&source="] },
+  { title: "Customers", href: "/admin/customers", icon: UserRoundCheck, prefetch: ["/api/admin/customers?page=1&limit=20&search="] },
+  { title: "Salespersons", href: "/admin/salespersons", icon: UserCog, prefetch: [`/api/admin/targets?month=${month}&year=${year}`] },
+  { title: "Reports", href: "/admin/reports", icon: ChartColumn, prefetch: ["/api/admin/reports/stats?filter=ALL", "/api/admin/analytics/funnel", "/api/admin/reports/team-performance?filter=ALL"] },
+  { title: "Messages", href: "/admin/messages", icon: MessageSquare, badgeKey: "messages" as const, prefetch: ["/api/admin/messages/contacts", "/api/admin/messages/unread-per-user"] },
+  { title: "Announcements", href: "/admin/announcements", icon: Megaphone, prefetch: ["/api/admin/announcements"] },
+  { title: "Group Chat", href: "/admin/group-chat", icon: MessageSquare, badgeKey: "groupChat" as const, prefetch: ["/api/admin/group-chat?conversations=true&chatType=TL_TEAM"] },
+  { title: "Activity", href: "/admin/activity", icon: Activity, prefetch: ["/api/admin/activity"] },
+  { title: "Trash", href: "/admin/trash", icon: Trash2, prefetch: ["/api/admin/leads/soft-delete?page=1&limit=20&search="] },
+  { title: "Sessions", href: "/admin/sessions", icon: Shield, prefetch: ["/api/admin/sessions?all=true"] },
+  { title: "Settings", href: "/admin/settings", icon: Settings, prefetch: ["/api/admin/settings"] },
 ];
 
 const COLLAPSE_KEY = "admin-sidebar-collapsed";
@@ -35,7 +40,6 @@ export default function Sidebar() {
   const [unreadCounts, setUnreadCounts] = useState<{ messages: number; groupChat: number }>({ messages: 0, groupChat: 0 });
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchUnread = useCallback(async () => {
@@ -73,7 +77,6 @@ export default function Sidebar() {
   }, [isOpen]);
   useEffect(() => {
     fetchUnread();
-    intervalRef.current = setInterval(fetchUnread, 15000);
 
     const channel = supabase
       .channel("admin-unread-count-realtime")
@@ -84,7 +87,6 @@ export default function Sidebar() {
       .subscribe();
 
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
       if (debounceRef.current) clearTimeout(debounceRef.current);
       supabase.removeChannel(channel);
     };
@@ -141,6 +143,7 @@ export default function Sidebar() {
                 key={item.href}
                 href={item.href}
                 title={collapsed ? item.title : undefined}
+                onMouseEnter={() => item.prefetch?.forEach(prefetchRoute)}
                 className={`group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
                   collapsed ? "md:justify-center md:px-0" : ""
                 } ${

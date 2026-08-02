@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo, memo } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import {
   Edit, Target, KeyRound, UserX, UserCheck, Shield, ShieldOff, Crown,
@@ -153,7 +154,7 @@ const OrgNodeCard = memo(function OrgNodeCard({
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2.5 flex-wrap">
-                        <span className="text-[15px] font-semibold text-white truncate">{user.name}</span>
+                        <Link href={`/admin/salespersons/${user.id}`} className="block text-[15px] font-semibold text-white truncate hover:text-[#D4AF37] transition-colors cursor-pointer relative z-10">{user.name}</Link>
                         <span className="rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/[0.12] px-2.5 py-0.5 text-[9px] sm:text-[10px] font-bold tracking-wider text-[#D4AF37] uppercase">
                           Team Lead
                         </span>
@@ -289,7 +290,7 @@ const OrgNodeCard = memo(function OrgNodeCard({
                                     <User size={13} />
                                   </div>
                                   <div className="min-w-0">
-                                    <p className="text-sm font-medium text-white truncate">{member.name}</p>
+                                    <Link href={`/admin/salespersons/${member.id}`} className="block text-sm font-medium text-white truncate hover:text-[#D4AF37] transition-colors cursor-pointer relative z-10">{member.name}</Link>
                                     <p className="text-[10px] sm:text-[11px] text-white/30 truncate">{member.email}</p>
                                   </div>
                                 </div>
@@ -369,7 +370,7 @@ const OrgNodeCard = memo(function OrgNodeCard({
                     <User size={14} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{user.name}</p>
+                    <Link href={`/admin/salespersons/${user.id}`} className="block text-sm font-medium text-white truncate hover:text-[#D4AF37] transition-colors cursor-pointer relative z-10">{user.name}</Link>
                     <p className="text-[11px] text-white/30 truncate">{user.email}</p>
                   </div>
                 </div>
@@ -608,7 +609,7 @@ export default function SalespersonTable() {
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <p className="text-sm font-medium text-white truncate">{sp.name}</p>
+                            <Link href={`/admin/salespersons/${sp.id}`} className="block text-sm font-medium text-white truncate hover:text-[#D4AF37] transition-colors cursor-pointer relative z-10">{sp.name}</Link>
                             <span className={`inline-flex rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${
                               sp.isActive
                                 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"

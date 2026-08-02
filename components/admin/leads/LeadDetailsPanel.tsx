@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import EditLeadDialog from "@/components/admin/leads/EditLeadDialog";
 import LeadTimeline from "@/components/admin/leads/LeadTimeline";
 import { formatDate, formatDateTime, formatTime, formatDateShort } from "@/lib/format-date";
+import { consumePrefetch } from "@/lib/prefetch";
 
 type Props = { onUpdate?: () => void };
 
@@ -53,13 +54,17 @@ export default function LeadDetailsPanel({ onUpdate }: Props) {
     if (!leadId) return;
     let cancelled = false;
     setLoading(true);
-    fetch(`/api/admin/leads/${leadId}`, { cache: "no-store" })
-      .then((r) => r.json())
-      .then((json) => {
+    const url = `/api/admin/leads/${leadId}`;
+    (async () => {
+      try {
+        const prefetched = await consumePrefetch(url);
+        if (!cancelled && prefetched?.success) { setLead(prefetched.data); setLoading(false); return; }
+        const r = await fetch(url, { cache: "no-store" });
+        const json = await r.json();
         if (!cancelled && json.success) setLead(json.data);
-      })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setLoading(false); });
+      } catch {}
+      finally { if (!cancelled) setLoading(false); }
+    })();
     return () => { cancelled = true; };
   }, [leadId]);
 

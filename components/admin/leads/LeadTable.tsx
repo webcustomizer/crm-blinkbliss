@@ -8,6 +8,7 @@ import { Search, ChevronLeft, ChevronRight, Trash2, CheckSquare,
   Square, MoreHorizontal, Eye, Users, Calendar, RefreshCw, AlertTriangle,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { prefetchRoute, consumePrefetch } from "@/lib/prefetch";
 import LeadDetailsPanel from "./LeadDetailsPanel";
 import LeadDialog from "./LeadDialog";
 import { LEAD_SOURCES } from "@/lib/constants/lead";
@@ -111,11 +112,12 @@ function Avatar({ label }: { label: string }) {
   );
 }
 
-export default function LeadsTable({ salespersons }: Props) {
+export default function LeadsTable({ salespersons: initialSalespersons }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dashboardFilter = searchParams.get("filter");
 
+  const [salespersons, setSalespersons] = useState<Salesperson[]>(initialSalespersons);
   const [data, setData] = useState<Lead[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -135,6 +137,22 @@ export default function LeadsTable({ salespersons }: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const [showBulkMenu, setShowBulkMenu] = useState(false);
+
+  useEffect(() => {
+    if (initialSalespersons.length > 0) return;
+    (async () => {
+      try {
+        const r = await fetch("/api/admin/salespersons", { cache: "no-store" });
+        const j = await r.json();
+        if (j.success) {
+          setSalespersons(j.data.map((u: any) => ({ id: u.id, name: u.name, role: u.role })));
+        }
+      } catch {}
+    })();
+  }, [initialSalespersons.length]);
+
+  const salespersonsRef = useRef(salespersons);
+  useEffect(() => { salespersonsRef.current = salespersons; }, [salespersons]);
 
   // Go-to-page input
   const [pageInput, setPageInput] = useState("");
@@ -167,7 +185,17 @@ export default function LeadsTable({ salespersons }: Props) {
           page: String(page), limit: String(limit),
           search, filter, salespersonId, source: sourceFilter,
         });
-        const res = await fetch(`/api/admin/leads?${params}`, { cache: "no-store" });
+        const url = `/api/admin/leads?${params}`;
+        const prefetchedData = await consumePrefetch(url);
+        if (reqId !== requestIdRef.current) return;
+        if (prefetchedData) {
+          const result = prefetchedData as any;
+          setData(result.data || []);
+          setPagination(result.pagination || { page: 1, totalPages: 1, total: 0 });
+          setLoadError(false);
+          return;
+        }
+        const res = await fetch(url, { cache: "no-store" });
         if (reqId !== requestIdRef.current) return; // a newer request has since started
         if (!res.ok) throw new Error(`Request failed with ${res.status}`);
         const result = await res.json();
@@ -197,6 +225,38 @@ export default function LeadsTable({ salespersons }: Props) {
   const getLeadsRef = useRef(getLeads);
   useEffect(() => { getLeadsRef.current = getLeads; });
 
+  const buildLeadsUrl = useCallback(
+    (overrides: { page?: number; filter?: string }) => {
+      const p = new URLSearchParams({
+        page: String(overrides.page ?? page), limit: String(limit),
+        search, filter: overrides.filter ?? filter, salespersonId, source: sourceFilter,
+      });
+      return `/api/admin/leads?${p}`;
+    },
+    [page, limit, search, filter, salespersonId, sourceFilter],
+  );
+
+  const prefetchLead = useCallback((leadId: string) => {
+    prefetchRoute(`/api/admin/leads/${leadId}`);
+    prefetchRoute(`/api/admin/leads/${leadId}/timeline`);
+  }, []);
+
+  const prefetchPage = useCallback(
+    (targetPage: number) => {
+      if (targetPage < 1 || targetPage > pagination.totalPages || targetPage === page) return;
+      prefetchRoute(buildLeadsUrl({ page: targetPage }));
+    },
+    [buildLeadsUrl, pagination.totalPages, page],
+  );
+
+  const prefetchFilter = useCallback(
+    (filterValue: string) => {
+      if (filterValue === filter) return;
+      prefetchRoute(buildLeadsUrl({ page: 1, filter: filterValue }));
+    },
+    [buildLeadsUrl, filter],
+  );
+
   // Realtime — channel name is scoped to this view so it can't collide with
   // the salesperson-side leads table subscribing at the same time.
   useEffect(() => {
@@ -221,7 +281,7 @@ export default function LeadsTable({ salespersons }: Props) {
               if (l.id !== id) return l;
               const assignedToChanged = newRow.assignedToId !== (l.assignedTo?.id ?? null);
               const resolvedAssignedTo = assignedToChanged
-                ? salespersons.find((p) => p.id === newRow.assignedToId) || null : l.assignedTo;
+                ? salespersonsRef.current.find((p) => p.id === newRow.assignedToId) || null : l.assignedTo;
               return {
                 ...l, name: newRow.name ?? l.name, phone: newRow.phone ?? l.phone,
                 city: newRow.city ?? l.city, currentStatus: newRow.currentStatus ?? l.currentStatus,
@@ -236,7 +296,7 @@ export default function LeadsTable({ salespersons }: Props) {
         }
       }).subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [salespersons, markUpdating, unmarkUpdating]);
+  }, [markUpdating, unmarkUpdating]);
 
   useEffect(() => { void getLeads(); }, [getLeads]);
 
@@ -416,6 +476,7 @@ export default function LeadsTable({ salespersons }: Props) {
               role="tab"
               aria-selected={filter === value}
               onClick={() => updateFilter(setFilter, value)}
+              onMouseEnter={() => prefetchFilter(value)}
               className={`relative shrink-0 whitespace-nowrap px-3 py-2 text-xs font-medium transition-colors sm:text-sm ${
                 filter === value ? "text-[#D4AF37]" : "text-white/45 hover:text-white/70"
               }`}
@@ -527,6 +588,7 @@ export default function LeadsTable({ salespersons }: Props) {
                 return (
                   <div
                     key={lead.id}
+                    onMouseEnter={() => prefetchLead(lead.id)}
                     className={`rounded-2xl border p-3.5 transition-colors duration-500 ${
                       isSelected ? "border-[#D4AF37]/40 bg-[#D4AF37]/[0.1]" : "border-white/10 bg-black/20"
                     } ${isUpdating ? "bg-[#D4AF37]/[0.07]" : ""} ${lead.completion === "INCOMPLETE" ? "border-l-2 border-l-amber-500/40" : ""}`}
@@ -611,6 +673,7 @@ export default function LeadsTable({ salespersons }: Props) {
                     return (
                       <tr
                         key={lead.id}
+                        onMouseEnter={() => prefetchLead(lead.id)}
                         className={`border-b border-white/5 text-white/70 transition-colors duration-500 hover:bg-[#D4AF37]/[0.04] ${isUpdating ? "bg-[#D4AF37]/[0.07]" : ""} ${isSelected ? "bg-[#D4AF37]/[0.12]" : ""} ${lead.completion === "INCOMPLETE" ? "border-l-2 border-l-amber-500/30" : ""}`}
                       >
                         <td className="p-3">
@@ -689,6 +752,7 @@ export default function LeadsTable({ salespersons }: Props) {
             <button
               disabled={page === 1}
               onClick={() => setPage((p) => p - 1)}
+              onMouseEnter={() => prefetchPage(page - 1)}
               aria-label="Previous page"
               className="flex items-center gap-1.5 rounded-xl border border-white/10 px-3 py-2 text-sm font-medium text-white transition-colors hover:border-[#D4AF37]/40 hover:bg-[#D4AF37]/[0.06] disabled:pointer-events-none disabled:opacity-30"
             >
@@ -705,6 +769,7 @@ export default function LeadsTable({ salespersons }: Props) {
                   <button
                     key={p}
                     onClick={() => setPage(p)}
+                    onMouseEnter={() => prefetchPage(p as number)}
                     disabled={p === page}
                     aria-current={p === page ? "page" : undefined}
                     className={`min-w-[36px] rounded-xl border px-3 py-2 text-sm font-medium transition-colors disabled:pointer-events-none ${
@@ -726,6 +791,7 @@ export default function LeadsTable({ salespersons }: Props) {
             <button
               disabled={page >= pagination.totalPages}
               onClick={() => setPage((p) => p + 1)}
+              onMouseEnter={() => prefetchPage(page + 1)}
               aria-label="Next page"
               className="flex items-center gap-1.5 rounded-xl border border-white/10 px-3 py-2 text-sm font-medium text-white transition-colors hover:border-[#D4AF37]/40 hover:bg-[#D4AF37]/[0.06] disabled:pointer-events-none disabled:opacity-30"
             >
