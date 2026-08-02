@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { teamLeaderId: true, createdAt: true },
+    select: { teamLeaderId: true, createdAt: true, teamAssignedAt: true },
   });
 
   const hasTeamLeader = !!user?.teamLeaderId;
@@ -42,6 +42,9 @@ export async function GET(req: NextRequest) {
   } else if (hasTeamLeader) {
     groupWhere.chatType = "TL_TEAM";
     groupWhere.teamLeaderId = user!.teamLeaderId;
+    if (user?.teamAssignedAt) {
+      groupWhere.createdAt = { gte: user.teamAssignedAt };
+    }
   } else {
     groupWhere.chatType = "GENERAL";
   }
