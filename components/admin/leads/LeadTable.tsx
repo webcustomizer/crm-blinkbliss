@@ -14,6 +14,7 @@ import LeadDialog from "./LeadDialog";
 import { LEAD_SOURCES } from "@/lib/constants/lead";
 import { formatDateShort } from "@/lib/format-date";
 import AssignDropdown from "./AssignDropdown";
+import { openLeadPanel } from "@/lib/lead-panel-nav";
 
 type Lead = {
   id: string;
@@ -633,11 +634,7 @@ export default function LeadsTable({ salespersons: initialSalespersons }: Props)
                           onSelect={assignLead}
                         />
                         <button
-                          onClick={() => {
-                            const params = new URLSearchParams(searchParams.toString());
-                            params.set("leadId", lead.id);
-                            router.push(`?${params.toString()}`, { scroll: false });
-                          }}
+                          onClick={() => openLeadPanel(lead.id)}
                           aria-label="View lead details"
                           className="flex items-center gap-1 rounded-xl border border-[#D4AF37]/30 bg-[#D4AF37]/[0.06] px-2.5 py-1.5 text-xs font-medium text-[#D4AF37]"
                         >
@@ -725,11 +722,7 @@ export default function LeadsTable({ salespersons: initialSalespersons }: Props)
                         </td>
                         <td className="p-3">
                           <button
-                            onClick={() => {
-                              const params = new URLSearchParams(searchParams.toString());
-                              params.set("leadId", lead.id);
-                              router.push(`?${params.toString()}`, { scroll: false });
-                            }}
+                            onClick={() => openLeadPanel(lead.id)}
                             className="inline-flex items-center gap-1.5 rounded-xl border border-[#D4AF37]/30 bg-[#D4AF37]/[0.06] px-3 py-1.5 text-xs font-medium text-[#D4AF37] transition-colors hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/10"
                           >
                             <Eye size={14} />

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import type { LeadDetails } from "@/types/lead";
 import {
   X, User, Phone, Mail, MapPin, Briefcase, Target,
@@ -13,13 +12,23 @@ import EditLeadDialog from "@/components/admin/leads/EditLeadDialog";
 import LeadTimeline from "@/components/admin/leads/LeadTimeline";
 import { formatDate, formatDateTime, formatTime, formatDateShort } from "@/lib/format-date";
 import { consumePrefetch } from "@/lib/prefetch";
+import { closeLeadPanel } from "@/lib/lead-panel-nav";
 
 type Props = { onUpdate?: () => void };
 
+function useLeadIdParam() {
+  const [leadId, setLeadId] = useState<string | null>(null);
+  useEffect(() => {
+    const read = () => setLeadId(new URLSearchParams(window.location.search).get("leadId"));
+    read();
+    window.addEventListener("popstate", read);
+    return () => window.removeEventListener("popstate", read);
+  }, []);
+  return leadId;
+}
+
 export default function LeadDetailsPanel({ onUpdate }: Props) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const leadId = searchParams.get("leadId");
+  const leadId = useLeadIdParam();
 
   const [loading, setLoading] = useState(false);
   const [lead, setLead] = useState<LeadDetails | null>(null);
@@ -27,22 +36,25 @@ export default function LeadDetailsPanel({ onUpdate }: Props) {
   const [followLoading, setFollowLoading] = useState(false);
   const [visible, setVisible] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isOpen = Boolean(leadId);
 
   const close = useCallback(() => {
-    const closedLeadId = searchParams.get("leadId");
+    const closedLeadId = leadId;
     setVisible(false);
-    setTimeout(() => {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("leadId") !== closedLeadId) return;
-      params.delete("leadId");
-      router.replace(`?${params.toString()}`, { scroll: false });
+    closeTimeoutRef.current = setTimeout(() => {
+      closeTimeoutRef.current = null;
+      if (closedLeadId) closeLeadPanel(closedLeadId);
     }, 100);
-  }, [router, searchParams]);
+  }, [leadId]);
 
   useEffect(() => {
     if (isOpen) {
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
+        closeTimeoutRef.current = null;
+      }
       requestAnimationFrame(() => setVisible(true));
     } else {
       setVisible(false);
