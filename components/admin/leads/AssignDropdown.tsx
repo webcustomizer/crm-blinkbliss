@@ -7,10 +7,11 @@ import { ChevronDown, Search, Check, UserX, Crown } from "lucide-react";
 type Person = { id: string; name: string; role?: string };
 
 interface Props {
-  leadId: string;
-  currentAssignment: { id: string; name: string } | null | undefined;
+  leadId?: string;
+  currentAssignment?: { id: string; name: string } | null | undefined;
   salespersons: Person[];
   onSelect: (leadId: string, personId: string) => void;
+  bulkMode?: boolean;
 }
 
 const MENU_WIDTH = 224; // w-56
@@ -56,7 +57,7 @@ function Avatar({ person, isTL }: { person: Person; isTL: boolean }) {
   );
 }
 
-export default function AssignDropdown({ leadId, currentAssignment, salespersons, onSelect }: Props) {
+export default function AssignDropdown({ leadId, currentAssignment, salespersons, onSelect, bulkMode }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -91,7 +92,7 @@ export default function AssignDropdown({ leadId, currentAssignment, salespersons
 
   const commit = useCallback(
     (personId: string) => {
-      onSelect(leadId, personId);
+      onSelect(leadId || "bulk", personId);
       close();
     },
     [leadId, onSelect, close],
@@ -195,10 +196,16 @@ export default function AssignDropdown({ leadId, currentAssignment, salespersons
           aria-haspopup="listbox"
           aria-expanded={open}
           className={`group flex items-center gap-1.5 rounded-md border border-transparent px-1.5 py-1 text-[11px] transition-all duration-150 hover:border-white/10 hover:bg-white/5 ${
-            currentAssignment ? "text-white/80" : "text-white/30"
+            bulkMode
+              ? "text-white/80 border border-white/10 bg-black/30 rounded-lg px-2 py-1 hover:text-white hover:border-white/20"
+              : currentAssignment ? "text-white/80" : "text-white/30"
           } ${open ? "border-[#D4AF37]/30 bg-white/5" : ""}`}
         >
-          {currentAssignment ? (
+          {bulkMode ? (
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-[#D4AF37]/30 text-[#D4AF37]/60">
+              <UserX size={11} />
+            </span>
+          ) : currentAssignment ? (
             <Avatar
               person={currentAssignment}
               isTL={salespersons.find((p) => p.id === currentAssignment.id)?.role === "TEAM_LEAD"}
@@ -208,7 +215,8 @@ export default function AssignDropdown({ leadId, currentAssignment, salespersons
               <UserX size={11} />
             </span>
           )}
-          <span className="max-w-[80px] truncate">{currentAssignment?.name || "Unassigned"}</span>
+          {!bulkMode && <span className="max-w-[80px] truncate">{currentAssignment?.name || "Unassigned"}</span>}
+          {bulkMode && <span>Assign to…</span>}
           <ChevronDown
             size={10}
             className={`shrink-0 text-white/30 transition-transform duration-200 group-hover:text-white/50 ${open ? "rotate-180" : ""}`}

@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Search, ChevronLeft, ChevronRight, Trash2, CheckSquare,
-  Square, MoreHorizontal, Eye, Users, Calendar, RefreshCw, AlertTriangle, ChevronDown,
+  Square, MoreHorizontal, Eye, Users, Calendar, RefreshCw, AlertTriangle,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import LeadDetailsPanel from "./LeadDetailsPanel";
@@ -135,8 +135,6 @@ export default function LeadsTable({ salespersons }: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const [showBulkMenu, setShowBulkMenu] = useState(false);
-  const [showBulkAssign, setShowBulkAssign] = useState(false);
-  const bulkAssignRef = useRef<HTMLDivElement>(null);
 
   // Go-to-page input
   const [pageInput, setPageInput] = useState("");
@@ -154,14 +152,6 @@ export default function LeadsTable({ salespersons }: Props) {
     const timer = setTimeout(() => setSearch(searchInput), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [searchInput]);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (bulkAssignRef.current && !bulkAssignRef.current.contains(e.target as Node)) setShowBulkAssign(false);
-    }
-    if (showBulkAssign) document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [showBulkAssign]);
 
   // Guards against out-of-order responses: if the user changes filters
   // quickly, only the most recently issued request is allowed to update state.
@@ -454,102 +444,51 @@ export default function LeadsTable({ salespersons }: Props) {
               className="rounded-lg bg-red-500/20 px-3 py-1 text-xs text-red-400 hover:bg-red-500/30 disabled:opacity-40">
               Mark Dead
             </button>
-            <div ref={bulkAssignRef} className="relative">
-              <button
-                onClick={() => setShowBulkAssign(!showBulkAssign)}
-                disabled={bulkLoading}
-                className="flex items-center gap-1 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-xs text-white/50 hover:text-white/70 hover:border-white/20 disabled:opacity-40"
-              >
-                Assign to…<ChevronDown size={10} className={`shrink-0 transition-transform ${showBulkAssign ? "rotate-180" : ""}`} />
-              </button>
-              {showBulkAssign && (
-                <div className="absolute left-0 top-full z-30 mt-1 w-48 rounded-lg border border-white/10 bg-[#111111] shadow-xl">
-                  <button onClick={() => { bulkAction("assign", ""); setShowBulkAssign(false); }}
-                    className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[11px] text-red-400 hover:bg-red-500/10">
-                    — Unassign —
-                  </button>
-                  {salespersons.filter((sp) => sp.role === "TEAM_LEAD").length > 0 && (
-                    <div className="border-t border-white/5">
-                      <div className="px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wider text-white/25">Team Leaders</div>
-                      {salespersons.filter((sp) => sp.role === "TEAM_LEAD").map((sp) => (
-                        <button key={sp.id} onClick={() => { bulkAction("assign", sp.id); setShowBulkAssign(false); }}
-                          className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[11px] text-white/70 hover:bg-white/5">
-                          {sp.name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {salespersons.filter((sp) => sp.role !== "TEAM_LEAD").length > 0 && (
-                    <div className="border-t border-white/5">
-                      <div className="px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wider text-white/25">Salespersons</div>
-                      {salespersons.filter((sp) => sp.role !== "TEAM_LEAD").map((sp) => (
-                        <button key={sp.id} onClick={() => { bulkAction("assign", sp.id); setShowBulkAssign(false); }}
-                          className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[11px] text-white/70 hover:bg-white/5">
-                          {sp.name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            <AssignDropdown
+              salespersons={salespersons}
+              onSelect={(_leadId, personId) => { bulkAction("assign", personId); }}
+              bulkMode
+            />
             <button onClick={() => bulkAction("delete")} disabled={bulkLoading}
               className="rounded-lg bg-red-600/20 px-3 py-1 text-xs text-red-400 hover:bg-red-600/30 disabled:opacity-40 flex items-center gap-1">
               <Trash2 size={12} /> Delete
             </button>
           </div>
 
-          {/* Mobile: collapse into a single "Actions" menu so buttons don't wrap awkwardly */}
-          <div className="relative sm:hidden">
-            <button
-              onClick={() => setShowBulkMenu((v) => !v)}
-              disabled={bulkLoading}
-              aria-haspopup="menu"
-              aria-expanded={showBulkMenu}
-              className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/20 px-3 py-1.5 text-xs text-white disabled:opacity-40"
-            >
-              <MoreHorizontal size={14} /> Actions
-            </button>
-            {showBulkMenu && (
-              <div role="menu" className="absolute left-0 top-full z-30 mt-2 w-48 space-y-1 rounded-xl border border-white/10 bg-[#141414] p-2 shadow-xl">
-                <button role="menuitem" onClick={() => bulkAction("status", "JOINED")} disabled={bulkLoading}
-                  className="w-full rounded-lg px-3 py-1.5 text-left text-xs text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-40">
-                  Mark Joined
-                </button>
-                <button role="menuitem" onClick={() => bulkAction("status", "DEAD")} disabled={bulkLoading}
-                  className="w-full rounded-lg px-3 py-1.5 text-left text-xs text-red-400 hover:bg-red-500/10 disabled:opacity-40">
-                  Mark Dead
-                </button>
-                <div className="border-t border-white/10 pt-1">
-                  <div className="px-3 py-1 text-[9px] font-semibold uppercase tracking-wider text-white/25">Assign to</div>
-                  <button role="menuitem" onClick={() => { bulkAction("assign", ""); setShowBulkMenu(false); }} disabled={bulkLoading}
-                    className="w-full rounded-lg px-3 py-1.5 text-left text-xs text-red-400 hover:bg-red-500/10 disabled:opacity-40">
-                    — Unassign —
+          {/* Mobile: standalone assign + collapsed actions menu */}
+          <div className="flex items-center gap-2 sm:hidden">
+            <AssignDropdown
+              salespersons={salespersons}
+              onSelect={(_leadId, personId) => { bulkAction("assign", personId); }}
+              bulkMode
+            />
+            <div className="relative">
+              <button
+                onClick={() => setShowBulkMenu((v) => !v)}
+                disabled={bulkLoading}
+                aria-haspopup="menu"
+                aria-expanded={showBulkMenu}
+                className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/20 px-3 py-1.5 text-xs text-white disabled:opacity-40"
+              >
+                <MoreHorizontal size={14} /> Actions
+              </button>
+              {showBulkMenu && (
+                <div role="menu" className="absolute right-0 top-full z-30 mt-2 w-48 space-y-1 rounded-xl border border-white/10 bg-[#141414] p-2 shadow-xl">
+                  <button role="menuitem" onClick={() => bulkAction("status", "JOINED")} disabled={bulkLoading}
+                    className="w-full rounded-lg px-3 py-1.5 text-left text-xs text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-40">
+                    Mark Joined
                   </button>
-                  {salespersons.filter((sp) => sp.role === "TEAM_LEAD").map((sp) => (
-                    <button key={sp.id} role="menuitem" onClick={() => { bulkAction("assign", sp.id); setShowBulkMenu(false); }} disabled={bulkLoading}
-                      className="w-full rounded-lg px-3 py-1.5 text-left text-xs text-white/70 hover:bg-white/5 disabled:opacity-40">
-                      {sp.name}
-                    </button>
-                  ))}
-                  {salespersons.filter((sp) => sp.role !== "TEAM_LEAD").length > 0 && (
-                    <>
-                      <div className="px-3 py-1 text-[9px] font-semibold uppercase tracking-wider text-white/25">Salespersons</div>
-                      {salespersons.filter((sp) => sp.role !== "TEAM_LEAD").map((sp) => (
-                        <button key={sp.id} role="menuitem" onClick={() => { bulkAction("assign", sp.id); setShowBulkMenu(false); }} disabled={bulkLoading}
-                          className="w-full rounded-lg px-3 py-1.5 text-left text-xs text-white/70 hover:bg-white/5 disabled:opacity-40">
-                          {sp.name}
-                        </button>
-                      ))}
-                    </>
-                  )}
+                  <button role="menuitem" onClick={() => bulkAction("status", "DEAD")} disabled={bulkLoading}
+                    className="w-full rounded-lg px-3 py-1.5 text-left text-xs text-red-400 hover:bg-red-500/10 disabled:opacity-40">
+                    Mark Dead
+                  </button>
+                  <button role="menuitem" onClick={() => bulkAction("delete")} disabled={bulkLoading}
+                    className="flex w-full items-center gap-1 rounded-lg px-3 py-1.5 text-left text-xs text-red-400 hover:bg-red-600/10 disabled:opacity-40">
+                    <Trash2 size={12} /> Delete
+                  </button>
                 </div>
-                <button role="menuitem" onClick={() => bulkAction("delete")} disabled={bulkLoading}
-                  className="flex w-full items-center gap-1 rounded-lg px-3 py-1.5 text-left text-xs text-red-400 hover:bg-red-600/10 disabled:opacity-40">
-                  <Trash2 size={12} /> Delete
-                </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           <button onClick={() => setSelectedIds(new Set())} className="ml-auto text-xs text-white/50 hover:text-white">
