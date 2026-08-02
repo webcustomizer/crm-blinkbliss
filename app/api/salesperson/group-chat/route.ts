@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
 
     const currentUser = await prisma.user.findUnique({
       where: { id: auth.user.id },
-      select: { createdAt: true, teamLeaderId: true },
+      select: { createdAt: true, teamLeaderId: true, teamAssignedAt: true },
     });
 
     const messages = await prisma.groupMessage.findMany({
@@ -65,6 +65,7 @@ export async function GET(req: NextRequest) {
         chatType,
         deleted: false,
         ...(chatType === "TL_TEAM" && currentUser?.teamLeaderId ? { teamLeaderId: currentUser.teamLeaderId } : {}),
+        ...(currentUser?.teamAssignedAt ? { createdAt: { gte: currentUser.teamAssignedAt } } : {}),
       },
       orderBy: { createdAt: "desc" },
       take: PAGE_SIZE,

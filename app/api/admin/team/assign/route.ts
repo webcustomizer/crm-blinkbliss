@@ -36,7 +36,13 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    await prisma.user.update({ where: { id: userId }, data: { teamLeaderId: teamLeaderId || null } });
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        teamLeaderId: teamLeaderId || null,
+        teamAssignedAt: teamLeaderId ? new Date() : null,
+      },
+    });
 
     const response = NextResponse.json({ success: true });
 

@@ -16,10 +16,12 @@ import {
   Trash2,
   ArrowLeft,
   Search,
+  Reply,
 } from "lucide-react";
 import type { GroupChatMessage, MentionLead } from "@/types/lead";
 import { subscribeToGroupMessages, subscribeToTyping } from "@/lib/realtime";
 import ChatImage, { isImageFile } from "@/components/chat/ChatImage";
+import MentionText from "@/components/chat/MentionText";
 import { handleAPIError } from "@/lib/client-error";
 import ImagePreview from "@/components/chat/ImagePreview";
 
@@ -94,6 +96,7 @@ export default function GroupChatPanel({
   const [fileUploading, setFileUploading] = useState(false);
   const [previewFile, setPreviewFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [replyTo, setReplyTo] = useState<GroupChatMessage | null>(null);
 
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -439,21 +442,26 @@ export default function GroupChatPanel({
       fileUrl: null,
       fileName: null,
       fileSize: null,
-      replyToId: null,
+      replyToId: replyTo?.id || null,
       createdAt: new Date().toISOString(),
       _sending: true,
       sender: users.find((u) => u.id === currentUserId),
       lead: mentionedLead
         ? { id: mentionedLead.id, name: mentionedLead.name, phone: mentionedLead.phone }
         : undefined,
+      replyTo: replyTo
+        ? { id: replyTo.id, content: replyTo.content, senderId: replyTo.senderId, sender: replyTo.sender }
+        : undefined,
     };
+    const replyingTo = replyTo;
     setNewMsg("");
     setMentionedLead(null);
+    setReplyTo(null);
     shouldAutoScrollRef.current = true;
     setMessages((prev) => [...prev, tempMsg]);
 
     try {
-      const body: Record<string, unknown> = { content, leadId, chatType: tab };
+      const body: Record<string, unknown> = { content, leadId, chatType: tab, replyToId: replyingTo?.id || null };
       if (tab === "TL_TEAM" && selectedTeamLeader) {
         body.teamLeaderId = selectedTeamLeader.id;
       }
@@ -505,11 +513,16 @@ export default function GroupChatPanel({
       fileUrl: blobUrl,
       fileName: file.name,
       fileSize: file.size,
-      replyToId: null,
+      replyToId: replyTo?.id || null,
       createdAt: new Date().toISOString(),
       _sending: true,
       sender: users.find((u) => u.id === currentUserId),
+      replyTo: replyTo
+        ? { id: replyTo.id, content: replyTo.content, senderId: replyTo.senderId, sender: replyTo.sender }
+        : undefined,
     };
+    const replyingTo = replyTo;
+    setReplyTo(null);
     shouldAutoScrollRef.current = true;
     setMessages((prev) => [...prev, tempMsg]);
     try {
@@ -526,6 +539,7 @@ export default function GroupChatPanel({
           fileName: uj.data.fileName,
           fileSize: uj.data.fileSize,
           chatType: tab,
+          replyToId: replyingTo?.id || null,
         };
         if (tab === "TL_TEAM" && selectedTeamLeader) {
           body.teamLeaderId = selectedTeamLeader.id;
@@ -884,11 +898,11 @@ export default function GroupChatPanel({
                         </div>
                       )}
                       <div
-                        className={`flex ${
+                        className={`flex group ${
                           isOwn ? "justify-end" : "justify-start"
                         } ${prevSame ? "mt-0.5" : "mt-2"}`}
                       >
-                        <div className="max-w-[82%] sm:max-w-[65%]">
+                        <div className="max-w-[82%] sm:max-w-[65%] relative">
                           {!prevSame && !isOwn && (
                             <p className="text-[10px] sm:text-xs mb-0.5 px-1 font-medium flex items-center gap-1.5">
                               <span className="text-[#D4AF37]/70">
@@ -902,14 +916,30 @@ export default function GroupChatPanel({
                             </p>
                           )}
                           <div
-                            className={`px-3 py-2 sm:px-3.5 sm:py-2 text-xs sm:text-sm shadow-sm overflow-hidden ${
+                            className={`relative px-3 py-2 sm:px-3.5 sm:py-2 text-xs sm:text-sm shadow-sm ${
                               isOwn
                                 ? "bg-emerald-600/25 text-white border border-emerald-500/25 rounded-2xl rounded-br-sm"
                                 : "bg-white/[0.06] text-white/85 border border-white/10 rounded-2xl rounded-bl-sm"
                             }`}
                           >
+                            {msg.replyTo && (
+                              <div className={`mb-1.5 px-2 py-1.5 rounded-lg border-l-2 ${
+                                isOwn
+                                  ? "bg-emerald-700/20 border-emerald-400/40"
+                                  : "bg-white/[0.04] border-[#D4AF37]/40"
+                              }`}>
+                                <p className={`text-[9px] sm:text-[10px] font-semibold mb-0.5 ${
+                                  isOwn ? "text-emerald-300/70" : "text-[#D4AF37]/70"
+                                }`}>
+                                  {msg.replyTo.sender?.name || "Unknown"}
+                                </p>
+                                <p className="text-[10px] sm:text-[11px] text-white/40 line-clamp-2 leading-snug">
+                                  {msg.replyTo.content}
+                                </p>
+                              </div>
+                            )}
                             <p className="break-words whitespace-pre-wrap leading-relaxed">
-                              {msg.content}
+                              <MentionText content={msg.content} lead={msg.lead} leadPath="/admin/leads" />
                             </p>
 
                             {msg.fileUrl && isImageFile(msg.fileName) ? (
@@ -964,6 +994,15 @@ export default function GroupChatPanel({
                                   <Check size={12} className="text-white/40" />
                                 ))}
                             </div>
+                            <button
+                              onClick={() => setReplyTo(msg)}
+                              className={`absolute top-1.5 ${
+                                isOwn ? "left-1.5" : "right-1.5"
+                              } opacity-0 group-hover:opacity-100 p-1 rounded-lg text-white/30 hover:text-white/70 hover:bg-white/10 transition-all`}
+                              title="Reply"
+                            >
+                              <Reply size={13} />
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -1015,6 +1054,26 @@ export default function GroupChatPanel({
                   </span>
                 </button>
               ))}
+            </div>
+          )}
+
+          {replyTo && (
+            <div className="mx-3 sm:mx-4 mt-1 flex items-center gap-2 rounded-xl bg-[#D4AF37]/[0.08] border border-[#D4AF37]/20 px-3 py-2 shrink-0">
+              <Reply size={14} className="text-[#D4AF37] shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-[#D4AF37]/70 font-semibold">
+                  Replying to {replyTo.sender?.name || "Unknown"}
+                </p>
+                <p className="text-[11px] text-white/40 truncate">
+                  {replyTo.content}
+                </p>
+              </div>
+              <button
+                onClick={() => setReplyTo(null)}
+                className="text-white/40 hover:text-white/70 shrink-0"
+              >
+                <X size={14} />
+              </button>
             </div>
           )}
 

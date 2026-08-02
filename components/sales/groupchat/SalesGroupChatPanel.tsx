@@ -20,6 +20,7 @@ import {
   subscribeToSettingsChanges,
 } from "@/lib/realtime";
 import ChatImage, { isImageFile } from "@/components/chat/ChatImage";
+import MentionText from "@/components/chat/MentionText";
 import ImagePreview from "@/components/chat/ImagePreview";
 
 export default function SalesGroupChatPanel({
@@ -607,7 +608,7 @@ export default function SalesGroupChatPanel({
                           : "bg-white/5 text-white/80 border border-white/10 rounded-bl-md"
                       }`}
                     >
-                      <p className="break-words">{msg.content}</p>
+                      <p className="break-words"><MentionText content={msg.content} lead={msg.lead} leadPath="/sales/my-leads" /></p>
                       {msg.fileUrl && isImageFile(msg.fileName) ? (
                         <ChatImage src={msg.fileUrl} alt={msg.fileName || "Image"} fileName={msg.fileName} />
                       ) : msg.fileUrl ? (

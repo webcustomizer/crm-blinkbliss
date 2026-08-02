@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { toast } from "sonner";
 import {
   Edit, Target, KeyRound, UserX, UserCheck, Shield, ShieldOff, Crown,
@@ -28,9 +28,8 @@ interface Actions {
   teamLeaders: { id: string; name: string }[];
 }
 
-function ActionButtons({ user, actions }: { user: UserWithTarget; actions: Actions }) {
+const ActionButtons = memo(function ActionButtons({ user, actions }: { user: UserWithTarget; actions: Actions }) {
   const isTL = user.role === "TEAM_LEAD";
-  const target = user.currentMonthTarget ?? user.monthlyTarget ?? 50;
   const totalGoal = (user.monthlyTarget ?? 50) * (user.targetMonths ?? 3);
   const achieved = user.totalJoinedLeads || 0;
   const autoEligible = achieved >= totalGoal;
@@ -91,9 +90,9 @@ function ActionButtons({ user, actions }: { user: UserWithTarget; actions: Actio
       </button>
     </div>
   );
-}
+});
 
-function OrgNodeCard({
+const OrgNodeCard = memo(function OrgNodeCard({
   user,
   depth,
   actions,
@@ -113,9 +112,9 @@ function OrgNodeCard({
   const pct = target > 0 ? Math.min(100, Math.round((achieved / target) * 100)) : 0;
   const isTL = user.role === "TEAM_LEAD";
 
-  const teamLeads = members.reduce((s, m) => s + (m.totalLeads ?? 0), 0);
-  const teamJoined = members.reduce((s, m) => s + (m.currentMonthAchieved || 0), 0);
-  const teamTarget = members.reduce((s, m) => s + (m.currentMonthTarget ?? m.monthlyTarget ?? 50), 0);
+  const teamLeads = useMemo(() => members.reduce((s, m) => s + (m.totalLeads ?? 0), 0), [members]);
+  const teamJoined = useMemo(() => members.reduce((s, m) => s + (m.currentMonthAchieved || 0), 0), [members]);
+  const teamTarget = useMemo(() => members.reduce((s, m) => s + (m.currentMonthTarget ?? m.monthlyTarget ?? 50), 0), [members]);
   const teamPct = teamTarget > 0 ? Math.min(100, Math.round((teamJoined / teamTarget) * 100)) : 0;
 
   return (
@@ -135,10 +134,8 @@ function OrgNodeCard({
             : "border-white/[0.06] bg-gradient-to-br from-white/[0.03] to-black/40 hover:border-white/[0.12]"
         }`}>
 
-          {/* ═══ TL CARD ═══ */}
           {isTL && (
             <>
-              {/* Header */}
               <div className="px-4 py-4 sm:px-5 space-y-3 sm:space-y-0">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
@@ -204,21 +201,17 @@ function OrgNodeCard({
                     </button>
                   </div>
                 </div>
-                {/* Actions row — mobile only */}
                 <div className="flex items-center gap-1 sm:hidden">
                   <ActionButtons user={user} actions={actions} />
                 </div>
               </div>
-              {/* Actions — desktop inline */}
               <div className="hidden sm:flex items-center justify-end gap-2 px-5 pb-2">
                 <ActionButtons user={user} actions={actions} />
               </div>
 
-              {/* Expandable body: stats + team members */}
               <div className="overflow-hidden transition-all duration-[400ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                 style={{ maxHeight: !collapsed ? "2000px" : "0px", opacity: !collapsed ? 1 : 0 }}>
                 <div className="border-t border-[#D4AF37]/[0.08] px-4 sm:px-5 py-4 space-y-4">
-                  {/* Stats row */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <div className="rounded-xl bg-gradient-to-br from-blue-500/[0.06] to-blue-500/[0.02] border border-blue-500/10 px-3.5 py-3">
                       <div className="flex items-center gap-1.5 mb-1.5">
@@ -259,7 +252,6 @@ function OrgNodeCard({
                     </div>
                   </div>
 
-                  {/* Team aggregate stats */}
                   {members.length > 0 && (
                     <div className="flex items-center gap-4 rounded-xl bg-white/[0.02] border border-white/[0.04] px-4 py-2.5">
                       <div className="flex items-center gap-1.5 text-[11px] text-white/30">
@@ -281,7 +273,6 @@ function OrgNodeCard({
                     <p className="text-[11px] text-[#D4AF37]/40 font-medium">Team: {user.ledTeam.name}</p>
                   )}
 
-                  {/* Team members list */}
                   {members.length > 0 && (
                     <div className="space-y-2">
                       <p className="text-[10px] text-white/25 uppercase tracking-wider font-semibold">Team Members</p>
@@ -356,7 +347,6 @@ function OrgNodeCard({
                                   <ActionButtons user={member} actions={actions} />
                                 </div>
                               </div>
-                              {/* Mobile: action buttons below */}
                               <div className="flex sm:hidden items-center gap-1 pl-[42px]">
                                 <ActionButtons user={member} actions={actions} />
                               </div>
@@ -371,7 +361,6 @@ function OrgNodeCard({
             </>
           )}
 
-          {/* ═══ SALESPERSON CARD ═══ */}
           {!isTL && (
             <div className="px-4 py-3 space-y-2 sm:space-y-0">
               <div className="flex items-center justify-between gap-3">
@@ -409,7 +398,7 @@ function OrgNodeCard({
       </div>
     </div>
   );
-}
+});
 
 export default function SalespersonTable() {
   const [data, setData] = useState<UserWithTarget[]>([]);
@@ -417,6 +406,9 @@ export default function SalespersonTable() {
   const [editUser, setEditUser] = useState<UserWithTarget | null>(null);
   const [resetPasswordUser, setResetPasswordUser] = useState<UserWithTarget | null>(null);
   const [collapsedTeams, setCollapsedTeams] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
+
+  const limit = 5;
 
   const now = new Date();
   const month = now.getMonth() + 1;
@@ -436,25 +428,41 @@ export default function SalespersonTable() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const teamLeaders = data.filter((u) => u.role === "TEAM_LEAD");
-  const unassigned = data.filter(
-    (u) => u.role === "SALESPERSON" && !u.teamLeaderId,
+  const teamLeaders = useMemo(() => data.filter((u) => u.role === "TEAM_LEAD"), [data]);
+  const unassigned = useMemo(
+    () => data.filter((u) => u.role === "SALESPERSON" && !u.teamLeaderId),
+    [data],
   );
 
-  function getTeamMembers(tlId: string) {
-    return data.filter((u) => u.role === "SALESPERSON" && u.teamLeaderId === tlId);
-  }
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(teamLeaders.length / limit)), [teamLeaders.length]);
+  const pagedTeamLeaders = useMemo(() => teamLeaders.slice((page - 1) * limit, page * limit), [teamLeaders, page, limit]);
 
-  function toggleTeam(tlId: string) {
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [totalPages, page]);
+
+  const teamMembersMap = useMemo(() => {
+    const map = new Map<string, UserWithTarget[]>();
+    for (const u of data) {
+      if (u.role === "SALESPERSON" && u.teamLeaderId) {
+        const arr = map.get(u.teamLeaderId);
+        if (arr) arr.push(u);
+        else map.set(u.teamLeaderId, [u]);
+      }
+    }
+    return map;
+  }, [data]);
+
+  const toggleTeam = useCallback((tlId: string) => {
     setCollapsedTeams((prev) => {
       const next = new Set(prev);
       if (next.has(tlId)) next.delete(tlId);
       else next.add(tlId);
       return next;
     });
-  }
+  }, []);
 
-  async function assignToTeam(userId: string, teamLeaderId: string) {
+  const assignToTeam = useCallback(async (userId: string, teamLeaderId: string) => {
     try {
       const r = await fetch("/api/admin/team/assign", {
         method: "PATCH",
@@ -465,18 +473,18 @@ export default function SalespersonTable() {
       if (j.success) { toast.success("Team updated."); fetchData(); }
       else toast.error(j.message);
     } catch { toast.error("Failed to update team."); }
-  }
+  }, [fetchData]);
 
-  async function promoteToTL(userId: string, name: string) {
+  const promoteToTL = useCallback(async (userId: string, name: string) => {
     try {
       const r = await fetch(`/api/admin/users/promote/${userId}`, { method: "POST" });
       const j = await r.json();
       if (j.success) { toast.success(`${name} promoted to Team Leader`); fetchData(); }
       else toast.error(j.message);
     } catch { toast.error("Failed to promote."); }
-  }
+  }, [fetchData]);
 
-  async function demoteTL(userId: string, name: string) {
+  const demoteTL = useCallback(async (userId: string, name: string) => {
     if (!confirm(`Demote ${name} back to Salesperson? Their team members will be unassigned.`)) return;
     try {
       const r = await fetch(`/api/admin/users/demote/${userId}`, { method: "POST" });
@@ -484,9 +492,9 @@ export default function SalespersonTable() {
       if (j.success) { toast.success(`${name} demoted to Salesperson`); fetchData(); }
       else toast.error(j.message);
     } catch { toast.error("Failed to demote."); }
-  }
+  }, [fetchData]);
 
-  async function toggleActive(userId: string, _currentActive: boolean, name: string) {
+  const toggleActive = useCallback(async (userId: string, _currentActive: boolean, name: string) => {
     try {
       const r = await fetch(`/api/admin/salespersons/${userId}/toggle-active`, { method: "POST" });
       const j = await r.json();
@@ -495,31 +503,42 @@ export default function SalespersonTable() {
         fetchData();
       } else toast.error(j.message || "Failed.");
     } catch { toast.error("Failed to toggle status."); }
-  }
+  }, [fetchData]);
 
-  async function markEligible(userId: string, name: string) {
+  const markEligible = useCallback(async (userId: string, name: string) => {
     try {
       const r = await fetch(`/api/admin/users/mark-eligible/${userId}`, { method: "POST" });
       const j = await r.json();
       if (j.success) { toast.success(j.message); fetchData(); }
       else toast.error(j.message);
     } catch { toast.error("Failed to mark eligible."); }
-  }
+  }, [fetchData]);
 
-  async function revokeEligible(userId: string, name: string) {
+  const revokeEligible = useCallback(async (userId: string, name: string) => {
     try {
       const r = await fetch(`/api/admin/users/revoke-eligible/${userId}`, { method: "POST" });
       const j = await r.json();
       if (j.success) { toast.success(j.message); fetchData(); }
       else toast.error(j.message);
     } catch { toast.error("Failed to revoke eligibility."); }
-  }
+  }, [fetchData]);
 
-  const actions: Actions = {
-    fetchData, month, year, assignToTeam, promoteToTL, demoteTL, toggleActive,
-    markEligible, revokeEligible,
-    setEditUser, setResetPasswordUser, teamLeaders,
-  };
+  const setEditUserCb = useCallback((u: UserWithTarget) => setEditUser(u), []);
+  const setResetPasswordUserCb = useCallback((u: UserWithTarget) => setResetPasswordUser(u), []);
+
+  const actions: Actions = useMemo(
+    () => ({
+      fetchData, month, year, assignToTeam, promoteToTL, demoteTL, toggleActive,
+      markEligible, revokeEligible,
+      setEditUser: setEditUserCb, setResetPasswordUser: setResetPasswordUserCb, teamLeaders,
+    }),
+    [fetchData, month, year, assignToTeam, promoteToTL, demoteTL, toggleActive, markEligible, revokeEligible, setEditUserCb, setResetPasswordUserCb, teamLeaders],
+  );
+
+  const goToPage = useCallback((p: number) => {
+    setPage(Math.max(1, Math.min(totalPages, p)));
+    setCollapsedTeams(new Set());
+  }, [totalPages]);
 
   if (loading) {
     return (
@@ -531,7 +550,6 @@ export default function SalespersonTable() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between rounded-[28px] border border-[#D4AF37]/20 bg-gradient-to-br from-[#171717] to-[#0d0d0d] p-5 sm:p-6 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)]">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#D4AF37]/10">
@@ -545,24 +563,21 @@ export default function SalespersonTable() {
         <AddSalespersonDialog onSuccess={fetchData} />
       </div>
 
-      {/* Tree View */}
       <div className="rounded-[28px] border border-[#D4AF37]/20 bg-gradient-to-br from-[#171717] to-[#0d0d0d] p-5 sm:p-6 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)]">
-        {/* Team Leaders */}
         <div className="space-y-5">
-          {teamLeaders.map((tl) => (
+          {pagedTeamLeaders.map((tl) => (
             <OrgNodeCard
               key={tl.id}
               user={tl}
               depth={0}
               actions={actions}
-              members={getTeamMembers(tl.id)}
+              members={teamMembersMap.get(tl.id) || []}
               collapsed={collapsedTeams.has(tl.id)}
               onToggle={() => toggleTeam(tl.id)}
             />
           ))}
         </div>
 
-        {/* Unassigned Salespersons */}
         {unassigned.length > 0 && (
           <div className="mt-8 pt-6 border-t border-white/10">
             <div className="flex items-center gap-2 mb-4">
@@ -648,11 +663,11 @@ export default function SalespersonTable() {
                           <Shield size={11} />
                         </button>
                         <SetGoalDialog userId={sp.id} currentTarget={sp.monthlyTarget} currentMonths={sp.targetMonths || 3} onSuccess={fetchData} />
-                        <button onClick={() => setEditUser(sp)}
+                        <button onClick={() => setEditUserCb(sp)}
                           className="rounded-md border border-white/10 bg-black/30 p-1 text-white/40 hover:border-[#D4AF37]/30 hover:text-[#D4AF37] transition-all" title="Edit">
                           <Edit size={11} />
                         </button>
-                        <button onClick={() => setResetPasswordUser(sp)}
+                        <button onClick={() => setResetPasswordUserCb(sp)}
                           className="rounded-md border border-white/10 bg-black/30 p-1 text-white/40 hover:border-orange-500/30 hover:text-orange-400 transition-all" title="Reset Password">
                           <KeyRound size={11} />
                         </button>
@@ -674,7 +689,6 @@ export default function SalespersonTable() {
           </div>
         )}
 
-        {/* Empty state */}
         {data.length === 0 && (
           <div className="py-16 text-center">
             <div className="flex justify-center mb-4">
@@ -684,6 +698,71 @@ export default function SalespersonTable() {
             </div>
             <p className="text-white/40 text-sm">No team members yet</p>
             <p className="text-white/20 text-xs mt-1">Add your first salesperson to get started</p>
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="mt-6 pt-4 border-t border-white/5">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] text-white/30">
+                Page {page} of {totalPages}
+              </p>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => goToPage(1)}
+                  disabled={page === 1}
+                  className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 text-[11px] text-white/50 hover:border-[#D4AF37]/30 hover:text-[#D4AF37] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  First
+                </button>
+                <button
+                  onClick={() => goToPage(page - 1)}
+                  disabled={page === 1}
+                  className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 text-[11px] text-white/50 hover:border-[#D4AF37]/30 hover:text-[#D4AF37] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  Prev
+                </button>
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (page <= 3) {
+                    pageNum = i + 1;
+                  } else if (page >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = page - 2 + i;
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => goToPage(pageNum)}
+                      className={`rounded-lg border px-2.5 py-1.5 text-[11px] transition-all ${
+                        page === pageNum
+                          ? "border-[#D4AF37]/40 bg-[#D4AF37]/10 text-[#D4AF37] font-semibold"
+                          : "border-white/10 bg-black/30 text-white/50 hover:border-[#D4AF37]/30 hover:text-[#D4AF37]"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => goToPage(page + 1)}
+                  disabled={page === totalPages}
+                  className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 text-[11px] text-white/50 hover:border-[#D4AF37]/30 hover:text-[#D4AF37] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+                <button
+                  onClick={() => goToPage(totalPages)}
+                  disabled={page === totalPages}
+                  className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 text-[11px] text-white/50 hover:border-[#D4AF37]/30 hover:text-[#D4AF37] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  Last
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

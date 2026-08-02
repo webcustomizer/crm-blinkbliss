@@ -83,6 +83,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   teamLeaderId String?
+  teamAssignedAt DateTime?
   teamLeader   User?    @relation("TeamMembers", fields: [teamLeaderId], references: [id])
   teamMembers  User[]   @relation("TeamMembers")
   ledTeam      Team?    @relation("TeamLead")

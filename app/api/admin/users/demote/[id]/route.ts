@@ -19,7 +19,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     await prisma.$transaction([
       // Unassign all team members
-      prisma.user.updateMany({ where: { teamLeaderId: id }, data: { teamLeaderId: null } }),
+      prisma.user.updateMany({ where: { teamLeaderId: id }, data: { teamLeaderId: null, teamAssignedAt: null } }),
       // Delete the team record
       prisma.team.deleteMany({ where: { leaderId: id } }),
       // Demote user back to salesperson

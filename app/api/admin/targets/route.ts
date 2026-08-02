@@ -12,67 +12,79 @@ export async function GET(req: NextRequest) {
       Number(searchParams.get("month")) || new Date().getMonth() + 1;
     const year = Number(searchParams.get("year")) || new Date().getFullYear();
 
-    const salespeople = await prisma.user.findMany({
-      where: {
-        role: { in: ["SALESPERSON", "TEAM_LEAD"] },
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        monthlyTarget: true,
-        targetMonths: true,
-        eligibleForTeamLeader: true,
-        eligibleSince: true,
-        responseTimeAvg: true,
-        isActive: true,
-        role: true,
-        teamLeaderId: true,
-        teamLeader: { select: { id: true, name: true } },
-        ledTeam: { select: { id: true, name: true } },
-        _count: { select: { leads: { where: { isDeleted: false } } } },
-      },
-      orderBy: [{ isActive: "desc" }, { name: "asc" }],
-    });
-
-    const targets = await prisma.salesTarget.findMany({
-      where: { month, year },
-    });
-
-    const targetMap = new Map(targets.map((t) => [t.userId, t]));
-
-    // Count achieved (joined) leads for this month via StatusHistory
     const startOfMonth = new Date(year, month - 1, 1);
     const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
 
-    const joinedRecords = await prisma.statusHistory.findMany({
-      where: {
-        newStatus: "JOINED",
-        changedAt: { gte: startOfMonth, lte: endOfMonth },
-        lead: { assignedToId: { not: null } },
-      },
-      select: { lead: { select: { assignedToId: true } } },
-    });
+    const [salespeople, targets, monthJoined, allTimeJoined] =
+      await Promise.all([
+        prisma.user.findMany({
+          where: { role: { in: ["SALESPERSON", "TEAM_LEAD"] } },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            monthlyTarget: true,
+            targetMonths: true,
+            eligibleForTeamLeader: true,
+            eligibleSince: true,
+            responseTimeAvg: true,
+            isActive: true,
+            role: true,
+            teamLeaderId: true,
+            teamLeader: { select: { id: true, name: true } },
+            ledTeam: { select: { id: true, name: true } },
+            _count: { select: { leads: { where: { isDeleted: false } } } },
+          },
+          orderBy: [{ isActive: "desc" }, { name: "asc" }],
+        }),
+        prisma.salesTarget.findMany({ where: { month, year } }),
+        prisma.statusHistory.groupBy({
+          by: ["leadId"],
+          where: {
+            newStatus: "JOINED",
+            changedAt: { gte: startOfMonth, lte: endOfMonth },
+            lead: { assignedToId: { not: null } },
+          },
+          _count: { id: true },
+        }),
+        prisma.statusHistory.groupBy({
+          by: ["leadId"],
+          where: {
+            newStatus: "JOINED",
+            lead: { assignedToId: { not: null } },
+          },
+          _count: { id: true },
+        }),
+      ]);
+
+    const targetMap = new Map(targets.map((t) => [t.userId, t]));
+    const leadIds = [
+      ...new Set([
+        ...monthJoined.map((r) => r.leadId),
+        ...allTimeJoined.map((r) => r.leadId),
+      ]),
+    ];
+
+    const leadAssignments = leadIds.length > 0
+      ? await prisma.lead.findMany({
+          where: { id: { in: leadIds }, assignedToId: { not: null } },
+          select: { id: true, assignedToId: true },
+        })
+      : [];
+    const leadToUser = new Map(
+      leadAssignments.map((l) => [l.id, l.assignedToId as string]),
+    );
 
     const achievedMap = new Map<string, number>();
-    for (const r of joinedRecords) {
-      const id = r.lead.assignedToId as string;
-      achievedMap.set(id, (achievedMap.get(id) || 0) + 1);
+    for (const r of monthJoined) {
+      const userId = leadToUser.get(r.leadId);
+      if (userId) achievedMap.set(userId, (achievedMap.get(userId) || 0) + r._count.id);
     }
 
-    // Count total JOINED leads (all time) for eligibility
-    const allJoinedRecords = await prisma.statusHistory.findMany({
-      where: {
-        newStatus: "JOINED",
-        lead: { assignedToId: { not: null } },
-      },
-      select: { lead: { select: { assignedToId: true } } },
-    });
-
     const totalJoinedMap = new Map<string, number>();
-    for (const r of allJoinedRecords) {
-      const id = r.lead.assignedToId as string;
-      totalJoinedMap.set(id, (totalJoinedMap.get(id) || 0) + 1);
+    for (const r of allTimeJoined) {
+      const userId = leadToUser.get(r.leadId);
+      if (userId) totalJoinedMap.set(userId, (totalJoinedMap.get(userId) || 0) + r._count.id);
     }
 
     const data = salespeople.map((sp) => {
